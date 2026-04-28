@@ -3,118 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-site-verification" content="2dLxLpWFWhQvJnr9_PohsosCbP3TcmlIVFb0YdLbJB0" />
-    <title>M-PARYAJ | Domino & Mopion</title>
+    <title>M-PARYAJ | Jwe & Genyen</title>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; --card: #1a1a1a; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 10px; text-align: center; }
-        .card { background: var(--card); padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; }
-        .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; margin: 5px 0; }
-        .mopion-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 300px; margin: 15px auto; }
-        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
+        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; }
+        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
+        .card { background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 320px; margin: 15px auto; }
+        .cell { background: #222; height: 60px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
+        .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
         .hidden { display: none; }
-        .balans-box { font-size: 1.5rem; color: var(--neon); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="login-section">
-        <div class="card">
-            <h2>M-<span>PARYAJ</span></h2>
-            <input type="tel" id="tel" placeholder="Nimewo MonCash/NatCash" style="width:85%; padding:12px; margin-bottom:10px;">
-            <button class="btn" onclick="antre()">LOGIN</button>
-        </div>
+    <div id="login-screen" class="card">
+        <h2 style="color:var(--neon)">M-PARYAJ</h2>
+        <input type="tel" id="userPhone" placeholder="Nimewo MonCash/NatCash" style="width:85%; padding:12px; margin-bottom:10px; border-radius:8px;">
+        <button class="btn" onclick="login()">ANTRE NAN JWÈT LA</button>
     </div>
 
-    <div id="game-section" class="hidden">
+    <div id="game-screen" class="hidden">
         <div class="card">
-            <div>Balans ou: <span id="balans" class="balans-box">0</span> HTG</div>
-            <p>Rechaje: <b>5511-0103</b></p>
+            <div style="font-size: 1.5rem;">Balans: <span id="valBalans" style="color:var(--neon)">0</span> HTG</div>
+            <p>Rechaje: <b style="color:var(--gold)">5511-0103</b></p>
         </div>
 
         <div class="card">
-            <h3>MÒPYON (Aligné 5)</h3>
-            <div class="mopion-grid" id="mopion-board"></div>
-            <p id="status">Tou pa: X</p>
+            <h3>MÒPYON (5 POU GENYEN)</h3>
+            <div id="board" class="grid"></div>
+            <p id="info">Tou pa: X</p>
         </div>
 
         <div class="card">
             <h3>DOMINO</h3>
-            <div id="domino-msg">Klike pou chèche yon advèsè...</div>
-            <button class="btn" style="background:var(--gold)" onclick="joueDomino()">JWE DOMINO (50 HTG)</button>
+            <div style="background:#0a2e1a; padding:20px; border-radius:10px; margin-bottom:10px;">Tablo 1: [6|6] [6|5] ...</div>
+            <button class="btn" style="background:var(--gold)" onclick="alert('Lojik Domino a ap chaje...')">JWE DOMINO</button>
         </div>
     </div>
 
     <script>
-        let board = Array(25).fill(""); 
-        let tounen = "X";
         let balans = 0;
+        let board = Array(25).fill("");
+        let currentPlayer = "X";
 
-        function antre() {
-            if(document.getElementById('tel').value.length >= 8) {
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('game-section').classList.remove('hidden');
-                desineMopion();
+        function login() {
+            let p = document.getElementById('userPhone').value;
+            if(p.length >= 8) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                initBoard();
             }
         }
 
-        function desineMopion() {
-            const container = document.getElementById('mopion-board');
-            container.innerHTML = "";
+        function initBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = "";
             board.forEach((val, i) => {
                 let cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.innerText = val;
-                cell.onclick = () => feMouvman(i);
-                container.appendChild(cell);
+                cell.onclick = () => play(i);
+                boardDiv.appendChild(cell);
             });
         }
 
-        function feMouvman(i) {
+        function play(i) {
             if(board[i] === "") {
-                board[i] = tounen;
-                desineMopion();
-                if(tchekeGanyan(tounen)) {
-                    alert("BRAVO! Jwè " + tounen + " Ganyen!");
-                    ajouteLajan(100); // Bay 100 HTG si l ganyen
-                    resetMopion();
+                board[i] = currentPlayer;
+                initBoard();
+                if(checkWin(currentPlayer)) {
+                    alert("BRAVO! " + currentPlayer + " ganyen 50 HTG!");
+                    updateBalans(50);
+                    resetGame();
                 } else {
-                    tounen = (tounen === "X") ? "O" : "X";
-                    document.getElementById('status').innerText = "Tou pa: " + tounen;
+                    currentPlayer = (currentPlayer === "X") ? "O" : "X";
+                    document.getElementById('info').innerText = "Tou pa: " + currentPlayer;
                 }
             }
         }
 
-        function tchekeGanyan(p) {
-            // Lojik senp pou 5 nan yon liy (Vètikal, Orizontal, Diagonal)
-            for (let i = 0; i < 5; i++) {
-                // Check orizontal
-                if (board.slice(i*5, i*5+5).every(v => v === p)) return true;
-                // Check vètikal
-                if ([0,1,2,3,4].every(j => board[i + j*5] === p)) return true;
+        function checkWin(p) {
+            // Lojik pou tcheke 5 liy orizontal, vètikal, oswa diagonal
+            const size = 5;
+            for(let i=0; i<size; i++) {
+                for(let j=0; j<size; j++) {
+                    // Sa se yon baz, n ap ajoute tout direksyon yo
+                    if(board[i*size] === p && board[i*size+1] === p && board[i*size+2] === p && board[i*size+3] === p && board[i*size+4] === p) return true;
+                }
             }
-            return true ? false : false; // Sa bezwen yon lojik pi fon pou diagonal
+            return false;
         }
 
-        function ajouteLajan(mnt) {
+        function updateBalans(mnt) {
             balans += mnt;
-            document.getElementById('balans').innerText = balans;
-            alert("Kont ou kredite ak " + mnt + " HTG!");
+            document.getElementById('valBalans').innerText = balans;
+            // ISIT LA: N ap ajoute kòd Firebase la pou sere balans lan nan nwaj la
         }
 
-        function joueDomino() {
-            alert("W ap antre nan yon tablo Domino...");
-            // Lojik pou genyen nan Domino
-            setTimeout(() => {
-                alert("Ou bat advèsè a nan Domino!");
-                ajouteLajan(150);
-            }, 3000);
-        }
-
-        function resetMopion() {
+        function resetGame() {
             board = Array(25).fill("");
-            tounen = "X";
-            desineMopion();
+            initBoard();
         }
     </script>
 </body>
