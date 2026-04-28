@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ | Domino & Mopion</title>
+    <title>M-PARYAJ | Admin & Jwèt</title>
     <style>
         :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; }
         body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; text-align: center; }
@@ -12,120 +12,91 @@
         input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
         button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px; }
         .btn-main { background: var(--neon); color: black; }
-        .btn-share { background: #25d366; color: white; }
+        .btn-admin { background: #ff4d4d; color: white; }
         .stat-val { color: var(--neon); font-weight: bold; font-size: 1.2rem; }
-        /* Style pou Tablo Mopion */
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin: 10px auto; max-width: 350px; background: #333; }
-        .cell { aspect-ratio: 1/1; background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 14px; border-radius: 2px; }
     </style>
 </head>
 <body>
 
-    <!-- 1. PAJ ENSKRIPSYON / LOGIN -->
+    <!-- 1. PAJ LOGIN -->
     <div id="auth-page" class="card">
         <h2 style="color: var(--neon);">M-PARYAJ</h2>
-        <p>Antre nimewo w ak yon modpas</p>
+        <p>Login pou jwe oswa Admin</p>
         <input type="tel" id="user-phone" placeholder="Nimewo Telefòn">
-        <input type="password" id="user-pass" placeholder="Modpas">
-        <button class="btn-main" onclick="login()">KÒMANSE JWE</button>
+        <input type="password" id="user-pass" placeholder="Modpas oswa Kòd Admin">
+        <button class="btn-main" onclick="login()">ANTRE</button>
     </div>
 
-    <!-- 2. PAJ JWÈT LA -->
+    <!-- 2. PAJ ADMIN (SEKRÈ) -->
+    <div id="admin-panel" class="hidden">
+        <div class="card" style="border-color: #ff4d4d;">
+            <h2 style="color: #ff4d4d;">PANÈL ADMIN</h2>
+            <p>Jere Balans Kliyan yo</p>
+            <input type="tel" id="target-phone" placeholder="Nimewo Jwè a">
+            <input type="number" id="add-amount" placeholder="Montan pou ajoute (HTG)">
+            <button class="btn-admin" onclick="ajouteKob()">AJOUTE KÒB SOU KONT LI</button>
+            <hr style="border: 0.5px solid #333;">
+            <div style="text-align: left; font-size: 0.8rem;">
+                <p>Total Pwofi Kay la (3% + 10%): <span id="admin-pwofi" style="color:var(--gold)">0</span> HTG</p>
+            </div>
+            <button onclick="location.reload()" style="background:#555">SOTI NAN ADMIN</button>
+        </div>
+    </div>
+
+    <!-- 3. PAJ JWÈT (POU KLIYAN) -->
     <div id="main-app" class="hidden">
         <div class="card" style="display: flex; justify-content: space-between;">
             <div id="display-id" style="color: #888;"></div>
             <div>Balans: <span id="balans" class="stat-val">0</span> HTG</div>
         </div>
-
-        <!-- RECHAJE -->
-        <div class="card" style="border-color: var(--gold);">
-            <strong>RECHAJE</strong> (5% Bonus | 3% Frè)<br>
-            <input type="number" id="depo-val" placeholder="Montan HTG">
-            <button style="background: var(--gold); color: black;" onclick="depoze()">MONCASH / NATCASH</button>
-        </div>
-
-        <!-- JWÈT YO -->
-        <div id="mopion-section" class="card">
-            <strong>MOPION (10x10)</strong>
-            <div id="status-msg">Aliyen 5 pwen!</div>
-            <div class="board" id="board"></div>
-            <button class="btn-main" onclick="resetMopion()">JWE MOPION (MIZ)</button>
-        </div>
-
-        <!-- PATAJE -->
         <div class="card">
-            <strong>PATAJE POU KÒB</strong>
-            <p style="font-size: 0.8rem;">Voye lyen an bay yon zanmi. Si l enskri, w ap jwenn 5 HTG!</p>
-            <button class="btn-share" onclick="pataje()">PATAJE SOU WHATSAPP</button>
+            <h3>BYENVINI NAN M-PARYAJ</h3>
+            <button class="btn-main" onclick="alert('Domino ap ouvri...')">JWE DOMINO</button>
+            <button class="btn-main" onclick="alert('Mopion ap ouvri...')">JWE MOPION</button>
         </div>
+        <button onclick="location.reload()" style="background:#333; color: white;">DEKONEKTE</button>
     </div>
 
     <script>
-        let balans = 0;
-        let pwofiAdmin = 0;
-
-        // Tcheke si moun nan te klike sou yon lyen parinaj
-        window.onload = function() {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('ref')) { localStorage.setItem('referal', params.get('ref')); }
-        };
+        // Done Simulation (Nan Firebase sa t'ap sere nèt)
+        let balansJwè = 0;
+        let pwofiKay = 0;
+        const KOD_ADMIN = "Cricra31";
 
         function login() {
             let phone = document.getElementById("user-phone").value;
-            if(phone.length < 8) { alert("Nimewo a pa bon!"); return; }
+            let pass = document.getElementById("user-pass").value;
 
-            // Lojik Parinaj
-            let ref = localStorage.getItem('referal');
-            if (ref) {
-                alert("Ou enskri via ID: " + ref + ". Moun sa ap resevwa 5 HTG.");
-                localStorage.removeItem('referal');
-            }
-
-            document.getElementById("auth-page").classList.add("hidden");
-            document.getElementById("main-app").classList.remove("hidden");
-            document.getElementById("display-id").innerText = "ID: " + phone;
-            initBoard();
-        }
-
-        function depoze() {
-            let mnt = parseFloat(document.getElementById("depo-val").value);
-            if(isNaN(mnt) || mnt <= 0) return;
-            pwofiAdmin += mnt * 0.03; // Ou pran 3%
-            balans += (mnt + (mnt * 0.05)); // Jwè a jwenn 5% bonus
-            document.getElementById("balans").innerText = balans.toFixed(2);
-            window.open(`https://wa.me{mnt}HTG`, '_blank');
-        }
-
-        function pataje() {
-            let id = document.getElementById("user-phone").value;
-            let link = window.location.origin + window.location.pathname + "?ref=" + id;
-            let msg = `Vini jwe sou M-PARYAJ! Gen kòb tout bon. Enskri ak lyen m nan: ${link}`;
-            window.open(`https://wa.me{encodeURIComponent(msg)}`, '_blank');
-        }
-
-        // LOJIK MOPION 10x10
-        let tablo = Array(100).fill("");
-        function initBoard() {
-            const b = document.getElementById("board");
-            b.innerHTML = "";
-            for(let i=0; i<100; i++) {
-                let d = document.createElement("div");
-                d.className = "cell";
-                d.onclick = () => klikeKare(i, d);
-                b.appendChild(d);
+            if (pass === KOD_ADMIN) {
+                // Ouvri paj Admin
+                document.getElementById("auth-page").classList.add("hidden");
+                document.getElementById("admin-panel").classList.remove("hidden");
+            } else if (phone.length >= 8 && pass !== "") {
+                // Ouvri paj Jwè
+                document.getElementById("auth-page").classList.add("hidden");
+                document.getElementById("main-app").classList.remove("hidden");
+                document.getElementById("display-id").innerText = "Jwè: " + phone;
+            } else {
+                alert("Ranpli enfòmasyon yo byen!");
             }
         }
-        function klikeKare(i, el) {
-            if(tablo[i] !== "") return;
-            tablo[i] = "X"; el.innerText = "X"; el.style.color = "var(--neon)";
-            // Isit la ou ta sipoze ajoute lojik pou tcheke 5 pwen an...
-        }
-        function resetMopion() {
-            balans -= 50; // Miz pa defo
-            document.getElementById("balans").innerText = balans;
-            tablo.fill("");
-            initBoard();
+
+        function ajouteKob() {
+            let tel = document.getElementById("target-phone").value;
+            let mnt = parseFloat(document.getElementById("add-amount").value);
+
+            if (tel === "" || isNaN(mnt)) {
+                alert("Mete nimewo ak montan an!");
+                return;
+            }
+
+            // Isit la nan Firebase, nou t'ap mete update balans tel la
+            alert("Siksè! " + mnt + " HTG ajoute sou kont " + tel);
+            
+            // Simulation pwofi (3% frè depo)
+            pwofiKay += (mnt * 0.03);
+            document.getElementById("admin-pwofi").innerText = pwofiKay.toFixed(2);
         }
     </script>
 </body>
-</html>.
+</html>
