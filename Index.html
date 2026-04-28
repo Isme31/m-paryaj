@@ -10,61 +10,45 @@
         body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 10px; text-align: center; }
         .card { background: var(--card); padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; }
         .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; margin: 5px 0; }
-        
-        /* MOPION 5x5 */
         .mopion-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 300px; margin: 15px auto; }
-        .cell { background: #222; height: 50px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
-        
-        /* DOMINO STYLE */
-        .domino-board { background: #0a2e1a; height: 100px; border: 2px solid #005a2b; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 10px 0; overflow-x: auto; }
-        .domino-piece { background: white; color: black; width: 30px; height: 55px; border-radius: 3px; display: flex; flex-direction: column; justify-content: space-around; font-weight: bold; margin: 0 3px; border: 1px solid #000; }
-        
+        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
         .hidden { display: none; }
-        .balans-box { font-size: 1.2rem; color: var(--neon); font-weight: bold; }
+        .balans-box { font-size: 1.5rem; color: var(--neon); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- PAJ LOGIN -->
     <div id="login-section">
         <div class="card">
-            <h2 style="text-shadow: 0 0 10px var(--neon);">M-PARYAJ</h2>
-            <input type="tel" id="tel" placeholder="Nimewo Telefòn" style="width:85%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #444; background:#222; color:white;">
-            <button class="btn" onclick="antre()">KÒMANSE JWÈT LA</button>
+            <h2>M-<span>PARYAJ</span></h2>
+            <input type="tel" id="tel" placeholder="Nimewo MonCash/NatCash" style="width:85%; padding:12px; margin-bottom:10px;">
+            <button class="btn" onclick="antre()">LOGIN</button>
         </div>
     </div>
 
-    <!-- PAJ JWÈT -->
     <div id="game-section" class="hidden">
         <div class="card">
-            <div class="balans-box">Balans: 0 HTG</div>
-            <p style="font-size: 0.8rem;">Voye kòb (MonCash/NatCash):<br>
-            <b style="font-size: 1.1rem; color: var(--gold);">5511-0103</b></p>
+            <div>Balans ou: <span id="balans" class="balans-box">0</span> HTG</div>
+            <p>Rechaje: <b>5511-0103</b></p>
         </div>
 
-        <!-- SEKSYON DOMINO -->
         <div class="card">
-            <h3>JWÈT DOMINO</h3>
-            <div class="domino-board" id="domino-board">
-                <div class="domino-piece"><div>6</div><hr style="width:100%;margin:0"><div>6</div></div>
-                <div class="domino-piece"><div>6</div><hr style="width:100%;margin:0"><div>5</div></div>
-                <div style="color: #005a2b; margin-left:10px;">...</div>
-            </div>
-            <button class="btn" style="background:var(--gold)" onclick="alert('Tablo Domino a ap louvri...')">ANTRE NAN TABLO</button>
-        </div>
-
-        <!-- SEKSYON MOPION 5x5 -->
-        <div class="card">
-            <h3>MÒPYON (5 Liy)</h3>
+            <h3>MÒPYON (Aligné 5)</h3>
             <div class="mopion-grid" id="mopion-board"></div>
-            <p id="status" style="font-size:0.8rem">Tou pa: X</p>
-            <button class="btn" onclick="resetMopion()">REKÒMANSE</button>
+            <p id="status">Tou pa: X</p>
+        </div>
+
+        <div class="card">
+            <h3>DOMINO</h3>
+            <div id="domino-msg">Klike pou chèche yon advèsè...</div>
+            <button class="btn" style="background:var(--gold)" onclick="joueDomino()">JWE DOMINO (50 HTG)</button>
         </div>
     </div>
 
     <script>
         let board = Array(25).fill(""); 
         let tounen = "X";
+        let balans = 0;
 
         function antre() {
             if(document.getElementById('tel').value.length >= 8) {
@@ -81,18 +65,50 @@
                 let cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.innerText = val;
-                if(val === "X") cell.style.color = "var(--neon)";
-                if(val === "O") cell.style.color = "var(--gold)";
-                cell.onclick = () => {
-                    if(board[i] === "") {
-                        board[i] = tounen;
-                        tounen = (tounen === "X") ? "O" : "X";
-                        document.getElementById('status').innerText = "Tou pa: " + tounen;
-                        desineMopion();
-                    }
-                };
+                cell.onclick = () => feMouvman(i);
                 container.appendChild(cell);
             });
+        }
+
+        function feMouvman(i) {
+            if(board[i] === "") {
+                board[i] = tounen;
+                desineMopion();
+                if(tchekeGanyan(tounen)) {
+                    alert("BRAVO! Jwè " + tounen + " Ganyen!");
+                    ajouteLajan(100); // Bay 100 HTG si l ganyen
+                    resetMopion();
+                } else {
+                    tounen = (tounen === "X") ? "O" : "X";
+                    document.getElementById('status').innerText = "Tou pa: " + tounen;
+                }
+            }
+        }
+
+        function tchekeGanyan(p) {
+            // Lojik senp pou 5 nan yon liy (Vètikal, Orizontal, Diagonal)
+            for (let i = 0; i < 5; i++) {
+                // Check orizontal
+                if (board.slice(i*5, i*5+5).every(v => v === p)) return true;
+                // Check vètikal
+                if ([0,1,2,3,4].every(j => board[i + j*5] === p)) return true;
+            }
+            return true ? false : false; // Sa bezwen yon lojik pi fon pou diagonal
+        }
+
+        function ajouteLajan(mnt) {
+            balans += mnt;
+            document.getElementById('balans').innerText = balans;
+            alert("Kont ou kredite ak " + mnt + " HTG!");
+        }
+
+        function joueDomino() {
+            alert("W ap antre nan yon tablo Domino...");
+            // Lojik pou genyen nan Domino
+            setTimeout(() => {
+                alert("Ou bat advèsè a nan Domino!");
+                ajouteLajan(150);
+            }, 3000);
         }
 
         function resetMopion() {
