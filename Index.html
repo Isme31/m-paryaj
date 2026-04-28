@@ -3,29 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ | Jwe & Genyen</title>
+    <title>M-PARYAJ | Domino & Mopion</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+
     <style>
         :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; }
         body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .card { background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 320px; margin: 15px auto; }
-        .cell { background: #222; height: 60px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
-        .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
+        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; }
         .hidden { display: none; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
     </style>
 </head>
 <body>
 
+    <!-- 1. LOGIN -->
     <div id="login-screen" class="card">
         <h2 style="color:var(--neon)">M-PARYAJ</h2>
-        <input type="tel" id="userPhone" placeholder="Nimewo MonCash/NatCash" style="width:85%; padding:12px; margin-bottom:10px; border-radius:8px;">
+        <input type="tel" id="userPhone" placeholder="Nimewo MonCash/NatCash">
+        <input type="password" id="userPass" placeholder="Modpas (Cricra31 pou Admin)">
         <button class="btn" onclick="login()">ANTRE NAN JWÈT LA</button>
     </div>
 
+    <!-- 2. ADMIN (CRICRA31) -->
+    <div id="admin-screen" class="hidden">
+        <div class="card" style="border-color: red;">
+            <h2 style="color: red;">ADMINISTRASYON</h2>
+            <input type="tel" id="targetPhone" placeholder="Nimewo Kliyan an">
+            <input type="number" id="addAmount" placeholder="Montan HTG">
+            <button class="btn" style="background:red; color:white;" onclick="adminAjouteKob()">METE KÒB SOU KONT LI</button>
+            <button class="btn" onclick="location.reload()">SOTI</button>
+        </div>
+    </div>
+
+    <!-- 3. JWÈT LA -->
     <div id="game-screen" class="hidden">
         <div class="card">
             <div style="font-size: 1.5rem;">Balans: <span id="valBalans" style="color:var(--neon)">0</span> HTG</div>
-            <p>Rechaje: <b style="color:var(--gold)">5511-0103</b></p>
+            <p>Voye kòb sou: <b style="color:var(--gold)">5511-0103</b></p>
         </div>
 
         <div class="card">
@@ -36,74 +56,103 @@
 
         <div class="card">
             <h3>DOMINO</h3>
-            <div style="background:#0a2e1a; padding:20px; border-radius:10px; margin-bottom:10px;">Tablo 1: [6|6] [6|5] ...</div>
+            <div style="background:#0a2e1a; padding:15px; border-radius:10px; margin-bottom:10px; color:#00ff88;">TABLO PWOPÈTE</div>
             <button class="btn" style="background:var(--gold)" onclick="alert('Lojik Domino a ap chaje...')">JWE DOMINO</button>
         </div>
     </div>
 
     <script>
-        let balans = 0;
+        // CONFIGURATION FIREBASE
+        const firebaseConfig = {
+            databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = "";
         let board = Array(25).fill("");
-        let currentPlayer = "X";
+        let turn = "X";
 
         function login() {
             let p = document.getElementById('userPhone').value;
+            let m = document.getElementById('userPass').value;
+
+            if(m === "Cricra31") {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('admin-screen').classList.remove('hidden');
+                return;
+            }
+
             if(p.length >= 8) {
+                currentUser = p;
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
+                syncBalans();
                 initBoard();
+            }
+        }
+
+        function syncBalans() {
+            db.ref('itilizate/' + currentUser).on('value', (snap) => {
+                let data = snap.val();
+                document.getElementById('valBalans').innerText = data ? data.balans : 0;
+            });
+        }
+
+        function adminAjouteKob() {
+            let tel = document.getElementById('targetPhone').value;
+            let mnt = parseInt(document.getElementById('addAmount').value);
+            if(tel && mnt) {
+                db.ref('itilizate/' + tel).once('value').then(snap => {
+                    let ansyenBalans = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
+                    db.ref('itilizate/' + tel).update({ balans: ansyenBalans + mnt });
+                    alert("Siksè! " + mnt + " HTG ajoute pou " + tel);
+                });
             }
         }
 
         function initBoard() {
-            const boardDiv = document.getElementById('board');
-            boardDiv.innerHTML = "";
-            board.forEach((val, i) => {
-                let cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.innerText = val;
-                cell.onclick = () => play(i);
-                boardDiv.appendChild(cell);
+            const bDiv = document.getElementById('board');
+            bDiv.innerHTML = "";
+            board.forEach((v, i) => {
+                let c = document.createElement('div');
+                c.className = 'cell';
+                c.innerText = v;
+                c.onclick = () => {
+                    if(board[i] === "") {
+                        board[i] = turn;
+                        initBoard();
+                        if(checkWin(turn)) {
+                            alert("BRAVO! Ou genyen 50 HTG!");
+                            pemanOtomatik(50);
+                            resetBoard();
+                        } else {
+                            turn = (turn === "X") ? "O" : "X";
+                            document.getElementById('info').innerText = "Tou pa: " + turn;
+                        }
+                    }
+                };
+                bDiv.appendChild(c);
             });
         }
 
-        function play(i) {
-            if(board[i] === "") {
-                board[i] = currentPlayer;
-                initBoard();
-                if(checkWin(currentPlayer)) {
-                    alert("BRAVO! " + currentPlayer + " ganyen 50 HTG!");
-                    updateBalans(50);
-                    resetGame();
-                } else {
-                    currentPlayer = (currentPlayer === "X") ? "O" : "X";
-                    document.getElementById('info').innerText = "Tou pa: " + currentPlayer;
-                }
-            }
+        function pemanOtomatik(mnt) {
+            db.ref('itilizate/' + currentUser).once('value').then(snap => {
+                let balansAktyel = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
+                db.ref('itilizate/' + currentUser).update({ balans: balansAktyel + mnt });
+            });
         }
 
         function checkWin(p) {
-            // Lojik pou tcheke 5 liy orizontal, vètikal, oswa diagonal
-            const size = 5;
-            for(let i=0; i<size; i++) {
-                for(let j=0; j<size; j++) {
-                    // Sa se yon baz, n ap ajoute tout direksyon yo
-                    if(board[i*size] === p && board[i*size+1] === p && board[i*size+2] === p && board[i*size+3] === p && board[i*size+4] === p) return true;
-                }
+            // Lojik senplifye 5 nan yon liy (Orizontal tès)
+            for(let i=0; i<5; i++) {
+                let r = i*5;
+                if(board[r]===p && board[r+1]===p && board[r+2]===p && board[r+3]===p && board[r+4]===p) return true;
             }
             return false;
         }
 
-        function updateBalans(mnt) {
-            balans += mnt;
-            document.getElementById('valBalans').innerText = balans;
-            // ISIT LA: N ap ajoute kòd Firebase la pou sere balans lan nan nwaj la
-        }
-
-        function resetGame() {
-            board = Array(25).fill("");
-            initBoard();
-        }
+        function resetBoard() { board = Array(25).fill(""); turn = "X"; initBoard(); }
     </script>
 </body>
 </html>
