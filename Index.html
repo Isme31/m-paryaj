@@ -9,39 +9,39 @@
 
     <title>M-PARYAJ | Domino & Mopion</title>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; --card: #1a1a1a; }
+        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; --card: #1a1a1a; --danger: #ff4d4d; }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
         .hidden { display: none; }
         .card { background: var(--card); padding: 20px; margin: 10px; border-radius: 15px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
         button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 5px 0; }
-        .btn-main { background: var(--neon); color: black; box-shadow: 0 0 10px rgba(0,255,136,0.3); }
-        .btn-admin { background: #ff4d4d; color: white; }
+        .btn-main { background: var(--neon); color: black; }
+        .btn-natcash { background: #ff0000; color: white; }
+        .btn-admin { background: var(--danger); color: white; }
         .logo { font-size: 2rem; font-weight: 900; color: white; text-shadow: 0 0 10px var(--neon); margin-bottom: 10px; }
         .logo span { color: var(--neon); }
         .balans { color: var(--neon); font-size: 1.5rem; font-weight: bold; }
         
-        /* DOMINO GRAPHICS */
-        .domino-area { display: flex; flex-direction: column; align-items: center; padding: 10px; }
-        .domino-board { background: #0a2e1a; width: 95%; height: 120px; border-radius: 10px; border: 2px solid #005a2b; display: flex; align-items: center; justify-content: center; overflow-x: auto; margin-bottom: 20px; }
-        .domino-piece { background: white; color: black; width: 35px; height: 65px; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-around; font-weight: bold; border: 1px solid #999; margin: 0 3px; font-size: 1.2rem; }
+        /* MOPION GRID */
+        .mopion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 250px; margin: 15px auto; }
+        .cell { background: #222; height: 70px; border: 1px solid var(--neon); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- 1. LOGIN / ADMIN ACCESS -->
+    <!-- 1. LOGIN -->
     <div id="auth-page" class="card" style="margin-top: 50px;">
         <div class="logo">M-<span>PARYAJ</span></div>
-        <p style="color: #888;">Domino & Mopion Paryaj</p>
+        <p style="color: #888;">Antre pou w kòmanse jwe</p>
         <input type="tel" id="user-phone" placeholder="Nimewo Telefòn">
-        <input type="password" id="user-pass" placeholder="Modpas (oswa Kòd Admin)">
+        <input type="password" id="user-pass" placeholder="Modpas">
         <button class="btn-main" onclick="login()">ANTRE NAN JWÈT LA</button>
     </div>
 
-    <!-- 2. ADMIN PANEL (CRICRA31) -->
+    <!-- 2. ADMIN PANEL -->
     <div id="admin-panel" class="hidden">
-        <div class="card" style="border-color: #ff4d4d;">
-            <h2 style="color: #ff4d4d;">PANÈL ADMIN</h2>
+        <div class="card" style="border-color: var(--danger);">
+            <h2 style="color: var(--danger);">PANÈL ADMIN</h2>
             <input type="tel" id="target-phone" placeholder="Nimewo Kliyan">
             <input type="number" id="add-amount" placeholder="Montan HTG">
             <button class="btn-admin" onclick="ajouteKob()">AJOUTE KÒB SOU KONT</button>
@@ -49,32 +49,45 @@
         </div>
     </div>
 
-    <!-- 3. MAIN GAME APP -->
+    <!-- 3. APP PRINCIPAL -->
     <div id="main-app" class="hidden">
         <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
             <div id="display-id" style="font-size: 0.8rem; color: #888;"></div>
             <div>Balans: <span id="balans" class="balans">0</span> HTG</div>
         </div>
 
-        <div class="card">
-            <h3>JWÈT DOMINO</h3>
-            <div class="domino-area">
-                <div class="domino-board" id="game-board">
-                    <div style="color: #005a2b; font-style: italic;">Tablo a vid...</div>
-                </div>
-                <button class="btn-main" onclick="alert('Lojik jwèt la ap chaje...')">KÒMANSE JWÈT</button>
+        <!-- RECHAJ SECTION -->
+        <div class="card" style="border: 1px solid var(--gold);">
+            <h3>RECHAJE KONT OU</h3>
+            <p style="font-size: 0.8rem;">Voye kòb sou nimewo sa a (MonCash/NatCash):</p>
+            <div style="background: #000; padding: 10px; border-radius: 8px; font-size: 1.2rem; color: var(--gold); font-weight: bold;">
+                5511-0103
             </div>
+            <button class="btn-natcash" onclick="alert('Voye prèv peman an bay Admin pou aktivasyon.')">MWEN FIN PEYE</button>
         </div>
 
-        <div class="card" style="border-color: var(--gold);">
-            <p style="color: var(--gold); font-size: 0.8rem;">Pataje ak yon zanmi, resevwa 5 HTG!</p>
-            <button style="background: #25d366; color: white;" onclick="pataje()">PATAJE SOU WHATSAPP</button>
+        <!-- MOPION GAME -->
+        <div class="card">
+            <h3>JWÈT MÒPYON</h3>
+            <div class="mopion-grid" id="mopion-board"></div>
+            <p id="mopion-status">Chwazi yon kare</p>
+            <button class="btn-main" onclick="resetMopion()">REKÒMANSE MÒPYON</button>
         </div>
+
+        <!-- DOMINO SECTION -->
+        <div class="card">
+            <h3>JWÈT DOMINO</h3>
+            <button class="btn-main" onclick="alert('Tablo Domino a ap prepare...')">ANTRE NAN TABLO</button>
+        </div>
+
+        <button style="background: #25d366; color: white;" onclick="pataje()">PATAJE POU W GENYEN 5 HTG</button>
     </div>
 
     <script>
         let balans = 0;
         const ADMIN_CODE = "Cricra31";
+        let board = ["", "", "", "", "", "", "", "", ""];
+        let currentPlayer = "X";
 
         function login() {
             let p = document.getElementById("user-phone").value;
@@ -83,28 +96,58 @@
             if (m === ADMIN_CODE) {
                 document.getElementById("auth-page").classList.add("hidden");
                 document.getElementById("admin-panel").classList.remove("hidden");
-            } else if (p.length >= 8 && m !== "") {
+            } else if (p.length >= 8) {
                 document.getElementById("auth-page").classList.add("hidden");
                 document.getElementById("main-app").classList.remove("hidden");
                 document.getElementById("display-id").innerText = "ID: " + p;
+                initMopion();
             } else {
-                alert("Tanpri ranpli enfòmasyon yo byen.");
+                alert("Mete yon nimewo telefòn valid.");
             }
+        }
+
+        // LOJIK MOPION
+        function initMopion() {
+            const boardDiv = document.getElementById("mopion-board");
+            boardDiv.innerHTML = "";
+            board.forEach((val, index) => {
+                let cell = document.createElement("div");
+                cell.className = "cell";
+                cell.innerText = val;
+                cell.onclick = () => makeMove(index);
+                if(val === "X") cell.style.color = "var(--neon)";
+                if(val === "O") cell.style.color = "var(--gold)";
+                boardDiv.appendChild(cell);
+            });
+        }
+
+        function makeMove(index) {
+            if (board[index] === "") {
+                board[index] = currentPlayer;
+                currentPlayer = (currentPlayer === "X") ? "O" : "X";
+                document.getElementById("mopion-status").innerText = "Se tou pa: " + currentPlayer;
+                initMopion();
+            }
+        }
+
+        function resetMopion() {
+            board = ["", "", "", "", "", "", "", "", ""];
+            currentPlayer = "X";
+            document.getElementById("mopion-status").innerText = "Chwazi yon kare";
+            initMopion();
         }
 
         function ajouteKob() {
             let tel = document.getElementById("target-phone").value;
             let mnt = document.getElementById("add-amount").value;
             if (tel && mnt) {
-                alert("Siksè! " + mnt + " HTG voye bay " + tel);
+                alert("Siksè! " + mnt + " HTG ap ajoute pou " + tel);
             }
         }
 
         function pataje() {
-            let id = document.getElementById("user-phone").value;
-            let link = window.location.href + "?ref=" + id;
-            let msg = `Vini defye m sou M-PARYAJ! Enskri ak lyen m nan: ${link}`;
-            window.open(`https://wa.me{encodeURIComponent(msg)}`, '_blank');
+            let msg = "Vini jwe M-PARYAJ avè m! Rechaje pa MonCash/NatCash sou 55110103. Lyen: " + window.location.href;
+            window.open("https://wa.me" + encodeURIComponent(msg), '_blank');
         }
     </script>
 </body>
