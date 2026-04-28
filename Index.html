@@ -3,111 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ | Live Sync</title>
-    <script type="module">
-        // --- KONFIGIRASYON FIREBASE ---
-        import { initializeApp } from "https://gstatic.com";
-        import { getDatabase, ref, set, get, update, onValue } from "https://gstatic.com";
+    
+    <!-- VERIFIKASYON GOOGLE -->
+    <meta name="google-site-verification" content="2dLxLpWFWhQvJnr9_PohsosCbP3TcmlIVFb0YdLbJB0" />
 
-        // KOLE KOD FIREBASE OU TE KOPYE A ISIT LA
-        const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "://firebaseapp.com",
-            databaseURL: "https://firebaseio.com",
-            projectId: "m-paryaj",
-            storageBucket: "://appspot.com",
-            appId: "..."
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        // --- FONKSYON YO ---
-
-        window.login = async function() {
-            let p = document.getElementById("user-phone").value;
-            let m = document.getElementById("user-pass").value;
-            if(p.length < 8) return alert("Nimewo twò kout");
-
-            if(m === "Cricra31") {
-                document.getElementById("auth-page").style.display = "none";
-                document.getElementById("admin-panel").style.display = "block";
-                return;
-            }
-
-            const userRef = ref(db, 'jwè/' + p);
-            const snap = await get(userRef);
-
-            if(snap.exists()) {
-                if(snap.val().modpas === m) { antreJwet(p); } 
-                else { alert("Modpas pa bon"); }
-            } else {
-                await set(userRef, { nimewo: p, modpas: m, balans: 0 });
-                antreJwet(p);
-            }
-        };
-
-        function antreJwet(p) {
-            document.getElementById("auth-page").style.display = "none";
-            document.getElementById("main-app").style.display = "block";
-            document.getElementById("display-id").innerText = "ID: " + p;
-            
-            // Koute balans lan an dirèk
-            onValue(ref(db, 'jwè/' + p + '/balans'), (snap) => {
-                document.getElementById("balans").innerText = snap.val() || 0;
-            });
-        }
-
-        window.ajouteKob = async function() {
-            let tel = document.getElementById("target-phone").value;
-            let mnt = parseFloat(document.getElementById("add-amount").value);
-            if(!tel || !mnt) return alert("Ranpli bwat yo");
-
-            const userRef = ref(db, 'jwè/' + tel);
-            const snap = await get(userRef);
-
-            if(snap.exists()) {
-                let nouvoBalans = (snap.val().balans || 0) + mnt;
-                await update(userRef, { balans: nouvoBalans });
-                alert("Siksè! " + mnt + " HTG voye bay " + tel);
-            } else {
-                alert("Jwè sa a poko enskri!");
-            }
-        };
-    </script>
+    <title>M-PARYAJ | Domino & Mopion</title>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; }
-        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; }
-        .card { background: #1a1a1a; padding: 20px; margin: 10px; border-radius: 15px; border: 1px solid #333; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: white; border: 1px solid #444; }
-        button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-main { background: var(--neon); color: black; }
+        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; --card: #1a1a1a; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
+        .hidden { display: none; }
+        .card { background: var(--card); padding: 20px; margin: 10px; border-radius: 15px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
+        button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 5px 0; }
+        .btn-main { background: var(--neon); color: black; box-shadow: 0 0 10px rgba(0,255,136,0.3); }
+        .btn-admin { background: #ff4d4d; color: white; }
+        .logo { font-size: 2rem; font-weight: 900; color: white; text-shadow: 0 0 10px var(--neon); margin-bottom: 10px; }
+        .logo span { color: var(--neon); }
+        .balans { color: var(--neon); font-size: 1.5rem; font-weight: bold; }
+        
+        /* DOMINO GRAPHICS */
+        .domino-area { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+        .domino-board { background: #0a2e1a; width: 95%; height: 120px; border-radius: 10px; border: 2px solid #005a2b; display: flex; align-items: center; justify-content: center; overflow-x: auto; margin-bottom: 20px; }
+        .domino-piece { background: white; color: black; width: 35px; height: 65px; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-around; font-weight: bold; border: 1px solid #999; margin: 0 3px; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
-    <div id="auth-page" class="card">
-        <h2 style="color: var(--neon);">M-PARYAJ</h2>
+    <!-- 1. LOGIN / ADMIN ACCESS -->
+    <div id="auth-page" class="card" style="margin-top: 50px;">
+        <div class="logo">M-<span>PARYAJ</span></div>
+        <p style="color: #888;">Domino & Mopion Paryaj</p>
         <input type="tel" id="user-phone" placeholder="Nimewo Telefòn">
-        <input type="password" id="user-pass" placeholder="Modpas">
-        <button class="btn-main" onclick="login()">ANTRE</button>
+        <input type="password" id="user-pass" placeholder="Modpas (oswa Kòd Admin)">
+        <button class="btn-main" onclick="login()">ANTRE NAN JWÈT LA</button>
     </div>
 
-    <div id="admin-panel" class="card" style="display:none; border-color: red;">
-        <h2 style="color: red;">ADMIN</h2>
-        <input type="tel" id="target-phone" placeholder="Nimewo Kliyan">
-        <input type="number" id="add-amount" placeholder="Montan">
-        <button style="background: red; color: white;" onclick="ajouteKob()">VOYE KÒB</button>
-    </div>
-
-    <div id="main-app" class="card" style="display:none;">
-        <div style="display:flex; justify-content: space-between;">
-            <span id="display-id"></span>
-            <span>Balans: <b id="balans" style="color:var(--neon)">0</b> HTG</span>
+    <!-- 2. ADMIN PANEL (CRICRA31) -->
+    <div id="admin-panel" class="hidden">
+        <div class="card" style="border-color: #ff4d4d;">
+            <h2 style="color: #ff4d4d;">PANÈL ADMIN</h2>
+            <input type="tel" id="target-phone" placeholder="Nimewo Kliyan">
+            <input type="number" id="add-amount" placeholder="Montan HTG">
+            <button class="btn-admin" onclick="ajouteKob()">AJOUTE KÒB SOU KONT</button>
+            <button onclick="location.reload()" style="background: #333; color: white;">SOTI</button>
         </div>
-        <hr>
-        <button class="btn-main" style="margin-top:20px">JWE DOMINO</button>
     </div>
 
+    <!-- 3. MAIN GAME APP -->
+    <div id="main-app" class="hidden">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div id="display-id" style="font-size: 0.8rem; color: #888;"></div>
+            <div>Balans: <span id="balans" class="balans">0</span> HTG</div>
+        </div>
+
+        <div class="card">
+            <h3>JWÈT DOMINO</h3>
+            <div class="domino-area">
+                <div class="domino-board" id="game-board">
+                    <div style="color: #005a2b; font-style: italic;">Tablo a vid...</div>
+                </div>
+                <button class="btn-main" onclick="alert('Lojik jwèt la ap chaje...')">KÒMANSE JWÈT</button>
+            </div>
+        </div>
+
+        <div class="card" style="border-color: var(--gold);">
+            <p style="color: var(--gold); font-size: 0.8rem;">Pataje ak yon zanmi, resevwa 5 HTG!</p>
+            <button style="background: #25d366; color: white;" onclick="pataje()">PATAJE SOU WHATSAPP</button>
+        </div>
+    </div>
+
+    <script>
+        let balans = 0;
+        const ADMIN_CODE = "Cricra31";
+
+        function login() {
+            let p = document.getElementById("user-phone").value;
+            let m = document.getElementById("user-pass").value;
+
+            if (m === ADMIN_CODE) {
+                document.getElementById("auth-page").classList.add("hidden");
+                document.getElementById("admin-panel").classList.remove("hidden");
+            } else if (p.length >= 8 && m !== "") {
+                document.getElementById("auth-page").classList.add("hidden");
+                document.getElementById("main-app").classList.remove("hidden");
+                document.getElementById("display-id").innerText = "ID: " + p;
+            } else {
+                alert("Tanpri ranpli enfòmasyon yo byen.");
+            }
+        }
+
+        function ajouteKob() {
+            let tel = document.getElementById("target-phone").value;
+            let mnt = document.getElementById("add-amount").value;
+            if (tel && mnt) {
+                alert("Siksè! " + mnt + " HTG voye bay " + tel);
+            }
+        }
+
+        function pataje() {
+            let id = document.getElementById("user-phone").value;
+            let link = window.location.href + "?ref=" + id;
+            let msg = `Vini defye m sou M-PARYAJ! Enskri ak lyen m nan: ${link}`;
+            window.open(`https://wa.me{encodeURIComponent(msg)}`, '_blank');
+        }
+    </script>
 </body>
 </html>
