@@ -4,151 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- VERIFIKASYON GOOGLE -->
+    <!-- KÒD VERIFIKASYON GOOGLE LA (LI PA DWÈ PARÈT SOU EKRAN AN) -->
     <meta name="google-site-verification" content="2dLxLpWFWhQvJnr9_PohsosCbP3TcmlIVFb0YdLbJB0" />
 
     <title>M-PARYAJ | Domino & Mopion</title>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; --card: #1a1a1a; --danger: #ff4d4d; }
+        :root { --neon: #00ff88; --gold: #ffcc00; --bg: #0d0d0d; --card: #1a1a1a; }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
         .hidden { display: none; }
-        .card { background: var(--card); padding: 20px; margin: 10px; border-radius: 15px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .card { background: var(--card); padding: 20px; margin: 10px; border-radius: 15px; border: 1px solid #333; }
         input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
-        button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin: 5px 0; }
+        button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; }
         .btn-main { background: var(--neon); color: black; }
-        .btn-natcash { background: #ff0000; color: white; }
-        .btn-admin { background: var(--danger); color: white; }
-        .logo { font-size: 2rem; font-weight: 900; color: white; text-shadow: 0 0 10px var(--neon); margin-bottom: 10px; }
-        .logo span { color: var(--neon); }
         .balans { color: var(--neon); font-size: 1.5rem; font-weight: bold; }
-        
-        /* MOPION GRID */
         .mopion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 250px; margin: 15px auto; }
-        .cell { background: #222; height: 70px; border: 1px solid var(--neon); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; }
+        .cell { background: #222; height: 70px; border: 1px solid var(--neon); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
     </style>
 </head>
 <body>
 
-    <!-- 1. LOGIN -->
     <div id="auth-page" class="card" style="margin-top: 50px;">
-        <div class="logo">M-<span>PARYAJ</span></div>
-        <p style="color: #888;">Antre pou w kòmanse jwe</p>
+        <div style="font-size: 2rem; font-weight: 900;">M-<span>PARYAJ</span></div>
         <input type="tel" id="user-phone" placeholder="Nimewo Telefòn">
         <input type="password" id="user-pass" placeholder="Modpas">
-        <button class="btn-main" onclick="login()">ANTRE NAN JWÈT LA</button>
+        <button class="btn-main" onclick="login()">ANTRE</button>
     </div>
 
-    <!-- 2. ADMIN PANEL -->
-    <div id="admin-panel" class="hidden">
-        <div class="card" style="border-color: var(--danger);">
-            <h2 style="color: var(--danger);">PANÈL ADMIN</h2>
-            <input type="tel" id="target-phone" placeholder="Nimewo Kliyan">
-            <input type="number" id="add-amount" placeholder="Montan HTG">
-            <button class="btn-admin" onclick="ajouteKob()">AJOUTE KÒB SOU KONT</button>
-            <button onclick="location.reload()" style="background: #333; color: white;">SOTI</button>
-        </div>
-    </div>
-
-    <!-- 3. APP PRINCIPAL -->
     <div id="main-app" class="hidden">
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
-            <div id="display-id" style="font-size: 0.8rem; color: #888;"></div>
+        <div class="card">
             <div>Balans: <span id="balans" class="balans">0</span> HTG</div>
+            <p>Pou rechaje, voye kòb sou: <b>5511-0103</b></p>
         </div>
-
-        <!-- RECHAJ SECTION -->
-        <div class="card" style="border: 1px solid var(--gold);">
-            <h3>RECHAJE KONT OU</h3>
-            <p style="font-size: 0.8rem;">Voye kòb sou nimewo sa a (MonCash/NatCash):</p>
-            <div style="background: #000; padding: 10px; border-radius: 8px; font-size: 1.2rem; color: var(--gold); font-weight: bold;">
-                5511-0103
-            </div>
-            <button class="btn-natcash" onclick="alert('Voye prèv peman an bay Admin pou aktivasyon.')">MWEN FIN PEYE</button>
-        </div>
-
-        <!-- MOPION GAME -->
         <div class="card">
-            <h3>JWÈT MÒPYON</h3>
+            <h3>MÒPYON</h3>
             <div class="mopion-grid" id="mopion-board"></div>
-            <p id="mopion-status">Chwazi yon kare</p>
-            <button class="btn-main" onclick="resetMopion()">REKÒMANSE MÒPYON</button>
+            <button class="btn-main" onclick="resetMopion()">REKÒMANSE</button>
         </div>
-
-        <!-- DOMINO SECTION -->
-        <div class="card">
-            <h3>JWÈT DOMINO</h3>
-            <button class="btn-main" onclick="alert('Tablo Domino a ap prepare...')">ANTRE NAN TABLO</button>
-        </div>
-
-        <button style="background: #25d366; color: white;" onclick="pataje()">PATAJE POU W GENYEN 5 HTG</button>
     </div>
 
     <script>
-        let balans = 0;
-        const ADMIN_CODE = "Cricra31";
-        let board = ["", "", "", "", "", "", "", "", ""];
-        let currentPlayer = "X";
-
         function login() {
             let p = document.getElementById("user-phone").value;
-            let m = document.getElementById("user-pass").value;
-
-            if (m === ADMIN_CODE) {
-                document.getElementById("auth-page").classList.add("hidden");
-                document.getElementById("admin-panel").classList.remove("hidden");
-            } else if (p.length >= 8) {
+            if (p.length >= 8) {
                 document.getElementById("auth-page").classList.add("hidden");
                 document.getElementById("main-app").classList.remove("hidden");
-                document.getElementById("display-id").innerText = "ID: " + p;
                 initMopion();
-            } else {
-                alert("Mete yon nimewo telefòn valid.");
             }
         }
-
-        // LOJIK MOPION
+        let board = ["", "", "", "", "", "", "", "", ""];
         function initMopion() {
-            const boardDiv = document.getElementById("mopion-board");
-            boardDiv.innerHTML = "";
-            board.forEach((val, index) => {
-                let cell = document.createElement("div");
-                cell.className = "cell";
-                cell.innerText = val;
-                cell.onclick = () => makeMove(index);
-                if(val === "X") cell.style.color = "var(--neon)";
-                if(val === "O") cell.style.color = "var(--gold)";
-                boardDiv.appendChild(cell);
+            const b = document.getElementById("mopion-board");
+            b.innerHTML = "";
+            board.forEach((v, i) => {
+                let c = document.createElement("div");
+                c.className = "cell";
+                c.innerText = v;
+                c.onclick = () => { if(board[i]=="") { board[i]="X"; initMopion(); } };
+                b.appendChild(c);
             });
         }
-
-        function makeMove(index) {
-            if (board[index] === "") {
-                board[index] = currentPlayer;
-                currentPlayer = (currentPlayer === "X") ? "O" : "X";
-                document.getElementById("mopion-status").innerText = "Se tou pa: " + currentPlayer;
-                initMopion();
-            }
-        }
-
-        function resetMopion() {
-            board = ["", "", "", "", "", "", "", "", ""];
-            currentPlayer = "X";
-            document.getElementById("mopion-status").innerText = "Chwazi yon kare";
-            initMopion();
-        }
-
-        function ajouteKob() {
-            let tel = document.getElementById("target-phone").value;
-            let mnt = document.getElementById("add-amount").value;
-            if (tel && mnt) {
-                alert("Siksè! " + mnt + " HTG ap ajoute pou " + tel);
-            }
-        }
-
-        function pataje() {
-            let msg = "Vini jwe M-PARYAJ avè m! Rechaje pa MonCash/NatCash sou 55110103. Lyen: " + window.location.href;
-            window.open("https://wa.me" + encodeURIComponent(msg), '_blank');
-        }
+        function resetMopion() { board = ["", "", "", "", "", "", "", "", ""]; initMopion(); }
     </script>
 </body>
 </html>
