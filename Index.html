@@ -4,69 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="2dLxLpWFWhQvJnr9_PohsosCbP3TcmlIVFb0YdLbJB0" />
-    <title>M-PARYAJ | Domino & Mopion</title>
+    <title>M-PARYAJ</title>
     <style>
-        :root { --neon: #00ff88; --bg: #0d0d0d; --card: #1a1a1a; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; text-align: center; }
-        .hidden { display: none; }
-        .card { background: var(--card); padding: 20px; margin: 10px; border-radius: 15px; border: 1px solid #333; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
-        button { width: 90%; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; background: var(--neon); color: black; }
-        .balans { color: var(--neon); font-size: 1.5rem; font-weight: bold; }
-        .mopion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 250px; margin: 15px auto; }
-        .cell { background: #222; height: 70px; border: 1px solid var(--neon); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+        body { background: #0d0d0d; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #00ff88; margin-bottom: 20px; }
+        .btn { background: #00ff88; color: black; padding: 15px; width: 100%; border-radius: 50px; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
-
-    <div id="auth-page" class="card" style="margin-top: 50px;">
-        <div style="font-size: 2rem; font-weight: 900; text-shadow: 0 0 10px var(--neon);">M-PARYAJ</div>
-        <input type="tel" id="user-phone" placeholder="Nimewo Telefòn">
-        <input type="password" id="user-pass" placeholder="Modpas">
-        <button onclick="login()">ANTRE</button>
+    <div class="card">
+        <h1>M-PARYAJ</h1>
+        <p>Balans: 0 HTG</p>
+        <p>Rechaje sou: <b>5511-0103</b></p>
     </div>
-
-    <div id="main-app" class="hidden">
-        <div class="card">
-            <div>Balans: <span id="balans" class="balans">0</span> HTG</div>
-            <p style="font-size: 0.9rem;">Rechaje (MonCash/NatCash): <br><b style="font-size: 1.2rem; color: #ffcc00;">5511-0103</b></p>
-        </div>
-        <div class="card">
-            <h3>MÒPYON</h3>
-            <div class="mopion-grid" id="mopion-board"></div>
-            <button onclick="resetMopion()">REKÒMANSE</button>
-        </div>
+    <div class="card">
+        <h3>JWÈT YO AP DISPONIB TALÈ...</h3>
+        <button class="btn" onclick="location.reload()">RAFRECHI PAJ LA</button>
     </div>
-
-    <script>
-        function login() {
-            let p = document.getElementById("user-phone").value;
-            if (p.length >= 8) {
-                document.getElementById("auth-page").classList.add("hidden");
-                document.getElementById("main-app").classList.remove("hidden");
-                initMopion();
-            }
-        }
-        let board = ["", "", "", "", "", "", "", "", ""];
-        function initMopion() {
-            const b = document.getElementById("mopion-board");
-            b.innerHTML = "";
-            board.forEach((v, i) => {
-                let c = document.createElement("div");
-                c.className = "cell";
-                c.innerText = v;
-                c.onclick = () => { if(board[i]=="") { board[i]="X"; initMopion(); checkWin(); } };
-                b.appendChild(c);
-            });
-        }
-        function checkWin() {
-            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-            for (let l of lines) {
-                const [a,b,c] = l;
-                if(board[a] && board[a]===board[b] && board[a]===board[c]) alert("Ganyan!");
-            }
-        }
-        function resetMopion() { board = ["", "", "", "", "", "", "", "", ""]; initMopion(); }
-    </script>
 </body>
 </html>
