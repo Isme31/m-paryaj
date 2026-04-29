@@ -4,72 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ</title>
-    <!-- Libreri Firebase nesesè yo -->
+    <!-- Libreri Firebase obligatwa -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
+    
     <style>
-        body { background: #0d0d0d; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #00ff88; margin-bottom: 20px; }
-        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; }
-        .btn { background: #00ff88; color: black; padding: 12px; width: 85%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
+        body { background: #0d0d0d; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
+        .card { background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #00ff88; margin: 20px auto; max-width: 400px; box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
+        .btn { background: #00ff88; color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        .btn:hover { background: #00cc6e; transform: scale(1.02); }
         .hidden { display: none; }
+        h2 { margin-top: 0; }
+        .balans-box { font-size: 24px; font-weight: bold; margin: 15px 0; color: #00ff88; }
     </style>
 </head>
 <body>
 
+    <!-- PAJ KONEKSYON -->
     <div id="login-box" class="card">
-        <h2>M-PARYAJ</h2>
+        <h2 style="color: #00ff88;">M-PARYAJ</h2>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas (Cricra31)">
+        <input type="password" id="pass" placeholder="Modpas (Admin oswa Itilizatè)">
         <button class="btn" onclick="antre()">KONEKTE</button>
     </div>
 
-    <div id="admin-box" class="card hidden">
-        <h2 style="color:red">ADMIN</h2>
-        <input type="tel" id="kliyan" placeholder="Nimewo Kliyan">
+    <!-- PAJ ADMIN -->
+    <div id="admin-box" class="card hidden" style="border-color: #ff4444;">
+        <h2 style="color:#ff4444">PANÈL ADMIN</h2>
+        <p>Mete kòb sou kont yon kliyan</p>
+        <input type="tel" id="kliyan" placeholder="Nimewo Telefòn Kliyan an">
         <input type="number" id="kob" placeholder="Montan HTG">
-        <button class="btn" onclick="ajoute()">METE KÒB</button>
+        <button class="btn" style="background:#ff4444" onclick="ajoute()">KONFIME DEPO</button>
+        <br><br>
+        <button onclick="location.reload()" style="background:none; border:none; color:gray; cursor:pointer;">Soti</button>
     </div>
 
+    <!-- PAJ JWÈT / BALANS -->
     <div id="game-box" class="card hidden">
-        <h3>Balans: <span id="bal" style="color:#00ff88">0</span> HTG</h3>
-        <p>Byenvini nan jwèt la!</p>
-        <button class="btn" onclick="location.reload()">SOTI</button>
+        <h2>BYENVINI</h2>
+        <p>Balans ou se:</p>
+        <div class="balans-box"><span id="bal">0</span> HTG</div>
+        <p>Ou prèt pou jwe Mopyon ak Domino?</p>
+        <button class="btn" onclick="alert('Jwèt la ap kòmanse talè...')">JWE KOUNYE A</button>
+        <br><br>
+        <button class="btn" style="background:#444; color:white" onclick="location.reload()">DEKONEKTE</button>
     </div>
 
     <script>
-        // Konfigirasyon ak lyen ou an
-        const config = { databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com/" };
-        firebase.initializeApp(config);
+        // Konfigirasyon Firebase ou a
+        const firebaseConfig = {
+            databaseURL: "https://firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         function antre() {
             let t = document.getElementById('tel').value;
             let p = document.getElementById('pass').value;
 
+            // SI SE ADMIN (Modpas la se: Cricra31)
             if(p === "Cricra31") {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-box').classList.remove('hidden');
-            } else if(t.length >= 8) {
+            } 
+            // SI SE YON KLIYAN
+            else if(t.length >= 8) {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('game-box').classList.remove('hidden');
-                // Chèche balans lan
-                db.ref('itilizate/' + t).on('value', (s) => {
-                    document.getElementById('bal').innerText = s.val() ? (s.val().balans || 0) : 0;
+                
+                // Al chèche balans nan Firebase
+                db.ref('itilizate/' + t).on('value', (snapshot) => {
+                    let data = snapshot.val();
+                    document.getElementById('bal').innerText = data ? (data.balans || 0) : 0;
                 });
+            } else {
+                alert("Tanpri antre yon nimewo telefòn valid oswa modpas admin lan.");
             }
         }
 
         function ajoute() {
             let k = document.getElementById('kliyan').value;
-            let m = parseInt(document.getElementById('kob').value);
+            let m = parseFloat(document.getElementById('kob').value);
 
-            if(k && m) {
-                db.ref('itilizate/' + k).once('value').then(s => {
-                    let ansyen = (s.val() && s.val().balans) ? s.val().balans : 0;
-                    db.ref('itilizate/' + k).update({ balans: ansyen + m })
-                    .then(() => alert("Kòb la ajoute ak siksè nan Firebase!"));
-                }).catch(e => alert("Erè: " + e.message));
+            if(k.length >= 8 && m > 0) {
+                let ref = db.ref('itilizate/' + k);
+                
+                ref.once('value').then(snapshot => {
+                    let ansyenBalans = 0;
+                    if(snapshot.exists() && snapshot.val().balans) {
+                        ansyenBalans = parseFloat(snapshot.val().balans);
+                    }
+                    
+                    let nouvoBalans = ansyenBalans + m;
+                    
+                    ref.update({
+                        balans: nouvoBalans,
+                        last_update: new Date().getTime()
+                    }).then(() => {
+                        alert("Siksè! " + m + " HTG ajoute pou " + k + ".\nNouvo balans: " + nouvoBalans);
+                        document.getElementById('kob').value = "";
+                    });
+                });
+            } else {
+                alert("Mete yon nimewo ak yon montan ki kòrèk.");
             }
         }
     </script>
