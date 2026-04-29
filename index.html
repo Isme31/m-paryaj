@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ | Ofisyèl</title>
+    <!-- Firebase SDK -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -58,6 +59,7 @@
     </div>
 
     <script>
+        // CONFIGURATION FIREBASE RANJE
         const firebaseConfig = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8", 
             databaseURL: "https://firebaseio.com"
@@ -97,7 +99,7 @@
             db.ref('demann').on('value', s => {
                 const lis = document.getElementById('admin-list');
                 lis.innerHTML = "";
-                if(!s.exists()) { lis.innerHTML = "Pa gen demann."; return; }
+                if(!s.exists()) { lis.innerHTML = "Pa gen okenn demann pannan."; return; }
 
                 s.forEach(c => {
                     let d = c.val();
@@ -127,6 +129,8 @@
             document.getElementById('game-box').classList.add('hidden');
             document.getElementById('mopyon-box').classList.remove('hidden');
             const grid = document.getElementById('grid'); grid.innerHTML = "";
+            board = Array(100).fill("");
+            jwetFini = false;
             for(let i=0; i<100; i++) {
                 let c = document.createElement('div'); c.className = 'cell';
                 c.onclick = () => {
