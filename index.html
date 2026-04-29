@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ | Ofisyèl</title>
+    
+    <!-- Bibliyotèk Firebase obligatwa yo -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
+
     <style>
         :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; }
         body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
@@ -16,6 +19,7 @@
         .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; font-weight: bold; }
         .hidden { display: none; }
         .balans-box { display: flex; justify-content: space-between; padding: 12px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 15px; }
+        .admin-item { background: #222; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
@@ -28,7 +32,7 @@
         <button class="btn" onclick="konekte()">ANTRE</button>
     </div>
 
-    <!-- 2. DASHBOARD (Tout moun ka wè sa depi yo konekte) -->
+    <!-- 2. DASHBOARD -->
     <div id="game-box" class="kad hidden">
         <div class="balans-box">
             <span>Balans: <b id="bal">0</b> HTG</span>
@@ -46,8 +50,8 @@
     <div id="admin-box" class="kad hidden" style="border-color: var(--wouj);">
         <h2 style="color: var(--wouj);">ADMIN PANEL</h2>
         <div style="color: var(--ò); margin-bottom: 10px;">Komisyon: <span id="admin-komisyon">0</span>G</div>
-        <div id="admin-list">Pa gen demann...</div>
-        <button class="btn" onclick="location.reload()" style="background:#444; color:white">SÒTI</button>
+        <div id="admin-list" style="text-align: left; font-size: 13px;">Pa gen demann...</div>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top: 15px;">SÒTI</button>
     </div>
 
     <!-- 4. JWÈT LA -->
@@ -58,6 +62,7 @@
     </div>
 
     <script>
+        // Konfigirasyon Firebase ou a
         const firebaseConfig = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8", 
             databaseURL: "https://firebaseio.com"
@@ -70,18 +75,23 @@
         function konekte() {
             let tel = document.getElementById('tel').value.trim();
             let p = document.getElementById('pass').value.trim();
+            
             if (p === "Cricra31") {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-box').classList.remove('hidden');
                 kouteAdmin(); return;
             }
+            
             if (tel.length >= 8 && p !== "") {
                 db.ref('itilizate/' + tel).once('value').then(s => {
                     let d = s.val();
-                    if (!d) { db.ref('itilizate/' + tel).set({ modpas: p, balans: 0 }).then(() => antreJwèt(tel)); }
-                    else { if (d.modpas === p) antreJwèt(tel); else alert("Move modpas!"); }
+                    if (!d) { 
+                        db.ref('itilizate/' + tel).set({ modpas: p, balans: 0 }).then(() => antreJwèt(tel)); 
+                    } else { 
+                        if (d.modpas === p) antreJwèt(tel); else alert("Move modpas!"); 
+                    }
                 });
-            }
+            } else { alert("Ranpli tout bwat yo!"); }
         }
 
         function antreJwèt(tel) {
@@ -95,13 +105,8 @@
 
         function lanseM() {
             let bal = parseFloat(document.getElementById('bal').innerText);
-            // BLOKAJ ISIT LA SI LI PA GEN LAJAN
-            if (bal < 50) {
-                alert("Ou pa gen ase kòb sou kont ou! Depoze omwen 50G.");
-                return;
-            }
+            if (bal < 50) { alert("Ou pa gen ase kòb!"); return; }
             
-            // Retire kòb la sèlman si li genyen l
             db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) - 50);
             document.getElementById('game-box').classList.add('hidden');
             document.getElementById('mopyon-box').classList.remove('hidden');
@@ -121,7 +126,10 @@
                         jwetFini = true; alert("BRAVO! Ou Ganyen 100G!");
                         db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) + 100);
                         db.ref('admin/komisyon').transaction(b => (b || 0) + 15);
-                    } else { tour = tour === "X" ? "O" : "X"; document.getElementById('status-m').innerText = "Se tou: " + tour; }
+                    } else { 
+                        tour = tour === "X" ? "O" : "X"; 
+                        document.getElementById('status-m').innerText = "Se tou: " + tour; 
+                    }
                 };
                 grid.appendChild(c);
             }
@@ -145,7 +153,10 @@
             return false;
         }
 
-        function voyeDemann(tip) { db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 }); alert("Demann voye!"); }
+        function voyeDemann(tip) { 
+            db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 }); 
+            alert("Demann voye!"); 
+        }
         
         function mandeRetre() {
             let m = prompt("Konbe ou vle retire?");
@@ -158,17 +169,29 @@
         }
 
         function kouteAdmin() {
-            db.ref('admin/komisyon').on('value', s => { document.getElementById('admin-komisyon').innerText = s.val() || 0; });
+            db.ref('admin/komisyon').on('value', s => { 
+                document.getElementById('admin-komisyon').innerText = s.val() || 0; 
+            });
             db.ref('demann').on('value', s => {
-                const lis = document.getElementById('admin-list'); lis.innerHTML = "";
-                if(!s.exists()) { lis.innerHTML = "Pa gen demann."; return; }
-                s.forEach(c => {
-                    let d = c.val();
-                    let div = document.createElement('div'); div.style.background="#333"; div.style.margin="5px"; div.style.padding="10px";
-                    div.innerHTML = `${d.tip}: ${d.tel} (${d.montan}G) <button onclick="db.ref('itilizate/${d.tel}/balans').transaction(b=>(b||0)+${d.montan}); db.ref('demann/${c.key}').remove()">OK</button>`;
+                const lis = document.getElementById('admin-list');
+                lis.innerHTML = "";
+                s.forEach(child => {
+                    let d = child.val();
+                    let div = document.createElement('div');
+                    div.className = 'admin-item';
+                    div.innerHTML = `<span>${d.tip}: ${d.tel} (${d.montan}G)</span> 
+                        <button onclick="apwouve('${child.key}', '${d.tel}', ${d.montan}, '${d.tip}')">✅</button>`;
                     lis.appendChild(div);
                 });
             });
+        }
+
+        function apwouve(key, tel, montan, tip) {
+            if(tip === "DEPO") {
+                db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + montan);
+            }
+            db.ref('demann/' + key).remove();
+            alert("Konfime!");
         }
     </script>
 </body>
