@@ -10,16 +10,8 @@
         :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; }
         body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .kad { background: var(--kad); padding: 20px; border-radius: 15px; border: 1px solid var(--vè); margin: 10px auto; max-width: 420px; }
-        
-        /* STYLE PREZANTASYON */
-        .hero-title { color: var(--vè); font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 0 10px var(--vè); }
-        .badge { background: var(--ò); color: black; padding: 5px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 20px; }
-        .rule-card { background: #222; padding: 15px; border-radius: 10px; margin: 10px 0; text-align: left; border-left: 4px solid var(--vè); }
-        
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
-        .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        .btn:hover { transform: scale(1.05); filter: brightness(1.2); }
-        
+        .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; background: var(--vè); border: 2px solid var(--vè); margin: 15px auto; max-width: 320px; }
         .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; font-weight: bold; }
         .hidden { display: none; }
@@ -28,38 +20,18 @@
 </head>
 <body>
 
-    <!-- 1. PAJ PREZANTASYON (LANDING PAGE) -->
-    <div id="intro-box" class="kad">
-        <h1 class="hero-title">M-PARYAJ</h1>
-        <div class="badge">VÈSYON 1.0</div>
-        <p>Byenvini sou sèl platfòm Mopyon an Ayiti kote ou ka fè kòb!</p>
-        
-        <div class="rule-card">
-            <b>💰 Miz:</b> 50 HTG pou chak pati.
-        </div>
-        <div class="rule-card">
-            <b>🏆 Prim:</b> Aliyen 5 pwen epi genyen 100 HTG imedyatman.
-        </div>
-        <div class="rule-card">
-            <b>⚡ Vitès:</b> Depo ak Retrè trete rapid pa Admin.
-        </div>
-
-        <button class="btn" onclick="montreLogin()">KÒMANSE JWE</button>
-    </div>
-
-    <!-- 2. LOGIN / ENSKRIPSYON -->
-    <div id="login-box" class="kad hidden">
-        <h1 style="color: var(--vè);">KONEKSYON</h1>
+    <!-- 1. LOGIN -->
+    <div id="login-box" class="kad">
+        <h1 style="color: var(--vè);">M-PARYAJ</h1>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas ou">
-        <button class="btn" onclick="konekte()">ANTRE NAN KONT OU</button>
-        <p style="font-size: 12px; color: #666; margin-top: 15px;" onclick="location.reload()">Tounen nan Prezantasyon</p>
+        <input type="password" id="pass" placeholder="Modpas">
+        <button class="btn" onclick="konekte()">ANTRE</button>
     </div>
 
-    <!-- 3. DASHBOARD JWÈ -->
+    <!-- 2. DASHBOARD (Tout moun ka wè sa depi yo konekte) -->
     <div id="game-box" class="kad hidden">
         <div class="balans-box">
-            <span>Balans: <b id="bal" style="color:var(--vè)">0</b> HTG</span>
+            <span>Balans: <b id="bal">0</b> HTG</span>
             <span style="color: var(--vè);">● Online</span>
         </div>
         <div style="display: flex; gap: 5px;">
@@ -70,14 +42,15 @@
         <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">SÒTI</button>
     </div>
 
-    <!-- PANEL ADMIN & MOPYON (Menm lojik la) -->
+    <!-- 3. ADMIN PANEL -->
     <div id="admin-box" class="kad hidden" style="border-color: var(--wouj);">
         <h2 style="color: var(--wouj);">ADMIN PANEL</h2>
         <div style="color: var(--ò); margin-bottom: 10px;">Komisyon: <span id="admin-komisyon">0</span>G</div>
-        <div id="admin-list">Chaje...</div>
+        <div id="admin-list">Pa gen demann...</div>
         <button class="btn" onclick="location.reload()" style="background:#444; color:white">SÒTI</button>
     </div>
 
+    <!-- 4. JWÈT LA -->
     <div id="mopyon-box" class="kad hidden">
         <h3 id="status-m">Se tou: X</h3>
         <div id="grid" class="grid"></div>
@@ -94,12 +67,6 @@
 
         let mwen = "", tour = "X", jwetFini = false, board = Array(100).fill("");
 
-        function montreLogin() {
-            document.getElementById('intro-box').classList.add('hidden');
-            document.getElementById('login-box').classList.remove('hidden');
-        }
-
-        // --- Mete rès fonksyon konekte(), lanseM(), tcheke(), elatriye isit la (menm jan ak anvan) ---
         function konekte() {
             let tel = document.getElementById('tel').value.trim();
             let p = document.getElementById('pass').value.trim();
@@ -121,12 +88,20 @@
             mwen = tel;
             document.getElementById('login-box').classList.add('hidden');
             document.getElementById('game-box').classList.remove('hidden');
-            db.ref('itilizate/' + mwen + '/balans').on('value', s => { document.getElementById('bal').innerText = s.val() || 0; });
+            db.ref('itilizate/' + mwen + '/balans').on('value', s => { 
+                document.getElementById('bal').innerText = s.val() || 0; 
+            });
         }
 
         function lanseM() {
             let bal = parseFloat(document.getElementById('bal').innerText);
-            if (bal < 50) return alert("Ou bezwen 50G!");
+            // BLOKAJ ISIT LA SI LI PA GEN LAJAN
+            if (bal < 50) {
+                alert("Ou pa gen ase kòb sou kont ou! Depoze omwen 50G.");
+                return;
+            }
+            
+            // Retire kòb la sèlman si li genyen l
             db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) - 50);
             document.getElementById('game-box').classList.add('hidden');
             document.getElementById('mopyon-box').classList.remove('hidden');
@@ -142,7 +117,7 @@
                     if(board[i] !== "" || jwetFini) return;
                     board[i] = tour; c.innerText = tour;
                     c.style.color = tour === "X" ? "var(--vè)" : "var(--wouj)";
-                    if(tcheke(i)) {
+                    if(tchekeGanyen(i)) {
                         jwetFini = true; alert("BRAVO! Ou Ganyen 100G!");
                         db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) + 100);
                         db.ref('admin/komisyon').transaction(b => (b || 0) + 15);
@@ -151,12 +126,42 @@
                 grid.appendChild(c);
             }
         }
-        function tcheke(idx) { /* Lojik tcheke 5 la */ return false; }
-        function voyeDemann(tip) { db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 }); alert("Voye!"); }
-        function kouteAdmin() { 
+
+        function tchekeGanyen(idx) {
+            const s = 10, r = Math.floor(idx/s), c = idx%s;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for(let [dr, dc] of dirs) {
+                let cnt = 1;
+                for(let i=1; i<5; i++) {
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc]===tour) cnt++; else break;
+                }
+                for(let i=1; i<5; i++) {
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc]===tour) cnt++; else break;
+                }
+                if(cnt >= 5) return true;
+            }
+            return false;
+        }
+
+        function voyeDemann(tip) { db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 }); alert("Demann voye!"); }
+        
+        function mandeRetre() {
+            let m = prompt("Konbe ou vle retire?");
+            let bal = parseFloat(document.getElementById('bal').innerText);
+            if (m >= 50 && m <= bal) {
+                db.ref('itilizate/' + mwen + '/balans').transaction(b => b - m);
+                db.ref('demann').push({ tip: "RETRÈ", tel: mwen, montan: parseInt(m) });
+                alert("Demann retrè voye!");
+            }
+        }
+
+        function kouteAdmin() {
             db.ref('admin/komisyon').on('value', s => { document.getElementById('admin-komisyon').innerText = s.val() || 0; });
             db.ref('demann').on('value', s => {
                 const lis = document.getElementById('admin-list'); lis.innerHTML = "";
+                if(!s.exists()) { lis.innerHTML = "Pa gen demann."; return; }
                 s.forEach(c => {
                     let d = c.val();
                     let div = document.createElement('div'); div.style.background="#333"; div.style.margin="5px"; div.style.padding="10px";
