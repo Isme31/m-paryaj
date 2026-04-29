@@ -3,151 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ V6 - MÒPION 5</title>
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+    <title>M-PARYAJ V6 - GOMOKU</title>
+    
+    <!-- Firebase SDK V9 Modular (via CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://gstatic.com";
+        import { getDatabase, ref, set, get, onValue } from "https://gstatic.com";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
+            authDomain: "m-paryaj.firebaseapp.com",
+            databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com",
+            projectId: "m-paryaj",
+            storageBucket: "m-paryaj.firebasestorage.app",
+            messagingSenderId: "103993159961",
+            appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588",
+            measurementId: "G-VCY342YNC8"
+        };
+
+        // Inisyalizasyon
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Rann fonksyon yo disponib pou bouton yo
+        window.konekte = async function() {
+            const tel = document.getElementById('tel').value.trim();
+            const pass = document.getElementById('pass').value.trim();
+            const status = document.getElementById('net-status');
+
+            if(!tel || !pass) return alert("Ranpli tout jaden yo!");
+
+            const userRef = ref(db, 'itilizate/' + tel);
+            const snapshot = await get(userRef);
+
+            if (!snapshot.exists()) {
+                // Kreye nouvo kont si l pa egziste
+                await set(userRef, { modpas: pass, balans: 50 });
+                louvriDashboard(tel);
+            } else {
+                const data = snapshot.val();
+                if(data.modpas === pass) {
+                    louvriDashboard(tel);
+                } else {
+                    alert("Modpas sa a pa kòrèk!");
+                }
+            }
+        };
+
+        function louvriDashboard(tel) {
+            document.getElementById('login-box').style.display = 'none';
+            document.getElementById('game-box').classList.remove('hidden');
+            document.getElementById('tel-afiche').innerText = "Nimewo: " + tel;
+
+            // Koute balans lan an tan reyèl
+            onValue(ref(db, 'itilizate/' + tel + '/balans'), (s) => {
+                document.getElementById('bal').innerText = s.val() || 0;
+            });
+
+            initMopion();
+        }
+    </script>
 
     <style>
-        body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
-        .box { background: #161616; padding: 15px; border-radius: 15px; border: 2px solid #00ff88; max-width: 400px; margin: auto; }
-        input { width: 80%; padding: 10px; margin: 5px 0; border-radius: 8px; border: none; background: #222; color: white; }
-        button { background: #00ff88; color: black; padding: 12px; width: 90%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        body { background: #050505; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 10px; }
+        .box { background: #111; padding: 20px; border-radius: 20px; border: 2px solid #00ff88; max-width: 400px; margin: 20px auto; box-shadow: 0 0 20px rgba(0,255,136,0.1); }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; font-size: 16px; }
+        button { background: #00ff88; color: #000; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.95); }
         .hidden { display: none; }
         
-        /* Grid 10x10 */
+        /* Grid 10x10 optimize pou mobil */
         .grid { 
             display: grid; 
             grid-template-columns: repeat(10, 1fr); 
-            gap: 2px; 
-            margin: 15px auto; 
-            width: 320px; 
-            background: #333;
-            padding: 2px;
-            border-radius: 5px;
+            gap: 1px; 
+            margin: 20px auto; 
+            width: 95vw; max-width: 350px;
+            background: #222;
+            border: 1px solid #333;
         }
         .cell { 
-            width: 30px; height: 30px; 
-            background: #161616; 
+            aspect-ratio: 1;
+            background: #0a0a0a; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 16px; font-weight: bold; cursor: pointer; 
+            font-size: 18px; font-weight: bold; cursor: pointer; 
         }
         .cell.x { color: #00ff88; }
         .cell.o { color: #ff4444; }
-        #status-game { color: #ffcc00; font-weight: bold; margin: 10px 0; }
+        #game-info { color: #ffcc00; font-size: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
+    <!-- KONEKSYON -->
     <div id="login-box" class="box">
-        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V6</span></h2>
-        <p id="net-status" style="color: orange; font-size: 11px;">Koneksyon... 📡</p>
+        <h2 style="color:#00ff88; letter-spacing: 2px;">M-PARYAJ <small style="color:white; font-size: 12px;">V6</small></h2>
+        <p id="net-status" style="color: #666; font-size: 12px;">Antre enfòmasyon w pou w jwe</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <button onclick="konekte()">ANTRE</button>
+        <button onclick="konekte()">KÒMANSE JWE</button>
     </div>
 
+    <!-- JWÈT LA -->
     <div id="game-box" class="box hidden">
-        <h3 id="tel-afiche" style="color:#00ff88; margin: 0;">Pwofil</h3>
-        <h1 style="color:#ffcc00; margin: 5px 0;"><span id="bal">0</span> HTG</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="tel-afiche" style="color:#888; font-size: 12px;">---</span>
+            <span style="color:#ffcc00; font-weight: bold;"><span id="bal">0</span> HTG</span>
+        </div>
         
-        <div id="status-game">Tou pa: X (Aliye 5)</div>
+        <div id="game-info">Tou pa: X (Aliye 5)</div>
         <div class="grid" id="board"></div>
 
-        <button onclick="resetMopion()" style="background:#444; color:white; width: 45%;">REKÒMANSE</button>
-        <button onclick="location.reload()" style="background:#ff4444; color:white; width: 45%;">SÒTI</button>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button onclick="resetGame()" style="background:#333; color:white;">REKÒMANSE</button>
+            <button onclick="location.reload()" style="background:#441111; color:white;">SÒTI</button>
+        </div>
     </div>
 
     <script>
-        const config = {
-            apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
-            authDomain: "://firebaseapp.com",
-            databaseURL: "https://firebaseio.com",
-            projectId: "m-paryaj",
-            appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588"
-        };
-
-        firebase.initializeApp(config);
-        const db = firebase.database();
-
-        function konekte() {
-            const tel = document.getElementById('tel').value.trim();
-            const pass = document.getElementById('pass').value.trim();
-            if(!tel || !pass) return alert("Ranpli jaden yo!");
-            db.ref('itilizate/' + tel).once('value').then(s => {
-                const d = s.val();
-                if(!d) db.ref('itilizate/' + tel).set({modpas: pass, balans: 50}).then(() => louvri(tel));
-                else if(d.modpas === pass) louvri(tel);
-                else alert("Manti!");
-            });
-        }
-
-        function louvri(tel) {
-            document.getElementById('login-box').classList.add('hidden');
-            document.getElementById('game-box').classList.remove('hidden');
-            document.getElementById('tel-afiche').innerText = "Nimewo: " + tel;
-            db.ref('itilizate/' + tel + '/balans').on('value', s => { document.getElementById('bal').innerText = s.val() || 0; });
-            initBoard();
-        }
-
-        // LOGIK MÒPION 5 ALIYE
         const size = 10;
-        let board = Array(size * size).fill("");
+        let board = Array(100).fill("");
         let turn = "X";
         let active = true;
 
-        function initBoard() {
-            const boardHtml = document.getElementById('board');
-            boardHtml.innerHTML = "";
-            for(let i=0; i<size*size; i++) {
-                let c = document.createElement('div');
-                c.className = 'cell';
-                c.onclick = () => play(i);
-                boardHtml.appendChild(c);
+        function initMopion() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = "";
+            for(let i=0; i<100; i++) {
+                let d = document.createElement('div');
+                d.className = 'cell';
+                d.id = 'c' + i;
+                d.onclick = () => play(i);
+                boardDiv.appendChild(d);
             }
         }
 
         function play(i) {
             if(board[i] === "" && active) {
                 board[i] = turn;
-                const cells = document.getElementsByClassName('cell');
-                cells[i].innerText = turn;
-                cells[i].classList.add(turn.toLowerCase());
+                const cell = document.getElementById('c' + i);
+                cell.innerText = turn;
+                cell.classList.add(turn.toLowerCase());
                 
                 if(checkWin(i)) {
-                    document.getElementById('status-game').innerText = "Jwè " + turn + " Genyen! 🎉";
+                    document.getElementById('game-info').innerText = "BRAVO! Jwè " + turn + " genyen! 🎉";
                     active = false;
                 } else {
                     turn = (turn === "X") ? "O" : "X";
-                    document.getElementById('status-game').innerText = "Tou pa: " + turn;
+                    document.getElementById('game-info').innerText = "Tou pa: " + turn;
                 }
             }
         }
 
         function checkWin(i) {
-            const r = Math.floor(i / size), c = i % size;
-            return checkDir(r, c, 0, 1) || checkDir(r, c, 1, 0) || checkDir(r, c, 1, 1) || checkDir(r, c, 1, -1);
+            const r = Math.floor(i/10), c = i%10;
+            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+            return dirs.some(([dr, dc]) => {
+                let count = 1;
+                [[dr, dc], [-dr, -dc]].forEach(([tr, tc]) => {
+                    let curR = r + tr, curC = c + tc;
+                    while(curR>=0 && curR<10 && curC>=0 && curC<10 && board[curR*10+curC] === turn) {
+                        count++; curR += tr; curC += tc;
+                    }
+                });
+                return count >= 5;
+            });
         }
 
-        function checkDir(r, c, dr, dc) {
-            let count = 1;
-            count += countInDir(r, c, dr, dc);
-            count += countInDir(r, c, -dr, -dc);
-            return count >= 5;
-        }
-
-        function countInDir(r, c, dr, dc) {
-            let ct = 0, curR = r + dr, curC = c + dc;
-            while(curR >=0 && curR < size && curC >=0 && curC < size && board[curR * size + curC] === turn) {
-                ct++; curR += dr; curC += dc;
-            }
-            return ct;
-        }
-
-        function resetMopion() {
-            board.fill(""); turn = "X"; active = true;
-            document.getElementById('status-game').innerText = "Tou pa: X (Aliye 5)";
-            const cells = document.getElementsByClassName('cell');
-            for(let c of cells) { c.innerText = ""; c.className = 'cell'; }
+        window.resetGame = function() {
+            board.fill("");
+            turn = "X";
+            active = true;
+            document.getElementById('game-info').innerText = "Tou pa: X (Aliye 5)";
+            initMopion();
         }
     </script>
 </body>
