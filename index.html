@@ -3,64 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ V6 - MÒPION</title>
-    
-    <!-- Firebase SDK (Vèsyon ki kòrèk la) -->
+    <title>M-PARYAJ V6 - MÒPION 5</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
     <style>
-        body { background: #0a0a0a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
-        .box { background: #161616; padding: 25px; border-radius: 15px; border: 2px solid #00ff88; max-width: 380px; margin: auto; box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #222; color: white; font-size: 16px; }
-        button { background: #00ff88; color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
+        .box { background: #161616; padding: 15px; border-radius: 15px; border: 2px solid #00ff88; max-width: 400px; margin: auto; }
+        input { width: 80%; padding: 10px; margin: 5px 0; border-radius: 8px; border: none; background: #222; color: white; }
+        button { background: #00ff88; color: black; padding: 12px; width: 90%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .hidden { display: none; }
         
-        /* Style pou Mòpion */
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px auto; max-width: 250px; }
-        .cell { width: 80px; height: 80px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; cursor: pointer; }
-        .cell:hover { background: #333; }
-        .win { color: #00ff88; text-shadow: 0 0 10px #00ff88; }
+        /* Grid 10x10 */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(10, 1fr); 
+            gap: 2px; 
+            margin: 15px auto; 
+            width: 320px; 
+            background: #333;
+            padding: 2px;
+            border-radius: 5px;
+        }
+        .cell { 
+            width: 30px; height: 30px; 
+            background: #161616; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 16px; font-weight: bold; cursor: pointer; 
+        }
+        .cell.x { color: #00ff88; }
+        .cell.o { color: #ff4444; }
+        #status-game { color: #ffcc00; font-weight: bold; margin: 10px 0; }
     </style>
 </head>
 <body>
 
-    <!-- PAJ KONEKSYON -->
     <div id="login-box" class="box">
-        <h2 style="color:#00ff88; margin-bottom: 5px;">M-PARYAJ <span style="font-size: 10px; color: gray;">V6</span></h2>
-        <p id="status" style="color: orange; font-size: 12px; margin-top: 0;">Y ap chaje... 📡</p>
-        
+        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V6</span></h2>
+        <p id="net-status" style="color: orange; font-size: 11px;">Koneksyon... 📡</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="konekte()">ANTRE</button>
     </div>
 
-    <!-- PAJ JWÈT MÒPION -->
     <div id="game-box" class="box hidden">
-        <h3 id="tel-afiche" style="color:#00ff88; margin-bottom: 5px;">Pwofil</h3>
-        <h1 style="color:#ffcc00; margin-top: 0;"><span id="bal">0</span> HTG</h1>
+        <h3 id="tel-afiche" style="color:#00ff88; margin: 0;">Pwofil</h3>
+        <h1 style="color:#ffcc00; margin: 5px 0;"><span id="bal">0</span> HTG</h1>
         
-        <hr style="border: 0.5px solid #333;">
-        <p id="game-status">Tou pa w (X)</p>
-        
-        <div class="grid" id="board">
-            <div class="cell" onclick="makeMove(0)"></div>
-            <div class="cell" onclick="makeMove(1)"></div>
-            <div class="cell" onclick="makeMove(2)"></div>
-            <div class="cell" onclick="makeMove(3)"></div>
-            <div class="cell" onclick="makeMove(4)"></div>
-            <div class="cell" onclick="makeMove(5)"></div>
-            <div class="cell" onclick="makeMove(6)"></div>
-            <div class="cell" onclick="makeMove(7)"></div>
-            <div class="cell" onclick="makeMove(8)"></div>
-        </div>
+        <div id="status-game">Tou pa: X (Aliye 5)</div>
+        <div class="grid" id="board"></div>
 
-        <button onclick="resetGame()" style="background:#444; color:white; width: 45%;">REKÒMANSE</button>
+        <button onclick="resetMopion()" style="background:#444; color:white; width: 45%;">REKÒMANSE</button>
         <button onclick="location.reload()" style="background:#ff4444; color:white; width: 45%;">SÒTI</button>
     </div>
 
     <script>
-        // 1. KONFIGIRASYON (KORIJE)
         const config = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
             authDomain: "://firebaseapp.com",
@@ -69,85 +66,88 @@
             appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588"
         };
 
-        // Inisyalize Firebase
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(config);
-            var db = firebase.database();
-            document.getElementById('status').innerText = "Koneksyon Prè ✅";
-            document.getElementById('status').style.color = "#00ff88";
-        } else {
-            document.getElementById('status').innerText = "REZO BLOKE: Script Firebase la pa chaje! ❌";
-            document.getElementById('status').style.color = "#ff4444";
-        }
+        firebase.initializeApp(config);
+        const db = firebase.database();
 
-        // 2. SISTÈM LOGIN
-        window.konekte = function() {
+        function konekte() {
             const tel = document.getElementById('tel').value.trim();
             const pass = document.getElementById('pass').value.trim();
             if(!tel || !pass) return alert("Ranpli jaden yo!");
-
-            db.ref('itilizate/' + tel).once('value').then(snap => {
-                const user = snap.val();
-                if(!user) {
-                    db.ref('itilizate/' + tel).set({modpas: pass, balans: 100}).then(() => login(tel));
-                } else if(user.modpas === pass) {
-                    login(tel);
-                } else {
-                    alert("Modpas pa kòrèk!");
-                }
+            db.ref('itilizate/' + tel).once('value').then(s => {
+                const d = s.val();
+                if(!d) db.ref('itilizate/' + tel).set({modpas: pass, balans: 50}).then(() => louvri(tel));
+                else if(d.modpas === pass) louvri(tel);
+                else alert("Manti!");
             });
-        };
+        }
 
-        function login(tel) {
+        function louvri(tel) {
             document.getElementById('login-box').classList.add('hidden');
             document.getElementById('game-box').classList.remove('hidden');
             document.getElementById('tel-afiche').innerText = "Nimewo: " + tel;
-            db.ref('itilizate/' + tel + '/balans').on('value', s => {
-                document.getElementById('bal').innerText = s.val() || 0;
-            });
+            db.ref('itilizate/' + tel + '/balans').on('value', s => { document.getElementById('bal').innerText = s.val() || 0; });
+            initBoard();
         }
 
-        // 3. LOGIK JWÈT MÒPION
-        let board = ["", "", "", "", "", "", "", "", ""];
-        let currentPlayer = "X";
-        let gameActive = true;
+        // LOGIK MÒPION 5 ALIYE
+        const size = 10;
+        let board = Array(size * size).fill("");
+        let turn = "X";
+        let active = true;
 
-        function makeMove(index) {
-            if (board[index] === "" && gameActive) {
-                board[index] = currentPlayer;
-                document.getElementsByClassName('cell')[index].innerText = currentPlayer;
-                checkWin();
-                if (gameActive) {
-                    currentPlayer = currentPlayer === "X" ? "O" : "X";
-                    document.getElementById('game-status').innerText = "Tou pa " + currentPlayer;
+        function initBoard() {
+            const boardHtml = document.getElementById('board');
+            boardHtml.innerHTML = "";
+            for(let i=0; i<size*size; i++) {
+                let c = document.createElement('div');
+                c.className = 'cell';
+                c.onclick = () => play(i);
+                boardHtml.appendChild(c);
+            }
+        }
+
+        function play(i) {
+            if(board[i] === "" && active) {
+                board[i] = turn;
+                const cells = document.getElementsByClassName('cell');
+                cells[i].innerText = turn;
+                cells[i].classList.add(turn.toLowerCase());
+                
+                if(checkWin(i)) {
+                    document.getElementById('status-game').innerText = "Jwè " + turn + " Genyen! 🎉";
+                    active = false;
+                } else {
+                    turn = (turn === "X") ? "O" : "X";
+                    document.getElementById('status-game').innerText = "Tou pa: " + turn;
                 }
             }
         }
 
-        function checkWin() {
-            const winPatterns = [
-                [0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]
-            ];
-            for (let p of winPatterns) {
-                if (board[p[0]] !== "" && board[p[0]] === board[p[1]] && board[p[1]] === board[p[2]]) {
-                    document.getElementById('game-status').innerText = "Jwè " + board[p[0]] + " Genyen! 🎉";
-                    gameActive = false;
-                    return;
-                }
-            }
-            if (!board.includes("")) {
-                document.getElementById('game-status').innerText = "Match Nil! 🤝";
-                gameActive = false;
-            }
+        function checkWin(i) {
+            const r = Math.floor(i / size), c = i % size;
+            return checkDir(r, c, 0, 1) || checkDir(r, c, 1, 0) || checkDir(r, c, 1, 1) || checkDir(r, c, 1, -1);
         }
 
-        function resetGame() {
-            board = ["", "", "", "", "", "", "", "", ""];
-            currentPlayer = "X";
-            gameActive = true;
-            document.getElementById('game-status').innerText = "Tou pa X";
-            let cells = document.getElementsByClassName('cell');
-            for (let c of cells) { c.innerText = ""; }
+        function checkDir(r, c, dr, dc) {
+            let count = 1;
+            count += countInDir(r, c, dr, dc);
+            count += countInDir(r, c, -dr, -dc);
+            return count >= 5;
+        }
+
+        function countInDir(r, c, dr, dc) {
+            let ct = 0, curR = r + dr, curC = c + dc;
+            while(curR >=0 && curR < size && curC >=0 && curC < size && board[curR * size + curC] === turn) {
+                ct++; curR += dr; curC += dc;
+            }
+            return ct;
+        }
+
+        function resetMopion() {
+            board.fill(""); turn = "X"; active = true;
+            document.getElementById('status-game').innerText = "Tou pa: X (Aliye 5)";
+            const cells = document.getElementsByClassName('cell');
+            for(let c of cells) { c.innerText = ""; c.className = 'cell'; }
         }
     </script>
 </body>
