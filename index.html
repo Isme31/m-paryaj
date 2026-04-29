@@ -3,51 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ | Online 30s</title>
+    <title>M-PARYAJ | Ofisyèl</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
-        :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; }
+        :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; --wa: #25d366; }
         body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .kad { background: var(--kad); padding: 20px; border-radius: 15px; border: 1px solid var(--vè); margin: 10px auto; max-width: 420px; }
         .hidden { display: none !important; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
         .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn-wa { background: var(--wa); color: white; text-decoration: none; display: block; padding: 10px; width: 90%; border-radius: 50px; font-size: 13px; margin: 10px auto; font-weight: bold; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; background: var(--vè); border: 2px solid var(--vè); margin: 15px auto; max-width: 320px; }
         .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; font-weight: bold; min-height: 32px; }
         #timer { font-size: 24px; font-weight: bold; color: var(--wouj); margin: 10px 0; }
+        .admin-item { background: #222; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid var(--wouj); display: flex; justify-content: space-between; align-items: center; text-align: left; }
     </style>
 </head>
 <body>
 
+    <!-- 1. LOGIN -->
     <div id="login-box" class="kad">
         <h1 style="color: var(--vè);">M-PARYAJ</h1>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button class="btn" onclick="konekte()">ANTRE</button>
+        <a href="https://wa.me" class="btn-wa" target="_blank">WhatsApp Sipò 1</a>
+        <a href="https://wa.me" class="btn-wa" target="_blank" style="background:#128C7E">WhatsApp Sipò 2</a>
     </div>
 
+    <!-- 2. DASHBOARD -->
     <div id="game-box" class="kad hidden">
         <h3>Balans: <b id="bal">0</b> HTG</h3>
-        <p>JWE AK YON ZANMI (50G)</p>
-        <button class="btn" onclick="kreyeMatch()" style="background: var(--ò);">KREYE YON MATCH</button>
-        <div style="margin-top: 20px;">
-            <input type="text" id="join-code" placeholder="Kòd Zanmi w" style="width: 50%;">
-            <button class="btn" onclick="rejwennMatch()" style="width: 35%; font-size: 12px;">REJWENN</button>
+        <div style="background:#222; padding:10px; border-radius:10px; border:1px solid #444; margin-bottom:10px;">
+            <p style="font-size:12px; margin:0;">Depoze sou: <b>31594645</b></p>
+            <input type="text" id="depo-id" placeholder="ID Tranzaksyon MonCash" style="width:80%; font-size:14px;">
+            <button class="btn" onclick="voyeDemannDepo()" style="background:var(--ò); font-size:12px;">KONFIME DEPO</button>
         </div>
+        <button class="btn" onclick="mandeRetre()" style="background:white; color:black; font-size:12px;">RETIRE KÒB</button>
+        <hr style="border:0.5px solid #333; margin:20px 0;">
+        <button class="btn" onclick="kreyeMatch()">KREYE MATCH (50G)</button>
+        <input type="text" id="join-code" placeholder="Antre Kòd Zanmi" style="width:50%; margin-top:10px;">
+        <button class="btn" onclick="rejwennMatch()" style="width:35%; font-size:12px;">ANTRE</button>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:30px;">SÒTI</button>
     </div>
 
-    <div id="waiting-box" class="kad hidden">
-        <h2 style="color: var(--ò);">KÒD: <span id="display-code">----</span></h2>
-        <p>Voye kòd sa bay zanmi w lan.</p>
-        <button class="btn" onclick="location.reload()" style="background:var(--wouj);">ANILE</button>
+    <!-- 3. ADMIN PANEL -->
+    <div id="admin-box" class="kad hidden" style="border-color:var(--wouj)">
+        <h2 style="color:var(--wouj)">ADMIN PANEL</h2>
+        <div id="admin-list">Chaje demann...</div>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:15px;">KITE</button>
     </div>
 
+    <!-- 4. JWÈT LA -->
     <div id="mopyon-box" class="kad hidden">
         <div id="timer">30s</div>
-        <div style="display:flex; justify-content:space-between;">
-            <span id="pèsonaj">...</span>
-            <span id="status-m" style="color:var(--ò);">Se tou: X</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <span id="pèsonaj">Ou se: ?</span>
+            <span id="status-m" style="color:var(--ò)">Se tou: X</span>
         </div>
         <div id="grid" class="grid"></div>
     </div>
@@ -66,24 +79,60 @@
         function konekte() {
             let tel = document.getElementById('tel').value.trim();
             let p = document.getElementById('pass').value.trim();
-            if (tel.length < 8) return;
+            if (p === "Cricra31") {
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('admin-box').classList.remove('hidden');
+                kouteAdmin(); return;
+            }
+            if (tel.length < 8) return alert("Nimewo a kout!");
             db.ref('itilizate/' + tel).once('value').then(s => {
                 let d = s.val();
-                if (!d) db.ref('itilizate/' + tel).set({ modpas: p, balans: 0 }).then(() => antre(tel));
+                if (!d) db.ref('itilizate/' + tel).set({ modpas: p, balans: 0, fwod: 0, status: "aktif" }).then(() => antre(tel));
                 else if (d.modpas === p) antre(tel);
                 else alert("Move modpas!");
             });
         }
 
         function antre(tel) {
-            mwen = tel;
-            document.getElementById('login-box').classList.add('hidden');
-            document.getElementById('game-box').classList.remove('hidden');
-            db.ref('itilizate/' + mwen + '/balans').on('value', s => { document.getElementById('bal').innerText = s.val() || 0; });
+            db.ref('itilizate/' + tel).once('value').then(s => {
+                if (s.val().status === "bloke") return alert("KONT OU BLOKE!");
+                mwen = tel;
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('game-box').classList.remove('hidden');
+                db.ref('itilizate/' + mwen + '/balans').on('value', snap => { document.getElementById('bal').innerText = snap.val() || 0; });
+            });
+        }
+
+        function voyeDemannDepo() {
+            let idTranz = document.getElementById('depo-id').value.trim();
+            if (idTranz === "") return alert("Mete ID a!");
+            db.ref('istori_transaksyon').orderByChild('pve_id').equalTo(idTranz).once('value').then(snap => {
+                if (snap.exists()) {
+                    alert("ID SA ITILIZE DEJA!");
+                    db.ref('itilizate/' + mwen + '/fwod').transaction(f => {
+                        let t = (f || 0) + 1;
+                        if (t >= 3) { db.ref('itilizate/' + mwen + '/status').set("bloke"); location.reload(); }
+                        return t;
+                    });
+                } else {
+                    db.ref('demann').push({ tip: "DEPO", tel: mwen, montan: 50, pve_id: idTranz, le: Date.now() });
+                    alert("Demann voye!"); document.getElementById('depo-id').value = "";
+                }
+            });
+        }
+
+        function mandeRetre() {
+            let m = prompt("Konbe ou vle retire (Min 100G)?");
+            let bal = parseFloat(document.getElementById('bal').innerText);
+            if (m >= 100 && m <= bal) {
+                db.ref('itilizate/' + mwen + '/balans').transaction(b => b - m);
+                db.ref('demann').push({ tip: "RETRÈ", tel: mwen, montan: parseInt(m), le: Date.now() });
+                alert("Demann voye!");
+            } else alert("Montan invalid!");
         }
 
         function kreyeMatch() {
-            if (parseFloat(document.getElementById('bal').innerText) < 50) return alert("Kòb la pasifi!");
+            if (parseFloat(document.getElementById('bal').innerText) < 50) return alert("Balans piti!");
             let kod = Math.floor(1000 + Math.random() * 9000);
             matchID = "match_" + kod;
             db.ref('matches/' + matchID).set({ board: Array(100).fill(""), tour: "X", jwèX: mwen, jwèO: "", winner: "", lastMove: Date.now() });
@@ -95,13 +144,13 @@
 
         function rejwennMatch() {
             let kod = document.getElementById('join-code').value.trim();
-            if (parseFloat(document.getElementById('bal').innerText) < 50) return alert("Kòb la pasifi!");
+            if (parseFloat(document.getElementById('bal').innerText) < 50) return alert("Balans piti!");
             matchID = "match_" + kod;
             db.ref('matches/' + matchID).once('value').then(s => {
                 if (s.exists() && s.val().jwèO === "") {
                     db.ref('matches/' + matchID).update({ jwèO: mwen, lastMove: Date.now() });
                     kouteMatch();
-                } else alert("Match plen oswa kòd eronre!");
+                } else alert("Kòd eronre!");
             });
         }
 
@@ -118,34 +167,26 @@
                     }
                     board = d.board; tourAktif = d.tour;
                     document.getElementById('pèsonaj').innerText = "Ou se: " + mwenSe;
-                    document.getElementById('status-m').innerText = "Se tou: " + tourAktif;
-                    desineBoard();
-                    startTimer(d.lastMove);
-
+                    document.getElementById('status-m').innerText = "Tou pa: " + tourAktif;
+                    desineBoard(); startTimer(d.lastMove);
                     if (d.winner && d.winner !== "") {
                         clearInterval(timerInterval);
-                        alert(d.winner === mwenSe ? "TAN FINI OUBYEN OU GANYEN! +100G" : "OU PÈDI!");
+                        alert(d.winner === mwenSe ? "OU GANYEN 100G!" : "OU PÈDI!");
                         if (d.winner === mwenSe) db.ref('itilizate/' + mwen + '/balans').transaction(b => b + 100);
-                        db.ref('matches/' + matchID).remove();
-                        setTimeout(() => location.reload(), 2000);
+                        db.ref('matches/' + matchID).remove(); setTimeout(() => location.reload(), 2000);
                     }
                 }
             });
         }
 
-        function startTimer(lastMoveTime) {
+        function startTimer(lastTime) {
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
-                let serye = Math.floor((Date.now() - lastMoveTime) / 1000);
-                let rès = 30 - serye;
+                let rès = 30 - Math.floor((Date.now() - lastTime) / 1000);
                 document.getElementById('timer').innerText = rès + "s";
-                
                 if (rès <= 0) {
                     clearInterval(timerInterval);
-                    if (tourAktif === mwenSe) { // Si se te tou pa m, mwen pèdi
-                        let lòtMoun = (mwenSe === "X") ? "O" : "X";
-                        db.ref('matches/' + matchID).update({ winner: lòtMoun });
-                    }
+                    if (tourAktif === mwenSe) db.ref('matches/' + matchID).update({ winner: (mwenSe === "X" ? "O" : "X") });
                 }
             }, 1000);
         }
@@ -158,13 +199,8 @@
                 c.onclick = () => {
                     if (tourAktif === mwenSe && board[i] === "") {
                         board[i] = mwenSe;
-                        let ganyen = tchekeGanyen(i);
-                        db.ref('matches/' + matchID).update({
-                            board: board,
-                            tour: (mwenSe === "X") ? "O" : "X",
-                            winner: ganyen ? mwenSe : "",
-                            lastMove: Date.now()
-                        });
+                        let g = tchekeGanyen(i);
+                        db.ref('matches/' + matchID).update({ board: board, tour: (mwenSe === "X" ? "O" : "X"), winner: g ? mwenSe : "", lastMove: Date.now() });
                     }
                 };
                 grid.appendChild(c);
@@ -187,6 +223,31 @@
                 if(cnt >= 5) return true;
             }
             return false;
+        }
+
+        function kouteAdmin() {
+            db.ref('demann').on('value', s => {
+                const lis = document.getElementById('admin-list'); lis.innerHTML = "";
+                s.forEach(child => {
+                    let d = child.val();
+                    let infoID = d.pve_id ? `<br><span style="color:var(--ò)">ID: ${d.pve_id}</span>` : "";
+                    let div = document.createElement('div'); div.className = 'admin-item';
+                    div.innerHTML = `<div><b>${d.tip}</b>: ${d.tel} (${d.montan}G)${infoID}</div> 
+                        <button onclick="apwouve('${child.key}', '${d.tel}', ${d.montan}, '${d.tip}')" style="font-size:20px; cursor:pointer">✅</button>`;
+                    lis.appendChild(div);
+                });
+            });
+        }
+
+        function apwouve(key, tel, montan, tip) {
+            db.ref('demann/' + key).once('value').then(s => {
+                let d = s.val();
+                if (tip === "DEPO") {
+                    db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + montan);
+                    db.ref('istori_transaksyon').push({ pve_id: d.pve_id, tel: tel });
+                }
+                db.ref('demann/' + key).remove(); alert("Valide!");
+            });
         }
     </script>
 </body>
