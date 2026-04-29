@@ -3,43 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ V3</title>
+    <title>M-PARYAJ V4</title>
     
-    <!-- Sèvi ak lyen "defer" pou asire script la chaje nèt -->
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+    <!-- Sèvi ak lyen Cloudflare (CDNJS) olye de Google gstatic -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
 
     <style>
         body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #161616; padding: 20px; border-radius: 15px; border: 1px solid #00ff88; max-width: 350px; margin: auto; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #222; color: white; }
-        button { background: #00ff88; color: black; padding: 12px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; width: 90%; }
+        .box { background: #161616; padding: 20px; border-radius: 15px; border: 2px solid #00ff88; max-width: 350px; margin: auto; box-shadow: 0 0 15px rgba(0,255,136,0.2); }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #222; color: white; font-size: 16px; }
+        button { background: #00ff88; color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .hidden { display: none; }
-        #status { font-size: 11px; margin-bottom: 10px; }
+        #status { font-size: 11px; margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="login-box" class="box">
-        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V3</span></h2>
-        <div id="status" style="color: orange;">Y ap chaje sistèm nan...</div>
+        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V4</span></h2>
+        <div id="status" style="color: orange;">Sistèm nan ap chaje...</div>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="konekte()">ANTRE</button>
     </div>
 
     <div id="game-box" class="box hidden">
-        <h3 id="tel-afiche">---</h3>
-        <h1 style="color:#ffcc00"><span id="bal">0</span> HTG</h1>
+        <h3 id="tel-afiche" style="color:#00ff88">---</h3>
+        <div style="font-size: 30px; color: #ffcc00; margin: 15px 0;"><span id="bal">0</span> HTG</div>
         <button onclick="location.reload()" style="background:#444; color:white">SÒTI</button>
     </div>
 
     <script>
-        // Fonksyon pou kòmanse sèlman lè Firebase fin chaje
+        // Fonksyon sekirite pou tann chajman
         window.onload = function() {
             if (typeof firebase === 'undefined') {
-                document.getElementById('status').innerText = "Erè: Firebase pa ka chaje. Rafrechi paj la! ❌";
-                document.getElementById('status').style.color = "red";
+                document.getElementById('status').innerText = "ERÈ REZO: Netwaye kach ou oswa chanje DNS! ❌";
+                document.getElementById('status').style.color = "#ff4444";
                 return;
             }
 
@@ -55,24 +55,23 @@
             firebase.initializeApp(firebaseConfig);
             const db = firebase.database();
 
-            // Tcheke koneksyon
+            // Tcheke koneksyon database
             db.ref('.info/connected').on('value', (snap) => {
                 const s = document.getElementById('status');
                 if (snap.val() === true) {
-                    s.innerText = "Koneksyon OK ✅";
+                    s.innerText = "Koneksyon Tabli ✅";
                     s.style.color = "#00ff88";
                 } else {
-                    s.innerText = "Ap chache database... ❌";
-                    s.style.color = "orange";
+                    s.innerText = "Database ap chache... ⏳";
+                    s.style.color = "#ffcc00";
                 }
             });
 
-            // Rann fonksyon konekte a disponib globalman
             window.konekte = function() {
                 const tel = document.getElementById('tel').value.trim();
                 const pass = document.getElementById('pass').value.trim();
 
-                if(!tel || !pass) return alert("Ranpli tout chan yo!");
+                if(!tel || !pass) return alert("Mete tout enfòmasyon yo!");
 
                 db.ref('itilizate/' + tel).once('value').then((snap) => {
                     const d = snap.val();
@@ -83,13 +82,13 @@
                     } else {
                         alert("Move modpas!");
                     }
-                }).catch(e => alert("Rules Firebase ou yo bloke! Error: " + e.message));
+                }).catch(e => alert("Baz done a di: " + e.message));
             };
 
             function antre(tel) {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('game-box').classList.remove('hidden');
-                document.getElementById('tel-afiche').innerText = "Tel: " + tel;
+                document.getElementById('tel-afiche').innerText = "Pwofil: " + tel;
                 db.ref('itilizate/' + tel + '/balans').on('value', s => {
                     document.getElementById('bal').innerText = s.val() || 0;
                 });
