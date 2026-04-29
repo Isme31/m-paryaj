@@ -51,13 +51,13 @@
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://firebaseio.com" };
+        // Lyen an ranje kounye a
+        const firebaseConfig = { 
+            databaseURL: "https://firebaseio.com" 
+        };
         
-        // Eseye inisyalize Firebase san l pa bloke paj la
-        try {
-            firebase.initializeApp(firebaseConfig);
-            var db = firebase.database();
-        } catch(e) { console.log("Firebase pa konekte, n ap itilize mòd lokal"); }
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
         let currentUser = "";
         let board = Array(25).fill("");
@@ -73,8 +73,8 @@
                 currentUser = p;
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
+                syncBalans();
                 initBoard();
-                if(db) syncBalans();
             }
         }
 
@@ -88,12 +88,15 @@
         function adminAjouteKob() {
             let tel = document.getElementById('targetPhone').value;
             let mnt = parseInt(document.getElementById('addAmount').value);
-            if(db && tel && mnt) {
+            if(tel && mnt) {
                 db.ref('itilizate/' + tel).once('value').then(snap => {
                     let ansyen = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
-                    db.ref('itilizate/' + tel).update({ balans: ansyen + mnt });
-                    alert("Kòb la ajoute!");
+                    db.ref('itilizate/' + tel).update({ balans: ansyen + mnt })
+                    .then(() => alert("Siksè! " + mnt + " HTG ajoute pou " + tel))
+                    .catch(e => alert("Erè: " + e.message));
                 });
+            } else {
+                alert("Rempli tout bwat yo!");
             }
         }
 
@@ -110,6 +113,7 @@
                         initBoard();
                         if(checkWin(turn)) {
                             alert("Ou Genyen!");
+                            pemanOtomatik(50);
                             resetBoard();
                         } else {
                             turn = (turn === "X") ? "O" : "X";
@@ -118,6 +122,13 @@
                     }
                 };
                 bDiv.appendChild(c);
+            });
+        }
+
+        function pemanOtomatik(mnt) {
+            db.ref('itilizate/' + currentUser).once('value').then(snap => {
+                let ansyen = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
+                db.ref('itilizate/' + currentUser).update({ balans: ansyen + mnt });
             });
         }
 
