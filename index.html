@@ -3,83 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ</title>
-    <!-- Libreri Firebase obligatwa -->
+    <title>M-PARYAJ | Domino & Mopyon</title>
+    <!-- Libreri Firebase -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     
     <style>
-        body { background: #0d0d0d; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
-        .card { background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #00ff88; margin: 20px auto; max-width: 400px; box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); }
-        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
-        .btn { background: #00ff88; color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        .btn:hover { background: #00cc6e; transform: scale(1.02); }
+        body { background: #0a0a0a; color: white; font-family: 'Segoe UI', Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
+        .card { background: #161616; padding: 25px; border-radius: 20px; border: 1px solid #00ff88; margin: 20px auto; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #222; color: white; font-size: 16px; outline: none; }
+        input:focus { border-color: #00ff88; }
+        .btn { background: #00ff88; color: black; padding: 15px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        .btn:hover { background: #00cc6e; transform: scale(1.03); }
         .hidden { display: none; }
-        h2 { margin-top: 0; }
-        .balans-box { font-size: 24px; font-weight: bold; margin: 15px 0; color: #00ff88; }
+        .balans-box { font-size: 32px; font-weight: bold; margin: 20px 0; color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+        .grid-jwet { display: flex; gap: 15px; margin-top: 20px; }
+        .jwet-card { background: #222; padding: 20px; border-radius: 15px; border: 1px solid #333; flex: 1; cursor: pointer; transition: 0.3s; }
+        .jwet-card:hover { border-color: #00ff88; background: #2a2a2a; }
+        .icon { font-size: 40px; display: block; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- PAJ KONEKSYON -->
+    <!-- 1. PAJ KONEKSYON -->
     <div id="login-box" class="card">
-        <h2 style="color: #00ff88;">M-PARYAJ</h2>
+        <h1 style="color: #00ff88; letter-spacing: 2px;">M-PARYAJ</h1>
+        <p style="color: #888;">Antre enfòmasyon ou yo</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas (Admin oswa Itilizatè)">
+        <input type="password" id="pass" placeholder="Modpas (Cricra31 pou Admin)">
         <button class="btn" onclick="antre()">KONEKTE</button>
     </div>
 
-    <!-- PAJ ADMIN -->
+    <!-- 2. PAJ ADMIN -->
     <div id="admin-box" class="card hidden" style="border-color: #ff4444;">
         <h2 style="color:#ff4444">PANÈL ADMIN</h2>
-        <p>Mete kòb sou kont yon kliyan</p>
-        <input type="tel" id="kliyan" placeholder="Nimewo Telefòn Kliyan an">
+        <p>Mete kòb sou kont kliyan</p>
+        <input type="tel" id="kliyan" placeholder="Nimewo Telefòn Kliyan">
         <input type="number" id="kob" placeholder="Montan HTG">
         <button class="btn" style="background:#ff4444" onclick="ajoute()">KONFIME DEPO</button>
-        <br><br>
-        <button onclick="location.reload()" style="background:none; border:none; color:gray; cursor:pointer;">Soti</button>
+        <button onclick="location.reload()" style="background:none; border:none; color:gray; cursor:pointer; margin-top:15px;">Soti</button>
     </div>
 
-    <!-- PAJ JWÈT / BALANS -->
+    <!-- 3. PAJ JWÈT / KLIYAN -->
     <div id="game-box" class="card hidden">
-        <h2>BYENVINI</h2>
-        <p>Balans ou se:</p>
+        <h2 id="user-display" style="font-size: 18px; color: #888;">Byenvini</h2>
+        <p>Balans ou kounye a:</p>
         <div class="balans-box"><span id="bal">0</span> HTG</div>
-        <p>Ou prèt pou jwe Mopyon ak Domino?</p>
-        <button class="btn" onclick="alert('Jwèt la ap kòmanse talè...')">JWE KOUNYE A</button>
-        <br><br>
-        <button class="btn" style="background:#444; color:white" onclick="location.reload()">DEKONEKTE</button>
+        
+        <div class="grid-jwet">
+            <div class="jwet-card" onclick="lanseJwet('Mopyon')">
+                <span class="icon">❌</span>
+                <span>MOPYON</span>
+            </div>
+            <div class="jwet-card" onclick="lanseJwet('Domino')">
+                <span class="icon">🀄</span>
+                <span>DOMINO</span>
+            </div>
+        </div>
+
+        <button class="btn" style="background:#333; color:white; margin-top:30px;" onclick="location.reload()">DEKONEKTE</button>
     </div>
 
     <script>
-        // Konfigirasyon Firebase ou a
-        const firebaseConfig = {
-            databaseURL: "https://firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
+        // Konfigirasyon Firebase
+        const config = { databaseURL: "https://firebaseio.com" };
+        firebase.initializeApp(config);
         const db = firebase.database();
 
         function antre() {
             let t = document.getElementById('tel').value;
             let p = document.getElementById('pass').value;
 
-            // SI SE ADMIN (Modpas la se: Cricra31)
+            // Tcheke si se Admin
             if(p === "Cricra31") {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-box').classList.remove('hidden');
             } 
-            // SI SE YON KLIYAN
+            // Tcheke si se Kliyan (Nimewo a dwe gen 8 chif omwen)
             else if(t.length >= 8) {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('game-box').classList.remove('hidden');
+                document.getElementById('user-display').innerText = "Kliyan: " + t;
                 
-                // Al chèche balans nan Firebase
+                // Konekte ak Balans lan nan Firebase
                 db.ref('itilizate/' + t).on('value', (snapshot) => {
                     let data = snapshot.val();
                     document.getElementById('bal').innerText = data ? (data.balans || 0) : 0;
                 });
             } else {
-                alert("Tanpri antre yon nimewo telefòn valid oswa modpas admin lan.");
+                alert("Erè: Antre yon nimewo valid oswa bon modpas la.");
             }
         }
 
@@ -89,25 +101,28 @@
 
             if(k.length >= 8 && m > 0) {
                 let ref = db.ref('itilizate/' + k);
-                
-                ref.once('value').then(snapshot => {
-                    let ansyenBalans = 0;
-                    if(snapshot.exists() && snapshot.val().balans) {
-                        ansyenBalans = parseFloat(snapshot.val().balans);
-                    }
-                    
-                    let nouvoBalans = ansyenBalans + m;
-                    
-                    ref.update({
-                        balans: nouvoBalans,
-                        last_update: new Date().getTime()
+                ref.once('value').then(snap => {
+                    let balansAtyèl = (snap.exists() && snap.val().balans) ? parseFloat(snap.val().balans) : 0;
+                    ref.update({ 
+                        balans: balansAtyèl + m,
+                        date: new Date().toLocaleString()
                     }).then(() => {
-                        alert("Siksè! " + m + " HTG ajoute pou " + k + ".\nNouvo balans: " + nouvoBalans);
+                        alert("Siksè! " + m + " HTG ajoute pou " + k);
                         document.getElementById('kob').value = "";
                     });
                 });
             } else {
-                alert("Mete yon nimewo ak yon montan ki kòrèk.");
+                alert("Ranpli tout bwat yo kòrèkteman.");
+            }
+        }
+
+        function lanseJwet(nonJwet) {
+            let kòb = parseFloat(document.getElementById('bal').innerText);
+            if(kòb <= 0) {
+                alert("Ou pa gen ase kòb pou w jwe. Kontakte admin an!");
+            } else {
+                alert("W ap antre nan " + nonJwet + ". Prepare w!");
+                // Isit la wa mete lyen paj jwèt la: window.location.href = nonJwet.toLowerCase() + ".html";
             }
         }
     </script>
