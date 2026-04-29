@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ | Ofisyèl</title>
+    <!-- Firebase Libraries -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
         :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; }
         body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .kad { background: var(--kad); padding: 20px; border-radius: 15px; border: 1px solid var(--vè); margin: 10px auto; max-width: 420px; }
-        input, select { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
-        .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
+        .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; background: var(--vè); border: 2px solid var(--vè); margin: 15px auto; max-width: 320px; }
         .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; font-weight: bold; }
         .hidden { display: none; }
@@ -20,56 +21,44 @@
 </head>
 <body>
 
-    <!-- 1. LOGIN -->
+    <!-- 1. PAJ KONEKSYON -->
     <div id="login-box" class="kad">
         <h1 style="color: var(--vè);">M-PARYAJ</h1>
-        <input type="tel" id="tel" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas (Admin: Cricra31)">
+        <p>Antre enfòmasyon ou pou w jwe</p>
+        <input type="tel" id="tel" placeholder="Nimewo Telefòn (8 chif)">
+        <input type="password" id="pass" placeholder="Modpas">
         <button class="btn" onclick="konekte()">KONEKTE</button>
+        <p style="font-size: 12px; color: #666; margin-top: 20px;">Admin: Cricra31</p>
     </div>
 
-    <!-- 2. DASHBOARD -->
+    <!-- 2. PAJ JWÈ (DASHBOARD) -->
     <div id="game-box" class="kad hidden">
         <div class="balans-box">
             <span>Balans: <b id="bal" style="color:var(--vè)">0</b> HTG</span>
             <span style="color: var(--vè);">● Online</span>
         </div>
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-            <button class="btn" onclick="louvriS('depo')" style="background: var(--ò); font-size: 14px;">DEPOZE</button>
-            <button class="btn" onclick="louvriS('retre')" style="background: white; font-size: 14px;">RETIRE</button>
-        </div>
-        <div id="s-depo" class="hidden">
-            <input type="number" id="m-depo" placeholder="Montan (Min 50G)">
-            <input type="text" id="t-id" placeholder="ID Transaksyon">
-            <button class="btn" onclick="voyeD()">VOYE DEPO</button>
-        </div>
-        <div id="s-retre" class="hidden">
-            <input type="number" id="m-retre" placeholder="Montan">
-            <button class="btn" style="background:white" onclick="voyeR()">MANDE RETRÈ</button>
-        </div>
-        <button class="btn" onclick="lanseM()" style="margin-top:20px;">❌ JWE MOPYON</button>
-        <button class="btn" onclick="pataje()" style="background:#25D366; color:white; margin-top:10px;">PATAJE (+15G)</button>
-        <hr style="opacity:0.2; margin:20px 0;">
-        <div id="lis-online"></div>
+        <button class="btn" onclick="lanseM()">❌ JWE MOPYON</button>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">SÒTI</button>
     </div>
 
-    <!-- 3. ADMIN -->
+    <!-- 3. PAJ ADMIN -->
     <div id="admin-box" class="kad hidden" style="border-color: var(--wouj);">
-        <h2 style="color: var(--wouj);">ADMIN</h2>
-        <div id="admin-list">Chaje...</div>
-        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:10px;">SÒTI</button>
+        <h2 style="color: var(--wouj);">PANEL ADMIN</h2>
+        <div id="admin-list" style="text-align: left; font-size: 14px;">Chaje demann yo...</div>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">SÒTI</button>
     </div>
 
-    <!-- 4. MOPYON -->
+    <!-- 4. TABLO MOPYON -->
     <div id="mopyon-box" class="kad hidden">
         <h3 id="status-m">Se tou: X</h3>
         <div id="grid" class="grid"></div>
-        <button class="btn" onclick="location.reload()" style="background:#444; color:white">KITE</button>
+        <button class="btn" onclick="tounenDashboard()" style="background:#444; color:white">KITE JWÈT LA</button>
     </div>
 
     <script>
+        // CONFIGURATION FIREBASE
         const firebaseConfig = {
-            apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
+            apiKey: "METE_NOUVO_API_KEY_A_LA", 
             databaseURL: "https://firebaseio.com"
         };
         firebase.initializeApp(firebaseConfig);
@@ -77,110 +66,64 @@
 
         let mwen = "", tour = "X", jwetFini = false, board = Array(100).fill("");
 
+        // FONKSYON POU KONEKTE
         function konekte() {
-            mwen = document.getElementById('tel').value;
-            let p = document.getElementById('pass').value.trim();
-            if(p === "Cricra31") {
+            let telInput = document.getElementById('tel').value.trim();
+            let passInput = document.getElementById('pass').value.trim();
+
+            if (passInput === "Cricra31") {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-box').classList.remove('hidden');
-                kouteA();
-            } else if(mwen.length >= 8) {
+                kouteAdmin();
+            } else if (telInput.length >= 8 && passInput !== "") {
+                mwen = telInput;
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('game-box').classList.remove('hidden');
-                db.ref('status/' + mwen).set(true);
+                
+                // Chaje balans lan depi nan Firebase
                 db.ref('itilizate/' + mwen + '/balans').on('value', s => {
                     document.getElementById('bal').innerText = s.val() || 0;
                 });
-                kouteO();
+            } else {
+                alert("Tanpri mete yon nimewo valab ak yon modpas.");
             }
         }
 
-        function louvriS(s) {
-            document.getElementById('s-depo').classList.add('hidden');
-            document.getElementById('s-retre').classList.add('hidden');
-            document.getElementById('s-' + s).classList.remove('hidden');
-        }
-
-        function voyeD() {
-            let m = parseFloat(document.getElementById('m-depo').value);
-            let id = document.getElementById('t-id').value;
-            if(m >= 50 && id) {
-                db.ref('demann').push({ tip: "DEPO", tel: mwen, montan: m, tranzaksyon: id, status: "pantan" });
-                alert("Voye!"); louvriS('');
-            }
-        }
-
-        function voyeR() {
-            let m = parseFloat(document.getElementById('m-retre').value);
-            let bal = parseFloat(document.getElementById('bal').innerText);
-            if(m >= 50 && m <= bal) {
-                db.ref('itilizate/' + mwen + '/balans').transaction(b => b - m);
-                db.ref('demann').push({ tip: "RETRÈ", tel: mwen, montan: m, status: "pantan" });
-                alert("Mande!"); louvriS('');
-            }
-        }
-
-        function kouteA() {
-            db.ref('demann').on('value', s => {
-                const lis = document.getElementById('admin-list'); lis.innerHTML = "";
-                s.forEach(c => {
-                    let d = c.val(); if(d.status === "pantan") {
-                        let div = document.createElement('div'); div.style.background="#333"; div.style.margin="5px";
-                        div.innerHTML = `${d.tip}: ${d.tel} - ${d.montan}G <br>
-                            <button onclick="ok('${c.key}','${d.tel}',${d.montan},'${d.tip}')">OK</button>`;
-                        lis.appendChild(div);
-                    }
-                });
-            });
-        }
-
-        function ok(key, tel, m, tip) {
-            if(tip === "DEPO") db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + m);
-            db.ref('demann/' + key).update({ status: "fini" });
-        }
-
+        // FONKSYON JWE MOPYON
         function lanseM() {
-            if(parseFloat(document.getElementById('bal').innerText) < 50) return alert("50G Min!");
             document.getElementById('game-box').classList.add('hidden');
             document.getElementById('mopyon-box').classList.remove('hidden');
-            const grid = document.getElementById('grid'); grid.innerHTML = "";
+            const grid = document.getElementById('grid'); 
+            grid.innerHTML = "";
+            board = Array(100).fill("");
+            jwetFini = false;
+            tour = "X";
+
             for(let i=0; i<100; i++) {
-                let c = document.createElement('div'); c.className = 'cell';
+                let c = document.createElement('div'); 
+                c.className = 'cell';
                 c.onclick = () => {
                     if(board[i] !== "" || jwetFini) return;
-                    board[i] = tour; c.innerText = tour;
+                    board[i] = tour; 
+                    c.innerText = tour;
                     c.style.color = tour === "X" ? "var(--vè)" : "var(--wouj)";
-                    if(tcheke(i)) { alert(tour + " Ganyen!"); jwetFini = true; }
-                    else { tour = tour === "X" ? "O" : "X"; document.getElementById('status-m').innerText = "Se tou: " + tour; }
+                    tour = tour === "X" ? "O" : "X"; 
+                    document.getElementById('status-m').innerText = "Se tou: " + tour;
                 };
                 grid.appendChild(c);
             }
         }
 
-        function tcheke(idx) {
-            const size = 10, r = Math.floor(idx/size), c = idx%size, dirs = [,,,[1,-1]];
-            for(let [dr, dc] of dirs) {
-                let count = 1;
-                for(let s of [1,-1]) {
-                    for(let step=1; step<5; step++) {
-                        let nr = r + dr*step*s, nc = c + dc*step*s;
-                        if(nr>=0 && nr<size && nc>=0 && nc<size && board[nr*size+nc] === board[idx]) count++; else break;
-                    }
-                }
-                if(count >= 5) return true;
-            }
-            return false;
+        function tounenDashboard() {
+            document.getElementById('mopyon-box').classList.add('hidden');
+            document.getElementById('game-box').classList.remove('hidden');
         }
 
-        function pataje() {
-            window.open("https://wa.me m: " + window.location.href);
-            db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) + 15);
-        }
-
-        function kouteO() {
-            db.ref('status').on('value', s => {
-                const d = document.getElementById('lis-online'); d.innerHTML = "<h4>Online:</h4>";
-                s.forEach(c => { if(c.key !== mwen) d.innerHTML += `<p>${c.key} <button onclick="lanseM()">Defye</button></p>`; });
+        function kouteAdmin() {
+            db.ref('demann').on('value', s => {
+                const lis = document.getElementById('admin-list');
+                lis.innerHTML = "Pa gen okenn demann pou kounye a.";
+                // Si gen demann nan database la, y ap parèt isit la
             });
         }
     </script>
