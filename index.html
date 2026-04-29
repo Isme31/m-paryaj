@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ | Domino & Mopion</title>
     
-    <!-- LIBRERI FIREBASE KOREK (VÈSYON 8) -->
+    <!-- Libreri Firebase -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
@@ -14,8 +14,7 @@
         body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .card { background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 320px; margin: 15px auto; }
-        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
-        .cell:hover { background: #333; color: var(--neon); }
+        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
         .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; }
         .hidden { display: none; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
@@ -25,17 +24,17 @@
 
     <div id="login-screen" class="card">
         <h2 style="color:var(--neon)">M-PARYAJ</h2>
-        <input type="tel" id="userPhone" placeholder="Nimewo MonCash/NatCash">
-        <input type="password" id="userPass" placeholder="Modpas (Cricra31 pou Admin)">
-        <button class="btn" onclick="login()">ANTRE NAN JWÈT LA</button>
+        <input type="tel" id="userPhone" placeholder="Nimewo Telefòn">
+        <input type="password" id="userPass" placeholder="Modpas (Cricra31)">
+        <button class="btn" onclick="login()">ANTRE</button>
     </div>
 
     <div id="admin-screen" class="hidden">
         <div class="card" style="border-color: red;">
-            <h2 style="color: red;">ADMINISTRASYON</h2>
-            <input type="tel" id="targetPhone" placeholder="Nimewo Kliyan an">
-            <input type="number" id="addAmount" placeholder="Montan HTG">
-            <button class="btn" style="background:red; color:white;" onclick="adminAjouteKob()">METE KÒB SOU KONT LI</button>
+            <h2 style="color: red;">ADMIN</h2>
+            <input type="tel" id="targetPhone" placeholder="Nimewo Kliyan">
+            <input type="number" id="addAmount" placeholder="Montan">
+            <button class="btn" style="background:red; color:white;" onclick="adminAjouteKob()">METE KÒB</button>
             <button class="btn" onclick="location.reload()">SOTI</button>
         </div>
     </div>
@@ -43,28 +42,22 @@
     <div id="game-screen" class="hidden">
         <div class="card">
             <div style="font-size: 1.5rem;">Balans: <span id="valBalans" style="color:var(--neon)">0</span> HTG</div>
-            <p>Voye kòb sou: <b style="color:var(--gold)">5511-0103</b></p>
         </div>
         <div class="card">
-            <h3>MÒPYON (5 POU GENYEN)</h3>
+            <h3>MÒPYON</h3>
             <div id="board" class="grid"></div>
             <p id="info">Tou pa: X</p>
-        </div>
-        <div class="card">
-            <h3>DOMINO</h3>
-            <div style="background:#0a2e1a; padding:15px; border-radius:10px; margin-bottom:10px; color:#00ff88;">TABLO PWOPÈTE</div>
-            <button class="btn" style="background:var(--gold)" onclick="alert('Lojik Domino a ap chaje...')">JWE DOMINO</button>
         </div>
     </div>
 
     <script>
-        // KONFIGIRASYON KOREK FIREBASE
-        const firebaseConfig = {
-            databaseURL: "https://firebaseio.com"
-        };
+        const firebaseConfig = { databaseURL: "https://firebaseio.com" };
         
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        // Eseye inisyalize Firebase san l pa bloke paj la
+        try {
+            firebase.initializeApp(firebaseConfig);
+            var db = firebase.database();
+        } catch(e) { console.log("Firebase pa konekte, n ap itilize mòd lokal"); }
 
         let currentUser = "";
         let board = Array(25).fill("");
@@ -73,19 +66,15 @@
         function login() {
             let p = document.getElementById('userPhone').value;
             let m = document.getElementById('userPass').value;
-
             if(m === "Cricra31") {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('admin-screen').classList.remove('hidden');
-                return;
-            }
-
-            if(p.length >= 8) {
+            } else if(p.length >= 8) {
                 currentUser = p;
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-                syncBalans();
                 initBoard();
+                if(db) syncBalans();
             }
         }
 
@@ -99,12 +88,12 @@
         function adminAjouteKob() {
             let tel = document.getElementById('targetPhone').value;
             let mnt = parseInt(document.getElementById('addAmount').value);
-            if(tel && mnt) {
+            if(db && tel && mnt) {
                 db.ref('itilizate/' + tel).once('value').then(snap => {
-                    let ansyenBalans = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
-                    db.ref('itilizate/' + tel).update({ balans: ansyenBalans + mnt });
-                    alert("Siksè! " + mnt + " HTG ajoute pou " + tel);
-                }).catch(e => alert("Erè Firebase: " + e.message));
+                    let ansyen = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
+                    db.ref('itilizate/' + tel).update({ balans: ansyen + mnt });
+                    alert("Kòb la ajoute!");
+                });
             }
         }
 
@@ -120,9 +109,8 @@
                         board[i] = turn;
                         initBoard();
                         if(checkWin(turn)) {
-                            alert("BRAVO! Ou genyen 50 HTG!");
-                            pemanOtomatik(50);
-                            setTimeout(resetBoard, 1500);
+                            alert("Ou Genyen!");
+                            resetBoard();
                         } else {
                             turn = (turn === "X") ? "O" : "X";
                             document.getElementById('info').innerText = "Tou pa: " + turn;
@@ -130,13 +118,6 @@
                     }
                 };
                 bDiv.appendChild(c);
-            });
-        }
-
-        function pemanOtomatik(mnt) {
-            db.ref('itilizate/' + currentUser).once('value').then(snap => {
-                let balansAktyel = (snap.val() && snap.val().balans) ? snap.val().balans : 0;
-                db.ref('itilizate/' + currentUser).update({ balans: balansAktyel + mnt });
             });
         }
 
