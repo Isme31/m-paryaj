@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ V4</title>
+    <title>M-PARYAJ V5</title>
     
-    <!-- Sèvi ak lyen Cloudflare (CDNJS) olye de Google gstatic -->
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <!-- Lyen sa yo dwe la pou Firebase ka mache -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
 
     <style>
         body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #161616; padding: 20px; border-radius: 15px; border: 2px solid #00ff88; max-width: 350px; margin: auto; box-shadow: 0 0 15px rgba(0,255,136,0.2); }
+        .box { background: #161616; padding: 25px; border-radius: 15px; border: 2px solid #00ff88; max-width: 350px; margin: auto; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #222; color: white; font-size: 16px; }
-        button { background: #00ff88; color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button { background: #00ff88; color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
         .hidden { display: none; }
-        #status { font-size: 11px; margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="login-box" class="box">
-        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V4</span></h2>
-        <div id="status" style="color: orange;">Sistèm nan ap chaje...</div>
+        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V5</span></h2>
+        <p id="status" style="color: orange; font-size: 12px;">Y ap prepare sistèm nan... ⏳</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="konekte()">ANTRE</button>
@@ -30,59 +29,57 @@
 
     <div id="game-box" class="box hidden">
         <h3 id="tel-afiche" style="color:#00ff88">---</h3>
-        <div style="font-size: 30px; color: #ffcc00; margin: 15px 0;"><span id="bal">0</span> HTG</div>
+        <h1 style="color:#ffcc00"><span id="bal">0</span> HTG</h1>
         <button onclick="location.reload()" style="background:#444; color:white">SÒTI</button>
     </div>
 
     <script>
-        // Fonksyon sekirite pou tann chajman
-        window.onload = function() {
+        // Fonksyon pou kòmanse aplikasyon an
+        function kòmanse() {
             if (typeof firebase === 'undefined') {
-                document.getElementById('status').innerText = "ERÈ REZO: Netwaye kach ou oswa chanje DNS! ❌";
+                document.getElementById('status').innerText = "BLOKAJ REZO: Sèvè yo pa reponn. Rafrechi paj la! ❌";
                 document.getElementById('status').style.color = "#ff4444";
                 return;
             }
 
-            const firebaseConfig = {
+            const config = {
                 apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
                 authDomain: "://firebaseapp.com",
                 databaseURL: "https://firebaseio.com",
                 projectId: "m-paryaj",
-                storageBucket: "m-paryaj.firebasestorage.app",
                 appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588"
             };
 
-            firebase.initializeApp(firebaseConfig);
+            firebase.initializeApp(config);
             const db = firebase.database();
 
-            // Tcheke koneksyon database
-            db.ref('.info/connected').on('value', (snap) => {
-                const s = document.getElementById('status');
-                if (snap.val() === true) {
-                    s.innerText = "Koneksyon Tabli ✅";
-                    s.style.color = "#00ff88";
+            // Tcheke koneksyon
+            db.ref('.info/connected').on('value', (s) => {
+                const status = document.getElementById('status');
+                if (s.val()) {
+                    status.innerText = "Koneksyon OK ✅";
+                    status.style.color = "#00ff88";
                 } else {
-                    s.innerText = "Database ap chache... ⏳";
-                    s.style.color = "#ffcc00";
+                    status.innerText = "Ap chache rezo... 📡";
+                    status.style.color = "orange";
                 }
             });
 
             window.konekte = function() {
                 const tel = document.getElementById('tel').value.trim();
                 const pass = document.getElementById('pass').value.trim();
+                if(!tel || !pass) return alert("Mete enfòmasyon yo!");
 
-                if(!tel || !pass) return alert("Mete tout enfòmasyon yo!");
-
-                db.ref('itilizate/' + tel).once('value').then((snap) => {
-                    const d = snap.val();
-                    if (!d) {
-                        db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 }).then(() => antre(tel));
-                    } else if (d.modpas === pass) {
+                db.ref('itilizate/' + tel).once('value').then(snap => {
+                    const user = snap.val();
+                    if(!user) {
+                        db.ref('itilizate/' + tel).set({modpas: pass, balans: 0}).then(() => antre(tel));
+                    } else if(user.modpas === pass) {
                         antre(tel);
                     } else {
-                        alert("Move modpas!");
+                        alert("Modpas la pa bon!");
                     }
-                }).catch(e => alert("Baz done a di: " + e.message));
+                });
             };
 
             function antre(tel) {
@@ -93,7 +90,10 @@
                     document.getElementById('bal').innerText = s.val() || 0;
                 });
             }
-        };
+        }
+
+        // Tann 2 segonn pou bibliyotèk yo gen tan chaje
+        setTimeout(kòmanse, 2000);
     </script>
 </body>
 </html>
