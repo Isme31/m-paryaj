@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ | Ofisyèl</title>
-    <!-- KORIJE 1: Lyen Firebase yo ki kòrèk kounye a -->
+    <title>M-PARYAJ V2</title>
+    <!-- Sèvi ak Vèsyon 8 la ki pi stab pou HTML senp -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
@@ -18,8 +18,8 @@
 <body>
 
     <div id="login-box" class="box">
-        <h2 style="color:#00ff88">M-PARYAJ</h2>
-        <p id="status" style="font-size: 11px; color: orange;">Y ap tcheke koneksyon...</p>
+        <h2 style="color:#00ff88">M-PARYAJ <span style="font-size: 10px; color: gray;">V2</span></h2>
+        <p id="status" style="font-size: 11px; color: orange;">Y ap tcheke koneksyon Firebase...</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="konekte()">ANTRE / KREYE KONT</button>
@@ -32,19 +32,24 @@
     </div>
 
     <script>
-        // KORIJE 2: Tout adrès pwojè w la nèt
+        // Tout enfòmasyon sa yo kòrèk selon pwojè w la
         const firebaseConfig = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
-            authDomain: "m-paryaj.firebaseapp.com",
-            databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com",
+            authDomain: "://firebaseapp.com",
+            databaseURL: "https://firebaseio.com",
             projectId: "m-paryaj",
             storageBucket: "m-paryaj.firebasestorage.app",
             appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588"
         };
 
-        // Inisyalize
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        // INISYALIZASYON
+        try {
+            firebase.initializeApp(firebaseConfig);
+            var db = firebase.database();
+            console.log("Firebase inisyalize!");
+        } catch (e) {
+            alert("Erè Inisyalizasyon: " + e.message);
+        }
 
         // Tcheke koneksyon
         const statusTxt = document.getElementById('status');
@@ -53,7 +58,7 @@
                 statusTxt.innerText = "Koneksyon Firebase: OK ✅";
                 statusTxt.style.color = "#00ff88";
             } else {
-                statusTxt.innerText = "Echèk koneksyon! Verifye Entènèt ou. ❌";
+                statusTxt.innerText = "Echèk koneksyon! (Tcheke Rules oswa URL) ❌";
                 statusTxt.style.color = "#ff4444";
             }
         });
@@ -62,18 +67,25 @@
             const tel = document.getElementById('tel').value.trim();
             const pass = document.getElementById('pass').value.trim();
 
-            if(!tel || !pass) return alert("Mete info yo!");
+            if(!tel || !pass) return alert("Ranpli tout jaden yo!");
 
-            db.ref('itilizate/' + tel).once('value').then((s) => {
+            // Nou sèvi ak yon fòma "Catch" pou wè si se Database la ki bloke
+            db.ref('itilizate/' + tel).once('value')
+            .then((s) => {
                 const d = s.val();
                 if (!d) {
-                    db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 }).then(() => antre(tel));
+                    db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 })
+                    .then(() => antre(tel))
+                    .catch(e => alert("DATABASE BLOKE: Ou dwe mete Rules sou True nan Firebase!"));
                 } else if (d.modpas === pass) {
                     antre(tel);
                 } else {
-                    alert("Move modpas!");
+                    alert("Modpas pa kòrèk!");
                 }
-            }).catch(e => alert("Database la bloke! Ale nan Rules nan Firebase epi mete read/write sou true."));
+            })
+            .catch(err => {
+                alert("Erè Aksè: " + err.message + "\n\nSa vle di Rules ou yo pa pibliye kòrèkteman.");
+            });
         }
 
         function antre(tel) {
