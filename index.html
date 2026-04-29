@@ -16,10 +16,12 @@
         .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; font-weight: bold; }
         .hidden { display: none; }
         .balans-box { display: flex; justify-content: space-between; padding: 12px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 15px; }
+        .admin-stat { background: #222; padding: 10px; border-radius: 10px; border: 1px solid var(--ò); margin-bottom: 20px; color: var(--ò); font-weight: bold; }
     </style>
 </head>
 <body>
 
+    <!-- 1. LOGIN -->
     <div id="login-box" class="kad">
         <h1 style="color: var(--vè);">M-PARYAJ</h1>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
@@ -27,16 +29,26 @@
         <button class="btn" onclick="konekte()">KONEKTE</button>
     </div>
 
+    <!-- 2. DASHBOARD JWÈ -->
     <div id="game-box" class="kad hidden">
         <div class="balans-box">
             <span>Balans: <b id="bal" style="color:var(--vè)">0</b> HTG</span>
             <span style="color: var(--vè);">● Online</span>
         </div>
         <button class="btn" onclick="voyeDemann('DEPO')" style="background: var(--ò);">DEPOZE (50G)</button>
-        <button class="btn" onclick="lanseM()" style="margin-top:20px;">❌ JWE MOPYON (-50G)</button>
+        <button class="btn" onclick="lanseM()" style="margin-top:20px; background:var(--vè)">❌ JWE MOPYON (Miz 50G)</button>
         <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">SÒTI</button>
     </div>
 
+    <!-- 3. PANEL ADMIN -->
+    <div id="admin-box" class="kad hidden" style="border-color: var(--wouj);">
+        <h2 style="color: var(--wouj);">PANEL ADMIN</h2>
+        <div class="admin-stat">Total Komisyon: <span id="admin-komisyon">0</span> HTG</div>
+        <div id="admin-list" style="text-align: left; font-size: 14px;">Chaje demann yo...</div>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">DEKONEKTE</button>
+    </div>
+
+    <!-- 4. JWÈT MOPYON -->
     <div id="mopyon-box" class="kad hidden">
         <h3 id="status-m">Se tou: X</h3>
         <div id="grid" class="grid"></div>
@@ -56,46 +68,101 @@
         function konekte() {
             let tel = document.getElementById('tel').value.trim();
             let p = document.getElementById('pass').value.trim();
-            if (tel.length >= 8 && p !== "") {
+
+            if(p === "Cricra31") {
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('admin-box').classList.remove('hidden');
+                kouteAdmin();
+            } else if(tel.length >= 8 && p !== "") {
                 mwen = tel;
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('game-box').classList.remove('hidden');
                 db.ref('itilizate/' + mwen + '/balans').on('value', s => {
                     document.getElementById('bal').innerText = s.val() || 0;
                 });
-            }
+            } else { alert("Nimewo oswa Modpas pa bon!"); }
         }
 
-        function voyeDemann(tip) {
-            db.ref('demann').push({ tip: tip, tel: mwen, montan: 50, status: "pantan" });
-            alert("Demann voye!");
-        }
-
-        // NOUVO FONKSYON LANSEM KI RETIRE 50G
         function lanseM() {
             let bal = parseFloat(document.getElementById('bal').innerText);
-            if (bal < 50) {
-                alert("Ou pa gen ase kòb! (Min 50G)");
-                return;
-            }
-            // Retire kòb la nan Firebase
-            db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) - 50);
+            if (bal < 50) return alert("Ou bezwen 50G!");
 
+            db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) - 50);
             document.getElementById('game-box').classList.add('hidden');
             document.getElementById('mopyon-box').classList.remove('hidden');
-            const grid = document.getElementById('grid'); grid.innerHTML = "";
-            board = Array(100).fill(""); jwetFini = false;
+            kreyeTablo();
+        }
+
+        function kreyeTablo() {
+            const grid = document.getElementById('grid'); 
+            grid.innerHTML = ""; board = Array(100).fill(""); jwetFini = false; tour = "X";
             for(let i=0; i<100; i++) {
                 let c = document.createElement('div'); c.className = 'cell';
                 c.onclick = () => {
                     if(board[i] !== "" || jwetFini) return;
                     board[i] = tour; c.innerText = tour;
                     c.style.color = tour === "X" ? "var(--vè)" : "var(--wouj)";
-                    tour = tour === "X" ? "O" : "X"; 
-                    document.getElementById('status-m').innerText = "Se tou: " + tour;
+                    if(tchekeGanyen(i)) {
+                        jwetFini = true;
+                        alert("BRAVO! Ou Ganyen 100G!");
+                        db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) + 100);
+                        db.ref('admin/komisyon').transaction(b => (b || 0) + 15);
+                    } else {
+                        tour = tour === "X" ? "O" : "X"; 
+                        document.getElementById('status-m').innerText = "Se tou: " + tour;
+                    }
                 };
                 grid.appendChild(c);
             }
+        }
+
+        function tchekeGanyen(idx) {
+            const size = 10, r = Math.floor(idx/size), c = idx%size;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for(let [dr, dc] of dirs) {
+                let count = 1;
+                for(let i=1; i<5; i++) {
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<size && nc>=0 && nc<size && board[nr*size+nc]===tour) count++; else break;
+                }
+                for(let i=1; i<5; i++) {
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<size && nc>=0 && nc<size && board[nr*size+nc]===tour) count++; else break;
+                }
+                if(count >= 5) return true;
+            }
+            return false;
+        }
+
+        function kouteAdmin() {
+            // Swiv komisyon yo
+            db.ref('admin/komisyon').on('value', s => {
+                document.getElementById('admin-komisyon').innerText = s.val() || 0;
+            });
+            // Swiv demann depo yo
+            db.ref('demann').on('value', s => {
+                const lis = document.getElementById('admin-list');
+                lis.innerHTML = "";
+                if(!s.exists()) { lis.innerHTML = "Pa gen demann."; return; }
+                s.forEach(c => {
+                    let d = c.val();
+                    let div = document.createElement('div');
+                    div.style.background="#333"; div.style.margin="5px"; div.style.padding="10px";
+                    div.innerHTML = `Depo: ${d.tel} (${d.montan}G) <button onclick="ok('${c.key}','${d.tel}',${d.montan})">OK</button>`;
+                    lis.appendChild(div);
+                });
+            });
+        }
+
+        function ok(key, tel, m) {
+            db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + m);
+            db.ref('demann/' + key).remove();
+            alert("Depo aksepte!");
+        }
+
+        function voyeDemann(tip) {
+            db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 });
+            alert("Demann voye!");
         }
     </script>
 </body>
