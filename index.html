@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ TEST</title>
+    <title>M-PARYAJ | Ofisyèl</title>
+    <!-- KORIJE 1: Lyen Firebase yo ki kòrèk kounye a -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
         body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
         .box { background: #161616; padding: 20px; border-radius: 10px; border: 1px solid #00ff88; max-width: 350px; margin: auto; }
-        input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
-        button { background: #00ff88; color: black; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 85%; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; background: #222; color: white; }
+        button { background: #00ff88; color: black; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 90%; }
         .hidden { display: none; }
     </style>
 </head>
@@ -18,23 +19,24 @@
 
     <div id="login-box" class="box">
         <h2 style="color:#00ff88">M-PARYAJ</h2>
-        <p id="status" style="font-size: 12px; color: orange;">Y ap tcheke koneksyon Firebase...</p>
+        <p id="status" style="font-size: 11px; color: orange;">Y ap tcheke koneksyon...</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="konekte()">ANTRE / KREYE KONT</button>
     </div>
 
     <div id="game-box" class="box hidden">
-        <h2 id="tel-afiche">---</h2>
+        <h3 id="tel-afiche">---</h3>
         <h1 style="color:#ffcc00"><span id="bal">0</span> HTG</h1>
         <button onclick="location.reload()" style="background:#ff4444; color:white">SÒTI</button>
     </div>
 
     <script>
+        // KORIJE 2: Tout adrès pwojè w la nèt
         const firebaseConfig = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
-            authDomain: "://firebaseapp.com",
-            databaseURL: "https://firebaseio.com",
+            authDomain: "m-paryaj.firebaseapp.com",
+            databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com",
             projectId: "m-paryaj",
             storageBucket: "m-paryaj.firebasestorage.app",
             appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588"
@@ -44,14 +46,14 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Tcheke koneksyon an tan reyèl
+        // Tcheke koneksyon
         const statusTxt = document.getElementById('status');
         db.ref('.info/connected').on('value', (snap) => {
             if (snap.val() === true) {
                 statusTxt.innerText = "Koneksyon Firebase: OK ✅";
                 statusTxt.style.color = "#00ff88";
             } else {
-                statusTxt.innerText = "Echèk koneksyon: Verifye Rules ou yo ❌";
+                statusTxt.innerText = "Echèk koneksyon! Verifye Entènèt ou. ❌";
                 statusTxt.style.color = "#ff4444";
             }
         });
@@ -62,25 +64,16 @@
 
             if(!tel || !pass) return alert("Mete info yo!");
 
-            // Teste ekriti nan database
-            db.ref('itilizate/' + tel).once('value')
-            .then((s) => {
+            db.ref('itilizate/' + tel).once('value').then((s) => {
                 const d = s.val();
                 if (!d) {
-                    // Kreye nouvo kont
-                    db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 })
-                    .then(() => antre(tel))
-                    .catch(e => alert("Erè Firebase: " + e.message));
+                    db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 }).then(() => antre(tel));
                 } else if (d.modpas === pass) {
                     antre(tel);
                 } else {
                     alert("Move modpas!");
                 }
-            })
-            .catch(e => {
-                console.error(e);
-                alert("DATABASE BLOKE: Ale nan onglet RULES nan Firebase epi mete read/write sou TRUE.");
-            });
+            }).catch(e => alert("Database la bloke! Ale nan Rules nan Firebase epi mete read/write sou true."));
         }
 
         function antre(tel) {
