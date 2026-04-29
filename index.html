@@ -5,34 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ | Ofisyèl</title>
     
-    <!-- Bibliyotèk Firebase obligatwa yo -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
     <style>
-        :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; }
+        :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; --wa: #25d366; }
         body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .kad { background: var(--kad); padding: 20px; border-radius: 15px; border: 1px solid var(--vè); margin: 10px auto; max-width: 420px; }
+        .hidden { display: none !important; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
         .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn-wa { background: var(--wa); color: white; text-decoration: none; display: block; padding: 10px; width: 90%; border-radius: 50px; font-size: 13px; margin: 10px auto; font-weight: bold; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; background: var(--vè); border: 2px solid var(--vè); margin: 15px auto; max-width: 320px; }
         .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; font-weight: bold; }
-        .hidden { display: none; }
         .balans-box { display: flex; justify-content: space-between; padding: 12px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 15px; }
-        .admin-item { background: #222; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
+        .admin-item { background: #222; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid var(--wouj); display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
-    <!-- 1. LOGIN -->
+    <!-- 1. LOGIN / ENSKRIPSYON -->
     <div id="login-box" class="kad">
         <h1 style="color: var(--vè);">M-PARYAJ</h1>
+        <p style="color: #888; font-size: 14px;">Mete enfòmasyon w pou w ka jwe</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas">
-        <button class="btn" onclick="konekte()">ANTRE</button>
+        <input type="password" id="pass" placeholder="Modpas ou">
+        <button class="btn" onclick="konekte()">KÒMANSE / ANTRE</button>
+        
+        <p style="color: #555; font-size: 12px; margin-top: 20px;">BEZWEN ÈD OUBYEN MODPAS?</p>
+        <!-- BOUTON WHATSAPP YO -->
+        <a href="https://wa.me" class="btn-wa" target="_blank">WhatsApp Admin 1</a>
+        <a href="https://wa.me" class="btn-wa" target="_blank" style="background: #128C7E;">WhatsApp Admin 2</a>
     </div>
 
-    <!-- 2. DASHBOARD -->
+    <!-- 2. ESPAS JWÈT -->
     <div id="game-box" class="kad hidden">
         <div class="balans-box">
             <span>Balans: <b id="bal">0</b> HTG</span>
@@ -46,15 +52,15 @@
         <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">SÒTI</button>
     </div>
 
-    <!-- 3. ADMIN PANEL -->
+    <!-- 3. ESPAS ADMIN -->
     <div id="admin-box" class="kad hidden" style="border-color: var(--wouj);">
         <h2 style="color: var(--wouj);">ADMIN PANEL</h2>
         <div style="color: var(--ò); margin-bottom: 10px;">Komisyon: <span id="admin-komisyon">0</span>G</div>
-        <div id="admin-list" style="text-align: left; font-size: 13px;">Pa gen demann...</div>
-        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top: 15px;">SÒTI</button>
+        <div id="admin-list">Chaje demann...</div>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top: 15px;">KITE ADMIN</button>
     </div>
 
-    <!-- 4. JWÈT LA -->
+    <!-- 4. TABLO JWÈT -->
     <div id="mopyon-box" class="kad hidden">
         <h3 id="status-m">Se tou: X</h3>
         <div id="grid" class="grid"></div>
@@ -62,7 +68,6 @@
     </div>
 
     <script>
-        // Konfigirasyon Firebase ou a
         const firebaseConfig = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8", 
             databaseURL: "https://firebaseio.com"
@@ -75,38 +80,33 @@
         function konekte() {
             let tel = document.getElementById('tel').value.trim();
             let p = document.getElementById('pass').value.trim();
-            
+            if (tel === "" || p === "") { alert("Ranpli tout bwat yo!"); return; }
+
             if (p === "Cricra31") {
                 document.getElementById('login-box').classList.add('hidden');
                 document.getElementById('admin-box').classList.remove('hidden');
                 kouteAdmin(); return;
             }
             
-            if (tel.length >= 8 && p !== "") {
+            if (tel.length >= 8) {
                 db.ref('itilizate/' + tel).once('value').then(s => {
                     let d = s.val();
-                    if (!d) { 
-                        db.ref('itilizate/' + tel).set({ modpas: p, balans: 0 }).then(() => antreJwèt(tel)); 
-                    } else { 
-                        if (d.modpas === p) antreJwèt(tel); else alert("Move modpas!"); 
-                    }
-                });
-            } else { alert("Ranpli tout bwat yo!"); }
+                    if (!d) { db.ref('itilizate/' + tel).set({ modpas: p, balans: 0 }).then(() => antreJwèt(tel)); }
+                    else { if (d.modpas === p) antreJwèt(tel); else alert("Move modpas!"); }
+                }).catch(e => alert("Erè: " + e.message));
+            } else { alert("Nimewo a dwe gen 8 chif!"); }
         }
 
         function antreJwèt(tel) {
             mwen = tel;
             document.getElementById('login-box').classList.add('hidden');
             document.getElementById('game-box').classList.remove('hidden');
-            db.ref('itilizate/' + mwen + '/balans').on('value', s => { 
-                document.getElementById('bal').innerText = s.val() || 0; 
-            });
+            db.ref('itilizate/' + mwen + '/balans').on('value', s => { document.getElementById('bal').innerText = s.val() || 0; });
         }
 
         function lanseM() {
             let bal = parseFloat(document.getElementById('bal').innerText);
-            if (bal < 50) { alert("Ou pa gen ase kòb!"); return; }
-            
+            if (bal < 50) { alert("Balans ou twò piti!"); return; }
             db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) - 50);
             document.getElementById('game-box').classList.add('hidden');
             document.getElementById('mopyon-box').classList.remove('hidden');
@@ -126,10 +126,7 @@
                         jwetFini = true; alert("BRAVO! Ou Ganyen 100G!");
                         db.ref('itilizate/' + mwen + '/balans').transaction(b => (b || 0) + 100);
                         db.ref('admin/komisyon').transaction(b => (b || 0) + 15);
-                    } else { 
-                        tour = tour === "X" ? "O" : "X"; 
-                        document.getElementById('status-m').innerText = "Se tou: " + tour; 
-                    }
+                    } else { tour = tour === "X" ? "O" : "X"; document.getElementById('status-m').innerText = "Se tou: " + tour; }
                 };
                 grid.appendChild(c);
             }
@@ -153,10 +150,7 @@
             return false;
         }
 
-        function voyeDemann(tip) { 
-            db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 }); 
-            alert("Demann voye!"); 
-        }
+        function voyeDemann(tip) { db.ref('demann').push({ tip: tip, tel: mwen, montan: 50 }); alert("Demann voye!"); }
         
         function mandeRetre() {
             let m = prompt("Konbe ou vle retire?");
@@ -169,17 +163,15 @@
         }
 
         function kouteAdmin() {
-            db.ref('admin/komisyon').on('value', s => { 
-                document.getElementById('admin-komisyon').innerText = s.val() || 0; 
-            });
+            db.ref('admin/komisyon').on('value', s => { document.getElementById('admin-komisyon').innerText = s.val() || 0; });
             db.ref('demann').on('value', s => {
-                const lis = document.getElementById('admin-list');
-                lis.innerHTML = "";
+                const lis = document.getElementById('admin-list'); lis.innerHTML = "";
+                if(!s.exists()) { lis.innerHTML = "Pa gen demann."; return; }
                 s.forEach(child => {
                     let d = child.val();
                     let div = document.createElement('div');
                     div.className = 'admin-item';
-                    div.innerHTML = `<span>${d.tip}: ${d.tel} (${d.montan}G)</span> 
+                    div.innerHTML = `<span><b>${d.tip}</b>: ${d.tel} (${d.montan}G)</span> 
                         <button onclick="apwouve('${child.key}', '${d.tel}', ${d.montan}, '${d.tip}')">✅</button>`;
                     lis.appendChild(div);
                 });
@@ -187,11 +179,9 @@
         }
 
         function apwouve(key, tel, montan, tip) {
-            if(tip === "DEPO") {
-                db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + montan);
-            }
+            if(tip === "DEPO") { db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + montan); }
             db.ref('demann/' + key).remove();
-            alert("Konfime!");
+            alert("Operasyon konfime!");
         }
     </script>
 </body>
