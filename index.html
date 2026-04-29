@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M-PARYAJ | Domino & Mopion</title>
     
-    <!-- Firebase SDK -->
+    <!-- Libreri Firebase nesesè yo (Vèsyon 8 k ap mache byen) -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
@@ -14,7 +14,8 @@
         body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
         .card { background: #1a1a1a; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 320px; margin: 15px auto; }
-        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .cell { background: #222; height: 55px; border: 1px solid var(--neon); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
+        .cell:hover { background: #333; }
         .btn { background: var(--neon); color: black; padding: 12px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; }
         .hidden { display: none; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; }
@@ -62,10 +63,12 @@
     </div>
 
     <script>
-        // CONFIGURATION FIREBASE
+        // KONFIGIRASYON FIREBASE (Mete apiKey pa w si w genyen l)
         const firebaseConfig = {
-            databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com"
+            databaseURL: "https://firebaseio.com"
         };
+        
+        // Inisyalize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -89,6 +92,8 @@
                 document.getElementById('game-screen').classList.remove('hidden');
                 syncBalans();
                 initBoard();
+            } else {
+                alert("Tanpri mete yon nimewo telefòn valid.");
             }
         }
 
@@ -108,6 +113,8 @@
                     db.ref('itilizate/' + tel).update({ balans: ansyenBalans + mnt });
                     alert("Siksè! " + mnt + " HTG ajoute pou " + tel);
                 });
+            } else {
+                alert("Ranpli tout bwat yo.");
             }
         }
 
@@ -125,7 +132,7 @@
                         if(checkWin(turn)) {
                             alert("BRAVO! Ou genyen 50 HTG!");
                             pemanOtomatik(50);
-                            resetBoard();
+                            setTimeout(resetBoard, 1000);
                         } else {
                             turn = (turn === "X") ? "O" : "X";
                             document.getElementById('info').innerText = "Tou pa: " + turn;
@@ -144,15 +151,24 @@
         }
 
         function checkWin(p) {
-            // Lojik senplifye 5 nan yon liy (Orizontal tès)
+            // Tcheke liy orizontal 5
             for(let i=0; i<5; i++) {
                 let r = i*5;
                 if(board[r]===p && board[r+1]===p && board[r+2]===p && board[r+3]===p && board[r+4]===p) return true;
             }
+            // Tcheke vètikal 5
+            for(let i=0; i<5; i++) {
+                if(board[i]===p && board[i+5]===p && board[i+10]===p && board[i+15]===p && board[i+20]===p) return true;
+            }
             return false;
         }
 
-        function resetBoard() { board = Array(25).fill(""); turn = "X"; initBoard(); }
+        function resetBoard() { 
+            board = Array(25).fill(""); 
+            turn = "X"; 
+            document.getElementById('info').innerText = "Tou pa: X";
+            initBoard(); 
+        }
     </script>
 </body>
 </html>
