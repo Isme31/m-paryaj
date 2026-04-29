@@ -3,48 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ</title>
+    <title>M-PARYAJ TEST</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
-        :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; }
-        body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
-        .kad { background: var(--kad); padding: 20px; border-radius: 15px; border: 1px solid var(--vè); margin: 10px auto; max-width: 400px; }
+        body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .kad { background: #161616; padding: 20px; border-radius: 15px; border: 1px solid #00ff88; max-width: 400px; margin: auto; }
+        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; }
+        .btn { background: #00ff88; color: black; padding: 15px; width: 85%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; }
         .hidden { display: none !important; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; }
-        .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .balans { font-size: 24px; color: var(--ò); margin: 10px 0; }
+        #bal { color: #ffcc00; font-size: 30px; }
     </style>
 </head>
 <body>
 
-    <!-- 1. PAJ LOGIN -->
     <div id="login-box" class="kad">
-        <h1 style="color: var(--vè);">M-PARYAJ</h1>
-        <input type="tel" id="tel" placeholder="Nimewo Telefòn">
+        <h1>M-PARYAJ</h1>
+        <p>Antre nenpòt modpas (pa mete Cricra31)</p>
+        <input type="tel" id="tel" placeholder="Nimewo">
         <input type="password" id="pass" placeholder="Modpas">
-        <button class="btn" onclick="konekte()">ANTRE NAN JWÈT LA</button>
+        <button class="btn" onclick="konekte()">ANTRE JWE</button>
     </div>
 
-    <!-- 2. DASHBOARD JWÈT -->
     <div id="game-box" class="kad hidden">
-        <h2>BYENVENI</h2>
-        <div class="balans">Balans: <span id="bal">0</span> HTG</div>
-        <hr style="border: 0.5px solid #333;">
-        
-        <p style="font-size: 12px;">Depoze sou: 31594645</p>
-        <input type="text" id="depo-id" placeholder="ID Tranzaksyon MonCash">
-        <button class="btn" onclick="voyeDepo()" style="background: var(--ò); margin-bottom: 10px;">KONFIME DEPO</button>
-        
-        <button class="btn" onclick="alert('Jwèt la ap kòmanse...')">KREYE MATCH (50G)</button>
-        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">SÒTI</button>
-    </div>
-
-    <!-- 3. ADMIN PANEL -->
-    <div id="admin-box" class="kad hidden" style="border-color: var(--wouj);">
-        <h2 style="color: var(--wouj);">ADMIN PANEL</h2>
-        <div id="admin-list">Pa gen demann...</div>
-        <button class="btn" onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">KITE ADMIN</button>
+        <h1>DASHBOARD JWÈT</h1>
+        <div id="bal">0 HTG</div>
+        <p>Bouton jwèt yo ap parèt isit la!</p>
+        <button class="btn" onclick="location.reload()" style="background:#444; color:white;">SÒTI</button>
     </div>
 
     <script>
@@ -56,42 +41,30 @@
         const db = firebase.database();
 
         function konekte() {
-            let tel = document.getElementById('tel').value.trim();
-            let p = document.getElementById('pass').value.trim();
+            let t = document.getElementById('tel').value;
+            let p = document.getElementById('pass').value;
 
-            if (tel === "" || p === "") {
-                alert("Tanpri ranpli tout bwat yo!");
+            if(t == "" || p == "") { alert("Ranpli bwat yo!"); return; }
+
+            // SI SE MODPAS ADMIN, L AP BLOKE W NAN ADMIN PANEL
+            if(p === "Cricra31") {
+                alert("Ou antre kòm Admin. Pou w jwe, sèvi ak yon lòt modpas.");
                 return;
             }
 
-            // SI SE ADMIN
-            if (p === "Cricra31") {
-                document.getElementById('login-box').classList.add('hidden');
-                document.getElementById('admin-box').classList.remove('hidden');
-                return;
-            }
+            // FÒSE OUVRI POU N WÈ SI SA MACHE
+            document.getElementById('login-box').classList.add('hidden');
+            document.getElementById('game-box').classList.remove('hidden');
 
-            // SI SE JWÈT
-            db.ref('itilizate/' + tel).once('value').then(s => {
-                let d = s.val();
-                if (!d) {
-                    db.ref('itilizate/' + tel).set({ modpas: p, balans: 0 });
+            // Kreye kont lan nan Firebase
+            db.ref('itilizate/' + t).once('value').then(s => {
+                if(!s.exists()) {
+                    db.ref('itilizate/' + t).set({modpas: p, balans: 0});
                 }
-                // FÒSE OUVRI DASHBOARD LA
-                document.getElementById('login-box').classList.add('hidden');
-                document.getElementById('game-box').classList.remove('hidden');
-                
-                // Mete balans lan ajou
-                db.ref('itilizate/' + tel + '/balans').on('value', snap => {
-                    document.getElementById('bal').innerText = snap.val() || 0;
+                db.ref('itilizate/' + t + '/balans').on('value', snap => {
+                    document.getElementById('bal').innerText = (snap.val() || 0) + " HTG";
                 });
-            }).catch(e => alert("Erè Firebase: " + e.message));
-        }
-
-        function voyeDepo() {
-            let id = document.getElementById('depo-id').value;
-            if(id === "") return alert("Mete ID a!");
-            alert("Depo voye! Admin ap verifye ID: " + id);
+            });
         }
     </script>
 </body>
