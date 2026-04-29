@@ -3,183 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M-PARYAJ | Ofisyèl</title>
-    <!-- Sèvi ak Scripts sa yo pou V8 mache byen nan HTML -->
+    <title>M-PARYAJ TEST</title>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
-        :root { --vè: #00ff88; --wouj: #ff4444; --nwa: #0a0a0a; --kad: #161616; --ò: #ffcc00; --ble: #0088ff; }
-        body { background: var(--nwa); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
-        .kad { background: var(--kad); padding: 20px; border-radius: 15px; border: 1px solid var(--vè); margin: 10px auto; max-width: 400px; }
-        .hidden { display: none !important; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; }
-        .btn { background: var(--vè); color: black; padding: 14px; width: 95%; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .admin-item { background: #222; padding: 10px; margin: 10px 0; border: 1px solid var(--ò); border-radius: 8px; text-align: left; font-size: 14px; }
-        .tab-btn { background: #333; color: white; padding: 10px; border: none; width: 45%; border-radius: 5px; cursor: pointer; }
-        .tab-aktif { background: var(--vè); color: black; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; background: var(--vè); margin-top: 10px; }
-        .cell { background: var(--kad); aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; min-height: 30px; }
+        body { background: #0a0a0a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .box { background: #161616; padding: 20px; border-radius: 10px; border: 1px solid #00ff88; max-width: 350px; margin: auto; }
+        input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        button { background: #00ff88; color: black; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 85%; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <!-- 1. LOGIN -->
-    <div id="login-box" class="kad">
-        <h1 style="color: var(--vè);">M-PARYAJ</h1>
+    <div id="login-box" class="box">
+        <h2 style="color:#00ff88">M-PARYAJ</h2>
+        <p id="status" style="font-size: 12px; color: orange;">Y ap tcheke koneksyon Firebase...</p>
         <input type="tel" id="tel" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <button class="btn" onclick="konekte()">ANTRE</button>
+        <button onclick="konekte()">ANTRE / KREYE KONT</button>
     </div>
 
-    <!-- 2. DASHBOARD JWÈT -->
-    <div id="game-box" class="kad hidden">
-        <h4 id="pwofil" style="color: var(--vè); margin: 0;">Pwofil: ---</h4>
-        <h2 style="color: var(--ò);"><span id="bal">0</span> HTG</h2>
-
-        <div style="margin: 15px 0;">
-            <button id="t1" class="tab-btn tab-aktif" onclick="chanjeTab(1)">MOPYON</button>
-            <button id="t2" class="tab-btn" onclick="chanjeTab(2)">BÒLÈT</button>
-        </div>
-
-        <!-- Depo -->
-        <div style="background: #222; padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-            <p style="font-size: 11px;">MonCash: 31594645 / 55110103</p>
-            <input type="text" id="pve-id" placeholder="ID MonCash" style="width: 70%;">
-            <button onclick="fèDepo()" style="background: var(--ò); border:none; padding: 5px 10px; border-radius: 5px; cursor:pointer;">OK</button>
-        </div>
-
-        <div id="mopyon-ui">
-            <button class="btn" onclick="louvriMopyon()">KREYE MATCH (50G)</button>
-        </div>
-
-        <div id="bolet-ui" class="hidden">
-            <input type="number" id="b-boul" placeholder="Boul">
-            <input type="number" id="b-kob" placeholder="Montan">
-            <button class="btn" style="background: var(--ble); color: white;" onclick="paryeBolet()">PARYE</button>
-        </div>
-
-        <button class="btn" onclick="location.reload()" style="background: #444; color: white; margin-top: 20px;">SÒTI</button>
-    </div>
-
-    <!-- 3. ADMIN PANEL -->
-    <div id="admin-box" class="kad hidden" style="border-color: var(--ò);">
-        <h2>ADMIN PANEL</h2>
-        <div id="lis-depo">Chaje depo...</div>
-        <button class="btn" onclick="location.reload()">KITE</button>
-    </div>
-
-    <!-- 4. TABLO MOPYON -->
-    <div id="mopyon-box" class="kad hidden">
-        <div id="grid" class="grid"></div>
-        <button class="btn" onclick="location.reload()" style="background: var(--wouj); color:white;">KITE</button>
+    <div id="game-box" class="box hidden">
+        <h2 id="tel-afiche">---</h2>
+        <h1 style="color:#ffcc00"><span id="bal">0</span> HTG</h1>
+        <button onclick="location.reload()" style="background:#ff4444; color:white">SÒTI</button>
     </div>
 
     <script>
-        // CONFIG OU A
         const firebaseConfig = {
             apiKey: "AIzaSyDQN0XDlGG4XkijYW0Gx3yn9IqkbB4jMp8",
-            authDomain: "m-paryaj.firebaseapp.com",
-            databaseURL: "https://m-paryaj-default-rtdb.firebaseio.com",
+            authDomain: "://firebaseapp.com",
+            databaseURL: "https://firebaseio.com",
             projectId: "m-paryaj",
             storageBucket: "m-paryaj.firebasestorage.app",
-            messagingSenderId: "103993159961",
             appId: "1:103993159961:web:0ebc12aebd2f3b05fc5588"
         };
-        
+
+        // Inisyalize
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let mwen = "", balansMwen = 0;
+        // Tcheke koneksyon an tan reyèl
+        const statusTxt = document.getElementById('status');
+        db.ref('.info/connected').on('value', (snap) => {
+            if (snap.val() === true) {
+                statusTxt.innerText = "Koneksyon Firebase: OK ✅";
+                statusTxt.style.color = "#00ff88";
+            } else {
+                statusTxt.innerText = "Echèk koneksyon: Verifye Rules ou yo ❌";
+                statusTxt.style.color = "#ff4444";
+            }
+        });
 
         function konekte() {
-            let tel = document.getElementById('tel').value;
-            let pass = document.getElementById('pass').value;
+            const tel = document.getElementById('tel').value.trim();
+            const pass = document.getElementById('pass').value.trim();
 
-            if (pass === "Cricra31") {
-                antreAdmin();
-                return;
-            }
+            if(!tel || !pass) return alert("Mete info yo!");
 
-            db.ref('itilizate/' + tel).once('value', s => {
-                let d = s.val();
+            // Teste ekriti nan database
+            db.ref('itilizate/' + tel).once('value')
+            .then((s) => {
+                const d = s.val();
                 if (!d) {
-                    db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 });
-                    antreJwè(tel);
+                    // Kreye nouvo kont
+                    db.ref('itilizate/' + tel).set({ modpas: pass, balans: 0 })
+                    .then(() => antre(tel))
+                    .catch(e => alert("Erè Firebase: " + e.message));
                 } else if (d.modpas === pass) {
-                    antreJwè(tel);
+                    antre(tel);
                 } else {
-                    alert("Modpas pa bon!");
+                    alert("Move modpas!");
                 }
+            })
+            .catch(e => {
+                console.error(e);
+                alert("DATABASE BLOKE: Ale nan onglet RULES nan Firebase epi mete read/write sou TRUE.");
             });
         }
 
-        function antreJwè(tel) {
-            mwen = tel;
+        function antre(tel) {
             document.getElementById('login-box').classList.add('hidden');
             document.getElementById('game-box').classList.remove('hidden');
-            document.getElementById('pwofil').innerText = "Pwofil: " + tel;
+            document.getElementById('tel-afiche').innerText = "Tel: " + tel;
             db.ref('itilizate/' + tel + '/balans').on('value', s => {
-                balansMwen = s.val() || 0;
-                document.getElementById('bal').innerText = balansMwen;
+                document.getElementById('bal').innerText = s.val() || 0;
             });
-        }
-
-        function antreAdmin() {
-            document.getElementById('login-box').classList.add('hidden');
-            document.getElementById('admin-box').classList.remove('hidden');
-            db.ref('demann_depo').on('value', snap => {
-                let div = document.getElementById('lis-depo');
-                div.innerHTML = "";
-                snap.forEach(d => {
-                    let depo = d.val();
-                    div.innerHTML += `<div class="admin-item">
-                        Tel: ${depo.tel} <br> ID: ${depo.id} <br>
-                        <button onclick="apwouve('${d.key}', '${depo.tel}')">Apwouve 100G</button>
-                    </div>`;
-                });
-            });
-        }
-
-        function apwouve(key, tel) {
-            db.ref('itilizate/' + tel + '/balans').transaction(b => (b || 0) + 100);
-            db.ref('demann_depo/' + key).remove();
-            alert("Depo apwouve!");
-        }
-
-        function fèDepo() {
-            let id = document.getElementById('pve-id').value;
-            if(!id) return alert("Mete ID a");
-            db.ref('demann_depo').push({ tel: mwen, id: id });
-            alert("Demann voye bay admin!");
-        }
-
-        function chanjeTab(n) {
-            document.getElementById('mopyon-ui').classList.toggle('hidden', n !== 1);
-            document.getElementById('bolet-ui').classList.toggle('hidden', n !== 2);
-            document.getElementById('t1').classList.toggle('tab-aktif', n === 1);
-            document.getElementById('t2').classList.toggle('tab-aktif', n === 2);
-        }
-
-        function louvriMopyon() {
-            document.getElementById('game-box').classList.add('hidden');
-            document.getElementById('mopyon-box').classList.remove('hidden');
-            let grid = document.getElementById('grid');
-            grid.innerHTML = "";
-            for(let i=0; i<100; i++) {
-                let c = document.createElement('div');
-                c.className = "cell";
-                c.onclick = () => c.innerText = "X";
-                grid.appendChild(c);
-            }
-        }
-
-        function paryeBolet() {
-            let boul = document.getElementById('b-boul').value;
-            let mnt = document.getElementById('b-kob').value;
-            if(balansMwen < mnt) return alert("Kòb pa ase!");
-            db.ref('itilizate/' + mwen + '/balans').set(balansMwen - mnt);
-            db.ref('paryaj').push({ tel: mwen, boul: boul, montan: mnt });
-            alert("Parye fèt!");
         }
     </script>
 </body>
