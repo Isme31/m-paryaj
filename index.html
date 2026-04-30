@@ -1,121 +1,71 @@
-<!DOCTYPE html>
-<html lang="ht">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blitz Mopyon 5⚡</title>
-    <style>
-        body { font-family: sans-serif; background: #0a0a0a; color: white; text-align: center; margin: 0; }
-        .hidden { display: none; }
-        .screen { padding: 15px; }
-        .grid { display: grid; grid-template-columns: repeat(10, 35px); gap: 2px; justify-content: center; background: #333; padding: 5px; margin: 10px auto; width: fit-content; border-radius: 5px; }
-        .cell { width: 35px; height: 35px; background: #111; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; border-radius: 3px; }
-        .timer { font-size: 1.5rem; color: #ff4444; border: 2px solid; width: 60px; margin: 5px auto; border-radius: 10px; }
-        button { padding: 12px; margin: 5px; border-radius: 8px; border: none; background: #007bff; color: white; font-weight: bold; width: 85%; max-width: 300px; }
-        input { padding: 12px; margin: 5px; width: 80%; border-radius: 8px; border: none; background: #222; color: white; }
-    </style>
-</head>
-<body>
-    <div id="auth-screen" class="screen">
-        <h1>Mopyon Blitz ⚡</h1>
-        <p>Sipò: 31594645 / 55110103</p>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn"> <br>
-        <input type="password" id="password" placeholder="Modpas"> <br>
-        <button onclick="handleLogin()">Konekte</button>
-    </div>
+<!-- Ranplase tout pati Script ki jere Robot la ak sa a -->
+<script>
+    // ... (rès kòd login ak depo yo rete menm jan)
 
-    <div id="menu-screen" class="screen hidden">
-        <h2>Balans: <span id="user-balance">0</span>G</h2>
-        <button onclick="playWithFriend()">Jwe ak yon Zanmi (Kòd)</button>
-        <button onclick="startGame(true)" style="background:#28a745">Jwe ak Robot (IA Fò)</button>
-        <button onclick="showScreen('deposit-screen')" style="background:#555">Depo / Retrè</button>
-        <p style="font-size:0.8rem">Sipò: 31594645 / 55110103</p>
-    </div>
+    function executeMove(idx, role) {
+        board[idx] = role;
+        const cell = document.getElementById('c' + idx);
+        cell.innerText = role;
+        cell.classList.add('taken');
+        cell.style.color = role === "X" ? "#007bff" : "#ff4444";
+        
+        if(checkWin(idx, role)) {
+            clearInterval(timer);
+            document.getElementById('game-status').innerHTML = `<b style="color:#28a745">Jwè ${role} Ganyen!</b>`;
+            // Nou pa reload paj la ankò, nou annik montre rezilta a
+            if(role === myRole) winPrize();
+            // Ajoute yon bouton pou moun nan tounen menu
+            document.getElementById('game-screen').innerHTML += `<br><button onclick="location.reload()">Tounen nan Menu</button>`;
+        } else {
+            startTimer();
+        }
+    }
 
-    <div id="game-screen" class="screen hidden">
-        <div class="timer" id="time-left">30</div>
-        <div id="game-status" style="margin:10px">Atann...</div>
-        <div class="grid" id="board"></div>
-        <button onclick="location.reload()" style="background:#dc3545">Kite Jwèt la</button>
-    </div>
+    // --- IA ROBOT ULTRA FÒ ---
+    function robotMove() {
+        let bestScore = -Infinity;
+        let move = -1;
 
-    <div id="deposit-screen" class="screen hidden">
-        <h3>Voye sou: 31594645</h3>
-        <input type="number" id="d-amt" placeholder="Kantite Lajan"> <br>
-        <input type="text" id="d-id" placeholder="ID Transaksyon"> <br>
-        <button onclick="doDepo()">Voye Demann</button>
-        <button onclick="showScreen('menu-screen')" style="background:#666">Retounen</button>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let uPhone, uPass, myBalance=0, isAdmin=false, board=Array(100).fill("");
-        let myRole="X", currentTurn="X", isRobot=false, myRoom="global", timer, timeLeft=30;
-
-        function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-
-        async function handleLogin() {
-            uPhone = document.getElementById('phone').value; uPass = document.getElementById('password').value;
-            const res = await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-            const data = await res.json();
-            if(data.success) { myBalance=data.balance; isAdmin=data.isAdmin; document.getElementById('user-balance').innerText=myBalance; showScreen('menu-screen'); }
+        // Robot la ap analize chak kare vid
+        for (let i = 0; i < 100; i++) {
+            if (board[i] === "") {
+                // Kalkile nòt pou kare sa a (Atak + Defans)
+                let score = evaluateSquare(i);
+                if (score > bestScore) {
+                    bestScore = score;
+                    move = i;
+                }
+            }
         }
 
-        function playWithFriend() { let code = prompt("Mete yon kòd chanm:"); if(code) { myRoom="room_"+code; startGame(false); } }
+        if (move !== -1) {
+            executeMove(move, "O");
+            currentTurn = "X";
+        }
+    }
 
-        async function startGame(withRobot) {
-            isRobot = withRobot;
-            const res = await fetch('/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-            const data = await res.json();
-            if(!data.success) return alert("Balans ou ensifizan!");
-            myBalance=data.newBalance; document.getElementById('user-balance').innerText=myBalance;
+    function evaluateSquare(idx) {
+        let score = 0;
+        // Robot la tcheke tout direksyon pou wè kote ki gen plis danje
+        const dirs = [1, 10, 11, 9]; 
+        
+        for (let d of dirs) {
+            let userCount = countDir(idx, d, "X") + countDir(idx, -d, "X");
+            let robotCount = countDir(idx, d, "O") + countDir(idx, -d, "O");
+
+            // Priorite 1: Ganyen (si l gen 4 pwen deja)
+            if (robotCount >= 4) score += 10000;
+            // Priorite 2: Bloke moun nan (si moun nan gen 4 pwen deja)
+            if (userCount >= 4) score += 5000;
+            // Priorite 3: Kontinye yon liy 3 pwen
+            if (robotCount === 3) score += 1000;
+            // Priorite 4: Bloke yon liy 3 pwen moun nan
+            if (userCount === 3) score += 500;
             
-            board=Array(100).fill(""); document.getElementById('board').innerHTML="";
-            for(let i=0; i<100; i++) { let c=document.createElement('div'); c.className='cell'; c.id='c'+i; c.onclick=()=>makeMove(i); document.getElementById('board').appendChild(c); }
-            showScreen('game-screen');
-            if(isRobot) { myRole="X"; currentTurn="X"; document.getElementById('game-status').innerText="Ou se X"; startTimer(); }
-            else { socket.emit('join-room',{roomCode:myRoom}); }
+            score += robotCount * 10; // Ti pwen anplis pou l toujou bò kote mak li yo
         }
+        return score;
+    }
 
-        function makeMove(i) {
-            if(board[i] || currentTurn !== myRole) return;
-            executeMove(i, myRole);
-            if(isRobot) { currentTurn="O"; setTimeout(robotMove, 600); }
-            else { socket.emit('mouvman',{room:myRoom, index:i, role:myRole}); currentTurn="O"; }
-        }
-
-        function executeMove(i, role) {
-            board[i]=role; let c=document.getElementById('c'+i); c.innerText=role; c.style.color=role==='X'?'#007bff':'#ff4444';
-            if(checkWin(i, role)) { alert("Jwè "+role+" Ganyen!"); location.reload(); if(role===myRole) fetch('/win-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})}); }
-            else { startTimer(); }
-        }
-
-        function robotMove() {
-            let move = board.findIndex((v,i)=>v==="" && countInAnyDir(i,"X")>=4); // Bloke 4
-            if(move===-1) move = board.findIndex((v,i)=>v==="" && countInAnyDir(i,"O")>=4); // Ganye si 4
-            if(move===-1) move = board.findIndex(v=>v==="");
-            executeMove(move, "O"); currentTurn="X";
-        }
-
-        function checkWin(i, r) { return countInAnyDir(i, r) >= 5; }
-        function countInAnyDir(i, r) {
-            let max=0; [[1,0],[0,1],[1,1],[1,-1]].forEach(([dx,dy])=>{
-                let c=1; [1,-1].forEach(s=>{ let x=i%10, y=Math.floor(i/10); while(true){ x+=dx*s; y+=dy*s; let ni=y*10+x; if(x<0||x>=10||y<0||y>=10||board[ni]!==r)break; c++; } });
-                if(c>max) max=c;
-            }); return max;
-        }
-
-        function startTimer() { clearInterval(timer); timeLeft=30; document.getElementById('time-left').innerText=timeLeft; timer=setInterval(()=>{timeLeft--; document.getElementById('time-left').innerText=timeLeft; if(timeLeft<=0){alert("Tan fini! Ou pèdi."); location.reload();}},1000); }
-
-        async function doDepo() {
-            const res = await fetch('/request-deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,amount:document.getElementById('d-amt').value,transactionId:document.getElementById('d-id').value})});
-            const data = await res.json(); alert(data.success?"Voye! Atann Admin.":data.message); showScreen('menu-screen');
-        }
-
-        socket.on('player-role', r=>myRole=r);
-        socket.on('start-game', t=>{currentTurn=t; document.getElementById('game-status').innerText="Turn: "+t; startTimer();});
-        socket.on('mouvman', d=>{if(d.role!==myRole){executeMove(d.index, d.role); currentTurn=myRole;}});
-    </script>
-</body>
-</html>
+    // ... (rès kòd checkWin ak Timer yo rete menm jan)
+</script>
