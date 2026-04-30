@@ -10,7 +10,6 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const ADMIN_KEY = "hugues"; 
-const URL_APLIKASYON_AN = "https://onrender.com"; 
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI).then(() => console.log("✅ MongoDB Konekte!"));
@@ -22,6 +21,7 @@ const Withdrawal = mongoose.model('Withdrawal', { userPhone: String, amount: Num
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// --- ROUTES ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin-panel', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
@@ -57,7 +57,7 @@ app.post('/win-game', async (req, res) => {
     res.json({ success: true });
 });
 
-// ADMIN API
+// --- ADMIN API ---
 app.get('/admin/all-data', async (req, res) => {
     if (req.query.key !== ADMIN_KEY) return res.status(403).send();
     res.json({ deposits: await Deposit.find({status:'pending'}), withdrawals: await Withdrawal.find({status:'pending'}) });
@@ -73,16 +73,35 @@ app.post('/admin/confirm-deposit', async (req, res) => {
     }
 });
 
+// --- SOCKETS (MATCHMAKING & ROOMS) ---
+let waitingPlayers = [];
+
 io.on('connection', (socket) => {
+    socket.on('find-match', () => {
+        if (waitingPlayers.length > 0) {
+            let opponent = waitingPlayers.shift();
+            let roomName = "match_" + Date.now();
+            socket.join(roomName); opponent.join(roomName);
+            socket.room = roomName; opponent.room = roomName;
+            io.to(opponent.id).emit('player-role', 'X');
+            io.to(socket.id).emit('player-role', 'O');
+            io.to(roomName).emit('start-game', 'X');
+        } else {
+            waitingPlayers.push(socket);
+            socket.emit('waiting', "W ap chèche yon moun...");
+        }
+    });
+
     socket.on('join-room', (d) => {
-        socket.join(d.roomCode);
-        socket.room = d.roomCode;
+        socket.join(d.roomCode); socket.room = d.roomCode;
         const clients = io.sockets.adapter.rooms.get(d.roomCode);
         socket.emit('player-role', (clients.size === 1) ? 'X' : 'O');
         if (clients.size === 2) io.to(d.roomCode).emit('start-game', 'X');
     });
-    socket.on('mouvman', (d) => socket.to(d.room).emit('mouvman', d));
+
+    socket.on('mouvman', (d) => socket.to(socket.room).emit('mouvman', d));
+    socket.on('disconnect', () => { waitingPlayers = waitingPlayers.filter(p => p.id !== socket.id); });
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`🚀 Port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Sèvè kouri sou pò ${PORT}`));
