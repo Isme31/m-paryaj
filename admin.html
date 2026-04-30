@@ -4,30 +4,28 @@
     <title>Admin Blitz</title>
     <style>
         body { background:#111; color:white; font-family:sans-serif; padding:20px; }
-        .box { background:#222; padding:15px; border-radius:10px; margin-bottom:10px; border:1px solid #444; }
+        .card { background:#222; border:1px solid #444; padding:15px; border-radius:10px; margin-bottom:10px; }
         button { background:green; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; }
     </style>
 </head>
 <body>
-    <h1>Kontwòl Blitz ⚡</h1>
+    <h1>Panèl Admin Blitz ⚡</h1>
     <div id="list">Chajman...</div>
-
     <script>
         const KEY = "hugues";
         async function load() {
             const res = await fetch('/admin/all-data?key='+KEY);
             const data = await res.json();
-            let h = "<h3>Depo pou Konfime</h3>";
+            let h = "";
             data.deposits.forEach(d => {
-                h += `<div class="box"><p>Tel: ${d.phone} | Lajan: ${d.amount}G</p>
-                <p>ID: ${d.transactionId}</p>
+                h += `<div class="card"><p>Tel: ${d.phone} | Kantite: ${d.amount}G</p><p>ID: ${d.transactionId}</p>
                 <button onclick="ok('${d._id}')">Konfime Lajan an</button></div>`;
             });
-            document.getElementById('list').innerHTML = h;
+            document.getElementById('list').innerHTML = h || "Pa gen depo an atant.";
         }
         async function ok(id) {
             await fetch('/admin/confirm-deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:KEY,id:id})});
-            alert("Lajan moute sou kont li!"); load();
+            alert("Lajan an moute!"); load();
         }
         load();
     </script>
