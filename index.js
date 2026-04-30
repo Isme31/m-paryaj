@@ -7,8 +7,6 @@ const FileSync = require('lowdb/adapters/FileSync');
 
 const adapter = new FileSync('db.json');
 const db = low(adapter);
-
-// Inisyalize DB ak balans pa defo
 db.defaults({ users: [] }).write();
 
 const app = express();
@@ -21,49 +19,38 @@ app.use(express.static(__dirname));
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
-
     if (!user) {
-        // Kado 100 goud pou nouvo moun
-        user = { phone, password, balance: 100 };
+        user = { phone, password, balance: 100 }; // Kado 100G pou nouvo kont
         db.get('users').push(user).write();
-        return res.json({ success: true, balance: user.balance });
+    }
+    if (user.password === password) {
+        res.json({ success: true, balance: user.balance });
     } else {
-        if (user.password === password) {
-            return res.json({ success: true, balance: user.balance });
-        } else {
-            return res.json({ success: false, message: "Modpas pa bon!" });
-        }
+        res.json({ success: false, message: "Modpas pa bon!" });
     }
 });
 
-// Route pou tcheke si moun nan ka mize
 app.post('/bet', (req, res) => {
     const { phone } = req.body;
     let user = db.get('users').find({ phone }).value();
-    
     if (user.balance >= 50) {
         const newBalance = user.balance - 50;
         db.get('users').find({ phone }).assign({ balance: newBalance }).write();
-        return res.json({ success: true, newBalance });
+        res.json({ success: true, newBalance });
     } else {
-        return res.json({ success: false, message: "Ou pa gen ase kòb (50G min)" });
+        res.json({ success: false, message: "Ou pa gen ase kòb (50G)" });
     }
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.resolve(__dirname, 'index.html'));
-});
-
-let winnerOfLastRound = 'X';
-
+let lastWinner = Math.random() < 0.5 ? 'X' : 'O';
 io.on('connection', (socket) => {
-    socket.emit('start-player', winnerOfLastRound);
+    socket.emit('start-player', lastWinner);
     socket.on('mouvman', (data) => socket.broadcast.emit('mouvman', data));
     socket.on('game-over', (winner) => {
-        winnerOfLastRound = winner;
-        io.emit('reset', winnerOfLastRound);
+        lastWinner = winner;
+        io.emit('reset', lastWinner);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Sèvè ap kouri sou ${PORT}`));
+server.listen(PORT, () => console.log(`Live sou port ${PORT}`));
