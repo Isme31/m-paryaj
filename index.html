@@ -1,45 +1,141 @@
-<!-- Ajoute sa anndan script index.html la -->
-<script>
-    let userPhone = "";
-    let userBalance = 0;
-    let hasBetted = false;
+<!DOCTYPE html>
+<html lang="hat">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon 50G | Blitz</title>
+    <script src="https://tailwindcss.com"></script>
+    <style>
+        @import url('https://googleapis.com');
+        body { font-family: 'Poppins', sans-serif; background: #0f172a; color: white; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
+        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 2px; }
+        .cell.X { color: #f87171; text-shadow: 0 0 5px #ef4444; }
+        .cell.O { color: #60a5fa; text-shadow: 0 0 5px #3b82f6; }
+        .timer-bar { height: 4px; background: #22c55e; width: 100%; transition: width 1s linear; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    async function handleLogin() {
-        // ... kòd login ou te genyen an ...
-        const data = await response.json();
-        if (data.success) {
-            userPhone = phone;
-            userBalance = data.balance;
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('lobby-screen').classList.remove('hidden');
-            document.getElementById('user-balance').innerText = userBalance + " Goud";
+    <!-- LOGIN -->
+    <div id="auth-screen" class="w-full max-w-md text-center">
+        <h1 class="text-4xl font-bold mb-6 text-blue-400">MOPYON 50G</h1>
+        <div class="glass p-8 rounded-3xl shadow-2xl">
+            <input type="text" id="phone" placeholder="Nimewo Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-white">
+            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 text-white">
+            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold">ANTRE NAN JWÈT LA</button>
+            
+            <div class="mt-6">
+                <p class="text-[10px] text-gray-500 mb-2 italic">BEZWEN ASISTAN? KONTAKTE NOU:</p>
+                <div class="flex justify-center gap-2">
+                    <a href="https://wa.me" target="_blank" class="text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-600/30">31594645</a>
+                    <a href="https://wa.me" target="_blank" class="text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-600/30">55110103</a>
+                </div>
+            </div>
+            <p id="auth-error" class="text-red-400 text-xs mt-4"></p>
+        </div>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobby-screen" class="hidden text-center glass p-8 rounded-3xl w-full max-w-md">
+        <h2 class="text-xl mb-4">Pare pou batay la?</h2>
+        <p class="mb-6 text-gray-400">Balans ou: <span id="user-balance" class="text-green-400 font-bold">--</span></p>
+        <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold shadow-lg">MIZE 50G POU JWE</button>
+    </div>
+
+    <!-- JWÈT -->
+    <div id="game-screen" class="hidden w-full max-w-4xl text-center">
+        <div class="glass p-3 rounded-2xl mb-4 max-w-xs mx-auto">
+            <div id="status" class="font-bold text-sm mb-1">Tou pa: X</div>
+            <div class="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                <div id="timer-visual" class="timer-bar"></div>
+            </div>
+        </div>
+        <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let userPhone = "", currentPlayer = "", board = Array(225).fill(null);
+        let timeLeft = 30, timerInterval = null;
+
+        async function handleLogin() {
+            userPhone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, password}) });
+            const data = await res.json();
+            if(data.success) {
+                document.getElementById('user-balance').innerText = data.balance + " G";
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('lobby-screen').classList.remove('hidden');
+            } else { document.getElementById('auth-error').innerText = data.message; }
         }
-    }
 
-    async function placeBet() {
-        const response = await fetch('/bet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: userPhone })
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            hasBetted = true;
-            userBalance = data.newBalance;
-            document.getElementById('lobby-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('game-balance').innerText = userBalance + " G";
-            createBoard();
-        } else {
-            alert(data.message);
+        async function placeBet() {
+            const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone}) });
+            const data = await res.json();
+            if(data.success) {
+                document.getElementById('lobby-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                createBoard(); startTimer();
+            } else { alert(data.message); }
         }
-    }
-</script>
 
-<!-- Paj Lobby a (Lè moun nan fin konekte) -->
-<div id="lobby-screen" class="hidden text-center glass p-8 rounded-3xl">
-    <h2 class="text-2xl mb-4">Byenvini nan Mopyon 50G</h2>
-    <p class="mb-4 text-gray-400">Balans ou: <span id="user-balance" class="text-green-400 font-bold"></span></p>
-    <button onclick="placeBet()" class="bg-green-600 px-8 py-3 rounded-xl font-bold">MIZE 50 GOUD POU JWE</button>
-</div>
+        function createBoard() {
+            const b = document.getElementById('board'); b.innerHTML = '';
+            for(let i=0; i<225; i++) {
+                const c = document.createElement('div'); c.classList.add('cell');
+                c.onclick = () => makeMove(i, true); b.appendChild(c);
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval); timeLeft = 30;
+            timerInterval = setInterval(() => {
+                timeLeft--; 
+                document.getElementById('timer-visual').style.width = (timeLeft/30)*100 + "%";
+                if(timeLeft <= 0) { 
+                    clearInterval(timerInterval); 
+                    socket.emit('game-over', currentPlayer === 'X' ? 'O' : 'X'); 
+                    alert("Tan fini! Ou pèdi.");
+                }
+            }, 1000);
+        }
+
+        function makeMove(i, emit) {
+            if(board[i] || !currentPlayer) return;
+            board[i] = currentPlayer;
+            const cell = document.getElementById('board').children[i];
+            cell.innerText = currentPlayer; cell.classList.add(currentPlayer);
+            if(checkWin(i)) {
+                clearInterval(timerInterval);
+                setTimeout(() => { alert(currentPlayer + " GENYEN!"); socket.emit('game-over', currentPlayer); }, 100);
+                return;
+            }
+            if(emit) socket.emit('mouvman', {index: i, player: currentPlayer});
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            document.getElementById('status').innerText = "Tou pa: " + currentPlayer;
+            startTimer();
+        }
+
+        function checkWin(index) {
+            const r = Math.floor(index / 15), c = index % 15;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for(let [dr, dc] of dirs) {
+                let cnt = 1;
+                for(let i=1; i<5; i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0&&nr<15&&nc>=0&&nc<15&&board[nr*15+nc]===currentPlayer) cnt++; else break; }
+                for(let i=1; i<5; i++) { let nr=r-dr*i, nc=c-dc*i; if(nr>=0&&nr<15&&nc>=0&&nc<15&&board[nr*15+nc]===currentPlayer) cnt++; else break; }
+                if(cnt >= 5) return true;
+            }
+            return false;
+        }
+
+        socket.on('start-player', p => { if(!currentPlayer) {currentPlayer=p; document.getElementById('status').innerText = "Tou pa: " + p;} });
+        socket.on('mouvman', d => { currentPlayer=d.player; makeMove(d.index, false); });
+        socket.on('reset', p => { board.fill(null); currentPlayer=p; createBoard(); startTimer(); });
+    </script>
+</body>
+</html>
