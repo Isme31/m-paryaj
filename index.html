@@ -1,18 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="ht">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz⚡</title>
+    <title>Mopyon Blitz 5⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
         .hidden { display: none; }
         .screen { padding: 20px; }
         input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; font-size: 16px; border: none; }
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
-        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
         .x { color: #007bff; } .o { color: #ff4757; }
+        .status-box { background: #222; padding: 10px; border-radius: 10px; margin: 10px 0; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -20,19 +22,21 @@
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <input type="text" id="ref" placeholder="Paren (opsyonèl)">
-        <button onclick="login()">Konekte</button>
+        <input type="text" id="ref" placeholder="Paren (Telefòn)">
+        <button onclick="login()">Konekte / Enskri</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <p>Balans: <span id="bal" style="color:#00ff00">0</span> G</p>
-        <div id="status">Pare pou jwe?</div>
+        <div class="status-box">
+            <p>Balans: <span id="bal" style="color:#00ff00">0</span> G</p>
+            <div id="status">Pare pou jwe?</div>
+        </div>
         
-        <button id="findBtn" onclick="findGame()">Jwe pou 50G</button>
+        <button id="findBtn" onclick="findGame()">Jwe pou 50G (Miltijwè)</button>
         <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
 
         <div id="board" class="grid hidden"></div>
-        <button onclick="location.reload()" style="background:#444">Soti</button>
+        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti nan Jwèt la</button>
     </div>
 
     <script>
@@ -40,7 +44,7 @@
         let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
 
         async function login() {
-            const phone = document.getElementById('phone').value;
+            const phone = id('phone').value;
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -50,17 +54,18 @@
             if(data.success) {
                 myPhone = phone; id('bal').innerText = data.balance;
                 id('auth-screen').classList.add('hidden'); id('game-screen').classList.remove('hidden');
-                if(phone === "hugues") id('robotBtn').classList.remove('hidden'); // Sèlman admin
+                if(phone === "509XXXXXXXX") id('robotBtn').classList.remove('hidden'); // METE NIMERWO PAW LA
             } else alert(data.message);
         }
 
         function findGame() {
             if(parseFloat(id('bal').innerText) < 50) {
-                id('status').innerHTML = "<b style='color:red'>Rechaje kont ou!</b>";
+                id('status').innerHTML = "<b style='color:red'>Balans twò ba. Rechaje!</b>";
                 return;
             }
             socket.emit('findGame', { phone: myPhone });
             id('status').innerText = "Ap chèche advèsè...";
+            id('findBtn').classList.add('hidden');
         }
 
         socket.on('gameStart', (data) => {
@@ -68,11 +73,11 @@
             mySymbol = data.players[socket.id];
             myTurn = (mySymbol === 'X');
             id('board').classList.remove('hidden');
-            id('status').innerText = `Jwèt la kòmanse! Ou se ${mySymbol}`;
+            id('status').innerText = `Jwèt kòmanse! Ou se ${mySymbol}. ${myTurn ? 'Tou pa w!' : 'Tou pa li.'}`;
             renderBoard();
         });
 
-        socket.on('error_msg', (m) => { id('status').innerHTML = `<b style='color:red'>${m}</b>`; });
+        socket.on('error_msg', (m) => { id('status').innerHTML = `<b style='color:red'>${m}</b>`; id('findBtn').classList.remove('hidden'); });
 
         function renderBoard() {
             const b = id('board'); b.innerHTML = "";
@@ -96,19 +101,18 @@
                 return;
             }
 
-            if(isRobot) { setTimeout(robotLogic, 500); } 
-            else { socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol }); }
+            if(isRobot) { setTimeout(robotLogic, 600); } 
+            else { socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol }); id('status').innerText = "Tou pa advèsè a..."; }
         }
 
         socket.on('opponentMove', (data) => {
             boardData[data.index] = data.symbol;
-            myTurn = true; renderBoard();
+            myTurn = true; id('status').innerText = "Tou pa w!"; renderBoard();
         });
 
-        // Lojik 5 pyon aliyen
         function checkWin5(idx, sym) {
             const size = 10;
-            const dirs = [[1,0], [0,1], [1,1], [1,-1]];
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             const r = Math.floor(idx/size), c = idx%size;
             for(let [dr, dc] of dirs) {
                 let count = 1;
@@ -125,12 +129,9 @@
             return false;
         }
 
-        // Robo Admin
         function startRobot() {
             isRobot = true; mySymbol = "X"; myTurn = true;
-            id('board').classList.remove('hidden');
-            id('status').innerText = "Ou kont Robo Blitz!";
-            renderBoard();
+            id('board').classList.remove('hidden'); id('status').innerText = "Mòd Antrenman (IA)"; renderBoard();
         }
 
         function robotLogic() {
@@ -139,9 +140,9 @@
                 let move = empty[Math.floor(Math.random() * empty.length)];
                 boardData[move] = "O"; myTurn = true; renderBoard();
                 if(checkWin5(move, "O")) id('status').innerText = "Robo a ganyen! 🤖";
+                else id('status').innerText = "Tou pa w!";
             }
         }
-
         function id(n) { return document.getElementById(n); }
     </script>
 </body>
