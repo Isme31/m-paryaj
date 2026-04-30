@@ -3,108 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Blitz ⚡</title>
+    <title>Mopyon Blitz ⚡</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
-        .container { max-width: 500px; margin: auto; }
-        .card { 
-            background:#222; 
-            border:1px solid #444; 
-            padding:15px; 
-            margin:15px 0; 
-            border-radius:12px; 
-            text-align: left;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-        .phone { color: #007bff; font-weight: bold; font-size: 1.1em; }
-        .amount { color: #28a745; font-weight: bold; float: right; }
-        .tid { background: #333; padding: 5px; border-radius: 4px; display: block; margin: 10px 0; font-family: monospace; }
-        button { 
-            background:#28a745; 
-            color:white; 
-            border:none; 
-            padding:12px; 
-            cursor:pointer; 
-            width:100%; 
-            border-radius:8px; 
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        button:hover { background: #218838; }
-        .empty { color: #888; margin-top: 50px; }
-        .refresh-btn { background: #444; margin-bottom: 20px; width: auto; padding: 10px 20px; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
+        .hidden { display: none; } .screen { padding: 20px; }
+        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .x { color: #007bff; } .o { color: #ff4757; }
+        .status-box { background: #222; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Panèl Kontwòl ⚡</h1>
-        <button class="refresh-btn" onclick="loadDeposits()">🔄 Rafrechi Lis la</button>
+    <div id="auth-screen" class="screen">
+        <h1>Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <input type="password" id="pass" placeholder="Modpas">
+        <input type="text" id="ref" placeholder="Paren (Opsyonèl)">
+        <button onclick="login()">Konekte pou Jwe</button>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <div class="status-box">
+            <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
+            <div id="status">Chwazi yon mòd 👇</div>
+        </div>
         
-        <div id="list">
-            <p class="empty">Ap chaje depo yo...</p>
+        <div id="main-menu">
+            <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
+            <div style="margin: 10px 0; color:#888;">— OSWA —</div>
+            <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
+            <button onclick="joinPrivate()" style="background:#ffc107; color:black">Antre nan Tab la</button>
+            <br><br>
+            <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
+        </div>
+
+        <div id="board" class="grid hidden"></div>
+
+        <div style="margin-top:20px; background:#222; padding:15px; border-radius:10px;">
+            <p>Depo MonCash: <b>55110103</b></p>
+            <input type="text" id="tid" placeholder="ID Tranzaksyon">
+            <button onclick="voyeDepo()">Mande Depo</button>
         </div>
     </div>
 
     <script>
-        const ADMIN_KEY = "hugues"; // Menm kle ki nan index.js la
+        const socket = io();
+        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
 
-        async function loadDeposits() {
-            try {
-                const res = await fetch(`/admin/all-data?key=${ADMIN_KEY}`);
-                const data = await res.json();
-                
-                const listDiv = document.getElementById('list');
-                
-                if (!data.deposits || data.deposits.length === 0) {
-                    listDiv.innerHTML = '<p class="empty">Pa gen depo an tann pou kounye a.</p>';
-                    return;
-                }
+        function id(n) { return document.getElementById(n); }
 
-                listDiv.innerHTML = data.deposits.map(d => `
-                    <div class="card" id="card-${d._id}">
-                        <span class="amount">${d.amount}G</span>
-                        <span class="phone">📞 ${d.phone}</span>
-                        <small style="display:block; color:#888; margin-top:5px;">Transaction ID:</small>
-                        <span class="tid">${d.transactionId}</span>
-                        <button onclick="confirmDeposit('${d._id}')">Konfime Depo sa ✅</button>
-                    </div>
-                `).join('');
-
-            } catch (err) {
-                console.error("Erè:", err);
-                document.getElementById('list').innerHTML = '<p style="color:red;">Erè nan koneksyon ak sèvè a.</p>';
+        async function login() {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value, ref: id('ref').value })
+            });
+            const data = await res.json();
+            if(data.success) {
+                myPhone = data.phone; id('bal').innerText = data.balance;
+                id('auth-screen').classList.add('hidden');
+                id('game-screen').classList.remove('hidden');
+                if(myPhone === "55110103" || myPhone === "31594645") id('robotBtn').classList.remove('hidden');
             }
         }
 
-        async function confirmDeposit(id) {
-            if (!confirm("Èske ou sèten ou resevwa kòb sa a tout bon?")) return;
+        async function voyeDepo() {
+            const tid = id('tid').value;
+            if(!tid) return alert("ID manke");
+            const res = await fetch('/submit-deposit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: myPhone, tid, amount: 50 })
+            });
+            const data = await res.json();
+            if(data.success) alert("Depo voye! Tann admin.");
+        }
 
-            try {
-                const res = await fetch('/admin/confirm-deposit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: ADMIN_KEY, id: id })
-                });
+        socket.on('balanceUpdate', (data) => {
+            if(data.phone === myPhone) id('bal').innerText = data.newBalance;
+        });
 
-                const result = await res.json();
+        function createPrivate() {
+            const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+            socket.emit('createPrivate', { room: code, phone: myPhone });
+            window.open(`https://wa.me{code}*`, '_blank');
+            id('status').innerText = "Kòd ou: " + code;
+            id('main-menu').classList.add('hidden');
+        }
 
-                if (result.success) {
-                    alert("Bravo! Balans jwè a ajou.");
-                    loadDeposits(); // Refè lis la
-                } else {
-                    alert("Erè: " + result.message);
-                }
-            } catch (err) {
-                alert("Sèvè a gen yon pwoblèm.");
+        function joinPrivate() {
+            const code = id('join-code').value.toUpperCase();
+            socket.emit('joinPrivate', { room: code, phone: myPhone });
+        }
+
+        socket.on('gameStart', (data) => {
+            currentRoom = data.room;
+            mySymbol = data.players[0] === myPhone ? 'X' : 'O';
+            myTurn = (mySymbol === 'X');
+            id('board').classList.remove('hidden');
+            id('main-menu').classList.add('hidden');
+            id('status').innerText = "Ou se " + mySymbol;
+            renderBoard();
+        });
+
+        socket.on('opponentMove', (data) => {
+            boardData[data.index] = data.symbol;
+            myTurn = true;
+            id('status').innerText = "Tou pa w!";
+            renderBoard();
+            if(checkWin5(data.index, data.symbol)) { id('status').innerText = "Ou pèdi! ❌"; myTurn = false; }
+        });
+
+        function startRobot() {
+            isRobot = true; mySymbol = "X"; myTurn = true;
+            boardData = Array(100).fill("");
+            id('main-menu').classList.add('hidden');
+            id('board').classList.remove('hidden');
+            id('status').innerText = "Ou vs Robo!";
+            renderBoard();
+        }
+
+        function robotLogic() {
+            let empty = boardData.map((v,i) => v === "" ? i : null).filter(v => v !== null);
+            if(empty.length > 0) {
+                let move = empty[Math.floor(Math.random() * empty.length)];
+                boardData[move] = "O";
+                renderBoard();
+                if(checkWin5(move, "O")) { id('status').innerText = "Robo a ganyen! 🤖"; myTurn = false; }
+                else { myTurn = true; id('status').innerText = "Tou pa w!"; }
             }
         }
 
-        // Chaje depo yo depi paj la louvri
-        loadDeposits();
+        function makeMove(i) {
+            if(!myTurn || boardData[i] !== "") return;
+            boardData[i] = mySymbol; myTurn = false;
+            renderBoard();
+            if(checkWin5(i, mySymbol)) {
+                id('status').innerText = "🎉 OU GANYEN!";
+                if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
+                return;
+            }
+            if(isRobot) setTimeout(robotLogic, 600);
+            else socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+        }
 
-        // Rafrechi otomatikman chak 30 segonn
-        setInterval(loadDeposits, 30000);
+        function renderBoard() {
+            const b = id('board'); b.innerHTML = "";
+            boardData.forEach((val, i) => {
+                const cell = document.createElement('div');
+                cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
+                cell.onclick = () => makeMove(i);
+                b.appendChild(cell);
+            });
+        }
+
+        function checkWin5(index, s) {
+            const size = 10; const r = Math.floor(index / size); const c = index % size;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let [dr, dc] of dirs) {
+                let count = 1;
+                for (let i = 1; i < 5; i++) {
+                    let nr = r+dr*i, nc = c+dc*i;
+                    if (nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===s) count++; else break;
+                }
+                for (let i = 1; i < 5; i++) {
+                    let nr = r-dr*i, nc = c-dc*i;
+                    if (nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===s) count++; else break;
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
     </script>
 </body>
 </html>
