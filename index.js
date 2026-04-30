@@ -7,34 +7,33 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Sèvi fichye static (HTML, CSS, JS) ki nan rasin pwojè a
 app.use(express.static(__dirname));
 
-// Voye index.html lè yon moun vizite sit la
 app.get('/', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
-// Jesyon kominikasyon an dirèk ak Socket.io
-io.on('connection', (socket) => {
-  console.log('Yon jwè konekte: ' + socket.id);
+// Nou kòmanse pa chwazi X oswa O pa azar
+let winnerOfLastRound = Math.random() < 0.5 ? 'X' : 'O';
 
-  // Lè yon jwè fè yon mouvman, voye l bay tout lòt moun
+io.on('connection', (socket) => {
+  // Lè yon moun konekte, nou di l kiyès k ap kòmanse
+  socket.emit('start-player', winnerOfLastRound);
+
   socket.on('mouvman', (data) => {
     socket.broadcast.emit('mouvman', data);
   });
 
-  // Lè yon moun klike sou bouton "Rekòmanse", reset pou tout moun
-  socket.on('reset', () => {
-    io.emit('reset');
+  socket.on('game-over', (winner) => {
+    winnerOfLastRound = winner; // Moun ki genyen an ap kòmanse pwochen fwa
+    io.emit('reset', winnerOfLastRound);
   });
 
-  socket.on('disconnect', () => {
-    console.log('Yon jwè dekonekte');
+  socket.on('reset', () => {
+    io.emit('reset', winnerOfLastRound);
   });
 });
 
-// Sèvi ak pò Render bay la oswa 3000 pa defo
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Sèvè a ap kouri sou pò ${PORT}`);
