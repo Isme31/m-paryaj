@@ -1,20 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head><title>Blitz Admin</title><script src="https://tailwindcss.com"></script></head>
-<body class="bg-gray-900 text-white p-6">
-    <h1 class="text-2xl font-bold text-orange-500 mb-6 border-b border-orange-500 pb-2 italic">ADMIN PANEL</h1>
-    <div class="grid md:grid-cols-2 gap-8 text-xs">
-        <div><h2 class="text-lg font-bold mb-4 text-green-400 uppercase">Depo</h2><div id="d-list" class="grid gap-2"></div></div>
-        <div><h2 class="text-lg font-bold mb-4 text-blue-400 uppercase">Retrè</h2><div id="w-list" class="grid gap-2"></div></div>
+<body class="bg-[#020617] text-white p-10">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-4xl font-black text-blue-500 mb-10 italic border-b border-white/10 pb-5 uppercase">Blitz Control Center</h1>
+        <div class="grid md:grid-cols-2 gap-10">
+            <div class="glass p-8 rounded-[40px] border border-green-500/20">
+                <h2 class="text-xl font-black mb-6 text-green-400 italic">DEPO PANDYE</h2>
+                <div id="d-list" class="space-y-4"></div>
+            </div>
+            <div class="glass p-8 rounded-[40px] border border-blue-500/20">
+                <h2 class="text-xl font-black mb-6 text-blue-400 italic">RETRÈ PANDYE</h2>
+                <div id="w-list" class="space-y-4"></div>
+            </div>
+        </div>
     </div>
     <script>
         const key = new URLSearchParams(window.location.search).get('key');
-        if(key !== "hugues") document.body.innerHTML = "<h1>Aksè Refize!</h1>";
+        if(key !== "hugues") document.body.innerHTML = "<h1 class='text-center mt-20 text-red-500 font-black'>AKSÈ REFIZE</h1>";
         async function fetchAll() {
             const res = await fetch(`/admin/data?key=${key}`);
             const { deposits, withdrawals } = await res.json();
-            document.getElementById('d-list').innerHTML = deposits.map(d => `<div class="p-3 bg-gray-800 rounded border border-gray-700 flex justify-between items-center"><span><b>${d.amount}G</b> | ${d.phone} | ID: ${d.transactionId}</span><button onclick="confD(${d.id})" class="bg-green-600 px-3 py-1 rounded">KONFIME</button></div>`).join('') || 'Vid.';
-            document.getElementById('w-list').innerHTML = withdrawals.map(w => `<div class="p-3 bg-gray-800 rounded border border-blue-700 flex justify-between items-center"><span><b>${w.amount}G</b> | ${w.method} | ${w.userPhone}</span><button onclick="confW(${w.id})" class="bg-blue-600 px-3 py-1 rounded">VOYE FINI</button></div>`).join('') || 'Vid.';
+            document.getElementById('d-list').innerHTML = deposits.map(d => `<div class="p-5 bg-white/5 rounded-2xl flex justify-between items-center border border-white/5"><div><p class="text-lg font-black text-green-400">${d.amount}G</p><p class="text-[10px] text-gray-500 uppercase">${d.phone} | ID: ${d.transactionId}</p></div><button onclick="confD(${d.id})" class="bg-green-600 px-6 py-2 rounded-xl font-black text-xs">OK</button></div>`).join('') || 'Vid.';
+            document.getElementById('w-list').innerHTML = withdrawals.map(w => `<div class="p-5 bg-white/5 rounded-2xl flex justify-between items-center border border-white/5"><div><p class="text-lg font-black text-blue-400">${w.amount}G</p><p class="text-[10px] text-gray-500 uppercase">${w.method} | ${w.userPhone}</p></div><button onclick="confW(${w.id})" class="bg-blue-600 px-6 py-2 rounded-xl font-black text-xs">VOYE</button></div>`).join('') || 'Vid.';
         }
         async function confD(id) { await fetch('/admin/confirm-deposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, id}) }); fetchAll(); }
         async function confW(id) { await fetch('/admin/confirm-withdrawal', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, id}) }); fetchAll(); }
