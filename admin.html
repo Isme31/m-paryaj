@@ -2,44 +2,38 @@
 <html>
 <head><title>Admin | Mopyon</title><script src="https://tailwindcss.com"></script></head>
 <body class="bg-gray-900 text-white p-8">
-    <h1 class="text-2xl font-bold text-orange-500 mb-4">DEPO KI PANDYE</h1>
-    <div id="depo-list" class="grid gap-2 mb-8"></div>
+    <h1 class="text-3xl font-bold text-orange-500 mb-6 italic">DEPO PANDYE</h1>
+    <div id="depo-list" class="grid gap-3 mb-10"></div>
 
-    <h1 class="text-2xl font-bold text-blue-500 mb-4">RETRÈ KI PANDYE</h1>
-    <div id="retrait-list" class="grid gap-2"></div>
+    <h1 class="text-3xl font-bold text-blue-500 mb-6 italic">RETRÈ PANDYE</h1>
+    <div id="retrait-list" class="grid gap-3"></div>
 
     <script>
         async function load() {
             const res = await fetch('/admin/data');
             const { deposits, withdrawals } = await res.json();
             
-            const dCont = document.getElementById('depo-list');
-            dCont.innerHTML = deposits.map(d => `
-                <div class="p-4 bg-gray-800 rounded border border-gray-700 flex justify-between">
-                    <span>${d.amount}G | ${d.phone} (ID: ${d.transactionId})</span>
-                    <button onclick="confirmDepo(${d.id})" class="bg-green-600 px-4 py-1 rounded">KONFIME</button>
-                </div>
-            `).join('');
+            document.getElementById('depo-list').innerHTML = deposits.map(d => `
+                <div class="p-4 bg-gray-800 rounded-xl border border-gray-700 flex justify-between items-center">
+                    <span><b>${d.amount}G</b> | Telefòn: ${d.phone} | ID: ${d.transactionId}</span>
+                    <button onclick="confirmDepo(${d.id})" class="bg-green-600 px-6 py-2 rounded font-bold">KONFIME</button>
+                </div>`).join('') || '<p>Pa gen depo.</p>';
 
-            const wCont = document.getElementById('retrait-list');
-            wCont.innerHTML = withdrawals.map(w => `
-                <div class="p-4 bg-gray-800 rounded border border-blue-700 flex justify-between">
-                    <span>${w.amount}G pou nimewo: <b>${w.method}</b> (Jwè: ${w.userPhone})</span>
-                    <button onclick="confirmRetrait(${w.id})" class="bg-blue-600 px-4 py-1 rounded">MWEN VOYE L</button>
-                </div>
-            `).join('');
+            document.getElementById('retrait-list').innerHTML = withdrawals.map(w => `
+                <div class="p-4 bg-gray-800 rounded-xl border border-blue-700 flex justify-between items-center">
+                    <span><b>${w.amount}G</b> | Voye sou: <b class="text-yellow-400">${w.method}</b> | Jwè: ${w.userPhone}</span>
+                    <button onclick="confirmRetrait(${w.id})" class="bg-blue-600 px-6 py-2 rounded font-bold">MWEN VOYE L</button>
+                </div>`).join('') || '<p>Pa gen retrè.</p>';
         }
 
         async function confirmDepo(id) {
             await fetch('/admin/confirm-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ depositId: id }) });
             load();
         }
-
         async function confirmRetrait(id) {
             await fetch('/admin/confirm-withdrawal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
             load();
         }
-
         load(); setInterval(load, 5000);
     </script>
 </body>
