@@ -9,17 +9,17 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// --- CONFIGURATION ---
 const ADMIN_KEY = "hugues"; 
-const URL_APLIKASYON_AN = "https://mopyon-50g.onrender.com"; 
-
-// --- KONFIKIRASYON MONGODB ---
+const URL_APLIKASYON_AN = "https://onrender.com"; 
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority";
 
+// --- CONNEXION MONGODB ---
 mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Konekte ak siksè!"))
     .catch(err => console.log("❌ Erè MongoDB:", err));
 
-// --- MODÈL DONE ---
+// --- MODÈLES DE DONNÉES ---
 const User = mongoose.model('User', { 
     phone: String, 
     password: String, 
@@ -42,16 +42,17 @@ const Withdrawal = mongoose.model('Withdrawal', {
 
 // --- MIDDLEWARES ---
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // Sa ap sèvi tout fichye CSS/JS ki nan folder la
+// Sert tous les fichiers (CSS, images) situés à la racine
+app.use(express.static(path.join(__dirname))); 
 
-// --- SISTÈM ANTI-DÒMI (AUTO-PING) ---
+// --- SYSTÈME ANTI-DODO (AUTO-PING) ---
 setInterval(() => {
     axios.get(URL_APLIKASYON_AN)
-        .then(() => console.log("⚡ Blitz toujou leve!"))
-        .catch(() => console.log("Ping failed."));
+        .then(() => console.log("⚡ Blitz est réveillé !"))
+        .catch(() => console.log("Ping échoué."));
 }, 840000); 
 
-// --- ROUTES POU PAJ YO (SA AP RANJE PAJ BLANCH LAN) ---
+// --- ROUTES POUR LES PAGES (RÈGLE LE PROBLÈME DE PAGE BLANCHE) ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -80,7 +81,7 @@ app.post('/login', async (req, res) => {
 app.post('/request-deposit', async (req, res) => {
     const { phone, amount, transactionId } = req.body;
     const existe = await Deposit.findOne({ transactionId });
-    if(existe) return res.json({ success: false, message: "ID deja itilize!" });
+    if(existe) return res.json({ success: false, message: "ID déjà utilisé !" });
     await new Deposit({ phone, amount: parseInt(amount), transactionId }).save();
     res.json({ success: true });
 });
@@ -145,4 +146,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Sèvè Blitz sou pò ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Serveur Blitz lancé sur le port ${PORT}`));
