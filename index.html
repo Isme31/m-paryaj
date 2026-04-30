@@ -5,61 +5,66 @@
     <title>Blitz Mopyon</title>
     <script src="https://tailwindcss.com"></script>
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; }
+        body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
-        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 2px; }
+        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
         .cell.X { color: #f87171; text-shadow: 0 0 5px #f87171; } .cell.O { color: #60a5fa; text-shadow: 0 0 5px #60a5fa; }
         .hidden { display: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- AUTH -->
+    <!-- LOGIN -->
     <div id="auth-screen" class="w-full max-w-md">
-        <h1 class="text-4xl font-bold mb-6 text-blue-400 italic text-center">BLITZ</h1>
+        <h1 class="text-4xl font-bold mb-6 text-blue-400 italic">BLITZ</h1>
         <div class="glass p-8 rounded-3xl">
             <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 outline-none border border-transparent focus:border-blue-500">
             <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 outline-none border border-transparent focus:border-blue-500">
-            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold">KONEKTE</button>
+            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold uppercase tracking-widest">Konekte</button>
         </div>
     </div>
 
-    <!-- MENU -->
+    <!-- MENU AK NON JWÈT LA -->
     <div id="menu-screen" class="hidden w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-6 text-blue-400">MENU</h2>
-        <button onclick="startBet(false)" class="glass p-5 rounded-2xl w-full flex justify-between items-center border-l-4 border-blue-500 mb-3 hover:bg-blue-600/10">
-            <div class="text-left font-bold">MOPYON 50G (VS MOUN)</div><span class="text-2xl">👥</span>
-        </button>
-        <button onclick="startBet(true)" class="glass p-5 rounded-2xl w-full flex justify-between items-center border-l-4 border-red-500 mb-3 hover:bg-red-600/10">
-            <div class="text-left font-bold">ROBO LEJAND (50G)</div><span class="text-2xl">🤖</span>
-        </button>
+        <h1 class="text-6xl font-black mb-10 text-blue-500 italic tracking-tighter shadow-blue-500/20">MOPYON</h1>
+        <p class="text-gray-400 mb-6 text-xs font-bold uppercase tracking-widest">Chwazi mòd jwèt ou</p>
+        <div class="grid gap-4">
+            <button onclick="startBet(false)" class="glass p-6 rounded-2xl w-full flex justify-between items-center border-l-4 border-blue-500 hover:bg-blue-600/20 transition transform hover:scale-105">
+                <div class="text-left"><span class="block text-xl font-extrabold uppercase">VS MOUN</span><span class="text-xs text-blue-300 italic">Mize 50G</span></div>
+                <span class="text-3xl">👥</span>
+            </button>
+            <button onclick="startBet(true)" class="glass p-6 rounded-2xl w-full flex justify-between items-center border-l-4 border-red-500 hover:bg-red-600/20 transition transform hover:scale-105">
+                <div class="text-left"><span class="block text-xl font-extrabold uppercase">VS ROBO</span><span class="text-xs text-red-400 italic">Defi Robo Lejand</span></div>
+                <span class="text-3xl">🤖</span>
+            </button>
+        </div>
     </div>
 
     <!-- LOBBY -->
     <div id="lobby-screen" class="hidden glass p-8 rounded-3xl w-full max-w-md">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-bold text-green-400"><span id="user-balance">0</span> G</h2>
-            <button onclick="location.reload()" class="text-xs text-gray-400 underline">MENU</button>
+            <button onclick="location.reload()" class="text-xs text-gray-400 underline font-bold uppercase">Menu</button>
         </div>
         <div id="multiplayer-controls">
             <div class="grid grid-cols-2 gap-3 mb-4">
-                <button onclick="genRoom()" class="bg-blue-600/20 border border-blue-500 py-2 rounded-xl text-xs">KREYE KÒD</button>
-                <button onclick="document.getElementById('room-box').classList.remove('hidden')" class="bg-purple-600/20 border border-purple-500 py-2 rounded-xl text-xs">ANTRE KÒD</button>
+                <button onclick="genRoom()" class="bg-blue-600/20 border border-blue-500 py-2 rounded-xl text-[10px] font-bold">KREYE KÒD</button>
+                <button onclick="document.getElementById('room-box').classList.remove('hidden')" class="bg-purple-600/20 border border-purple-500 py-2 rounded-xl text-[10px] font-bold">ANTRE KÒD</button>
             </div>
             <div id="room-box" class="hidden mb-4">
-                <input type="text" id="room-id" placeholder="KÒD" class="w-full bg-slate-800 p-3 rounded-xl mb-3 text-center border border-blue-500 outline-none uppercase font-bold">
-                <button onclick="joinMatch()" class="w-full bg-green-600 py-3 rounded-xl font-bold">JWE KOUNYE A</button>
+                <input type="text" id="room-id" placeholder="KÒD" class="w-full bg-slate-800 p-3 rounded-xl mb-3 text-center border border-blue-500 outline-none uppercase font-bold tracking-widest">
+                <button onclick="joinMatch()" class="w-full bg-green-600 py-3 rounded-xl font-bold uppercase">Jwe</button>
             </div>
         </div>
-        <div class="border-t border-gray-700 pt-4 grid grid-cols-2 gap-4">
-            <div class="text-left"><p class="text-[10px] text-gray-500 mb-1">DEPO</p>
-                <input id="d-amt" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+        <div class="border-t border-gray-700 pt-4 grid grid-cols-2 gap-4 text-left">
+            <div><p class="text-[9px] text-gray-500 mb-1 uppercase font-bold">Depo</p>
+                <input id="d-amt" placeholder="Kòb" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
                 <input id="d-id" placeholder="ID" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
                 <button onclick="doDepo()" class="w-full bg-orange-600 py-1 rounded text-[10px] font-bold">VOYE</button>
             </div>
-            <div class="text-left"><p class="text-[10px] text-gray-500 mb-1">RETRÈ</p>
-                <input id="w-amt" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+            <div><p class="text-[9px] text-gray-500 mb-1 uppercase font-bold">Retrè</p>
+                <input id="w-amt" placeholder="Kòb" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
                 <select id="w-meth" class="w-full bg-slate-800 p-1 rounded text-[10px] mb-1 text-white outline-none">
                     <option value="31594645">MonCash</option><option value="55110103">Natcash</option>
                 </select>
@@ -69,17 +74,17 @@
     </div>
 
     <!-- GAME & CHAT -->
-    <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col md:flex-row gap-4 items-start justify-center">
-        <div class="flex-none glass p-3 rounded-xl">
-            <div id="status" class="mb-3 font-bold text-blue-400 uppercase text-xs tracking-tighter">ATANN...</div>
+    <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col md:flex-row gap-4 items-center justify-center">
+        <div class="glass p-2 rounded-xl">
+            <div id="status" class="mb-2 font-bold text-blue-400 uppercase text-[10px]">ATANN...</div>
             <div class="board" id="board"></div>
         </div>
-        <div class="w-full md:w-64 glass rounded-xl flex flex-col h-[400px]">
-            <div class="p-2 border-b border-gray-700 text-[10px] font-bold text-gray-500">CHAT JWÈT</div>
+        <div class="w-full md:w-64 glass rounded-xl flex flex-col h-[350px]">
+            <div class="p-2 border-b border-gray-700 text-[10px] font-bold text-gray-500 uppercase">Chat</div>
             <div id="chat-box" class="flex-1 overflow-y-auto p-2 space-y-2 text-xs text-left"></div>
-            <div class="p-2 flex gap-1 border-t border-gray-700">
+            <div class="p-2 flex gap-1">
                 <input type="text" id="chat-input" placeholder="..." class="flex-1 bg-slate-800 p-1 rounded outline-none text-xs">
-                <button onclick="sendMsg()" class="bg-blue-600 px-2 rounded">➡️</button>
+                <button onclick="sendMsg()" class="bg-blue-600 px-2 rounded text-xs font-bold">➡️</button>
             </div>
         </div>
     </div>
@@ -94,7 +99,7 @@
             const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) });
             const d = await res.json();
             if(d.success) { document.getElementById('user-balance').innerText=d.balance; document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); }
-            else alert("Erè!");
+            else alert("Telefòn/Modpas Erè!");
         }
 
         async function startBet(ai) {
@@ -103,25 +108,17 @@
             const d = await res.json();
             if(d.success) {
                 document.getElementById('user-balance').innerText=d.newBalance;
-                if(isAI) {
-                    document.getElementById('menu-screen').classList.add('hidden');
-                    document.getElementById('game-screen').classList.remove('hidden');
-                    myRole="X"; currentPl="X"; makeGrid(); document.getElementById('status').innerText="TOU PAW (VS ROBO)";
-                } else {
-                    document.getElementById('menu-screen').classList.add('hidden');
-                    document.getElementById('lobby-screen').classList.remove('hidden');
-                }
+                document.getElementById('menu-screen').classList.add('hidden');
+                if(isAI) { document.getElementById('game-screen').classList.remove('hidden'); myRole="X"; currentPl="X"; makeGrid(); document.getElementById('status').innerText="VS ROBO LEJAND"; }
+                else { document.getElementById('lobby-screen').classList.remove('hidden'); }
             } else alert(d.message);
         }
 
         function genRoom() { document.getElementById('room-id').value = Math.random().toString(36).substring(2,8).toUpperCase(); document.getElementById('room-box').classList.remove('hidden'); }
         function joinMatch() {
-            room = document.getElementById('room-id').value;
-            if(!room) return alert("Mete kòd!");
+            room = document.getElementById('room-id').value; if(!room) return alert("Mete kòd!");
             socket.emit('join-room', { roomCode: room, phone: uPhone });
-            document.getElementById('lobby-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
-            makeGrid();
+            document.getElementById('lobby-screen').classList.add('hidden'); document.getElementById('game-screen').classList.remove('hidden'); makeGrid();
         }
 
         function makeGrid() {
@@ -134,50 +131,44 @@
         }
 
         function move(i, r) {
-            if(board[i]) return;
-            board[i]=r; const el=document.getElementById("c-"+i); el.innerText=r; el.classList.add(r);
+            if(board[i]) return; board[i]=r;
+            const el=document.getElementById("c-"+i); el.innerText=r; el.classList.add(r);
             if(win(i, r)) {
-                if(r === myRole) {
-                    fetch('/win-game', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) })
-                    .then(res=>res.json()).then(d=>{ alert("OU GENYEN 90G!"); location.reload(); });
-                } else { alert("OU PÈDI!"); location.reload(); }
-                if(!isAI) socket.emit('game-over', { room });
-                return;
+                if(r === myRole) { fetch('/win-game', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) }).then(()=>alert("OU GENYEN 90G!")); }
+                else alert("OU PÈDI!"); location.reload(); return;
             }
             currentPl = (r==='X')?'O':'X';
             document.getElementById('status').innerText = (currentPl===myRole)?"TOU PAW!":"TANN...";
             if(isAI && currentPl==="O") setTimeout(smartRobot, 600);
         }
 
-        // AI LEJAND LOJIK
         function smartRobot() {
-            let bestScore = -Infinity; let moveIdx = -1;
+            let bestS = -Infinity; let mIdx = -1;
             for(let i=0; i<225; i++) {
-                if(!board[i]) {
-                    let score = calcScore(i);
-                    if(score > bestScore) { bestScore = score; moveIdx = i; }
-                }
+                if(!board[i]) { let s = calcScore(i); if(s > bestS) { bestS = s; mIdx = i; } }
             }
-            if(moveIdx !== -1) move(moveIdx, "O");
+            if(mIdx !== -1) move(mIdx, "O");
         }
 
         function calcScore(idx) {
-            let s=0; const row=Math.floor(idx/15), col=idx%15, dirs=[[0,1],[1,0],[1,1],[1,-1]];
-            for(let [dr, dc] of dirs) {
-                s += checkPattern(row, col, dr, dc, "O") * 20; // Atak
-                s += checkPattern(row, col, dr, dc, "X") * 25; // Defans (Bloke moun)
-            }
+            let s=0; const r=Math.floor(idx/15), c=idx%15, ds=[,,,[1,-1]];
+            for(let [dr, dc] of ds) { s += check(r, c, dr, dc, "O")*20; s += check(r, c, dr, dc, "X")*25; }
             return s + Math.random();
         }
 
-        function checkPattern(r, c, dr, dc, role) {
-            let count = 0;
-            for(let i=-4; i<=4; i++) {
-                if(i===0) continue;
-                let nr=r+dr*i, nc=c+dc*i;
-                if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*15+nc] === role) count++;
-            }
-            return count;
+        function check(r, c, dr, dc, role) {
+            let cnt = 0; for(let i=-4; i<=4; i++) { if(i===0) continue; let nr=r+dr*i, nc=c+dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*15+nc] === role) cnt++; }
+            return cnt;
+        }
+
+        function win(idx, r) {
+            const s=15, row=Math.floor(idx/s), col=idx%s, ds=[,,,[1,-1]];
+            for(let [dr, dc] of ds) {
+                let cnt=1;
+                for(let i=1; i<5; i++) { let nr=row+dr*i, nc=col+dc*i; if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc]===r) cnt++; else break; }
+                for(let i=1; i<5; i++) { let nr=row-dr*i, nc=col-dc*i; if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc]===r) cnt++; else break; }
+                if(cnt>=5) return true;
+            } return false;
         }
 
         function sendMsg() { const i=document.getElementById('chat-input'); if(i.value) { socket.emit('chat-message', {room, phone:uPhone, message:i.value}); i.value=""; } }
@@ -190,25 +181,15 @@
         async function doWithdraw() {
             const amt=document.getElementById('w-amt').value;
             const res = await fetch('/request-withdrawal', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass, amount:amt, method:document.getElementById('w-meth').value}) });
-            const d = await res.json(); if(d.success) { alert("Mande!"); location.reload(); } else alert(d.message);
+            if(res.ok) alert("Demann voye!"); location.reload();
         }
         async function doDepo() {
             await fetch('/request-deposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, amount:document.getElementById('d-amt').value, transactionId:document.getElementById('d-id').value}) });
             alert("Voye!");
         }
 
-        function win(idx, r) {
-            const s=15, row=Math.floor(idx/s), col=idx%s, dirs=[[0,1],[1,0],[1,1],[1,-1]];
-            for(let [dr, dc] of dirs) {
-                let cnt=1;
-                for(let i=1; i<5; i++) { let nr=row+dr*i, nc=col+dc*i; if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc]===r) cnt++; else break; }
-                for(let i=1; i<5; i++) { let nr=row-dr*i, nc=col-dc*i; if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc]===r) cnt++; else break; }
-                if(cnt>=5) return true;
-            } return false;
-        }
-
         socket.on('player-role', r => myRole=r);
-        socket.on('start-game', r => { currentPl=r; document.getElementById('status').innerText=(myRole==='X'?"OU KÒMANSE!":"TANN..."); });
+        socket.on('start-game', r => { currentPl=r; document.getElementById('status').innerText=(myRole==='X'?"OU KÒMANSE!":"TANN LÒT LA..."); });
         socket.on('mouvman', d => move(d.index, d.role));
         socket.on('reset', () => setTimeout(()=>location.reload(), 3000));
     </script>
