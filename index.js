@@ -77,7 +77,7 @@ io.on('connection', (socket) => {
         if (winnerPhone) {
             let user = db.get('users').find({ phone: winnerPhone }).value();
             if (user) {
-                const updatedBalance = user.balance + 90;
+                const updatedBalance = user.balance + 90; // Admin pran 10G
                 db.get('users').find({ phone: winnerPhone }).assign({ balance: updatedBalance }).write();
                 io.to(room).emit('update-balance', { phone: winnerPhone, balance: updatedBalance });
             }
