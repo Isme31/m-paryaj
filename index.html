@@ -1,56 +1,125 @@
-<!-- ... (Tout style CSS ou yo rete menm jan) ... -->
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
-    let uPhone="", uPass="", myBalance=0;
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon Blitz</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; }
+        .hidden { display: none; }
+        .screen { padding: 20px; }
+        input, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; }
+        button { background: #007bff; color: white; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; justify-content: center; margin-top: 20px; }
+        .cell { width: 100px; height: 100px; background: #333; font-size: 2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    </style>
+</head>
+<body>
 
-    async function handleLogin() {
-        uPhone = document.getElementById('phone').value;
-        uPass = document.getElementById('password').value;
-        const res = await fetch('/login', { 
-            method:'POST', 
-            headers:{'Content-Type':'application/json'}, 
-            body: JSON.stringify({phone: uPhone, password: uPass}) 
-        });
-        const data = await res.json();
-        if(data.success) {
-            myBalance = data.balance;
-            document.getElementById('user-balance').innerText = myBalance;
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('menu-screen').classList.remove('hidden');
-        } else { alert(data.message); }
-    }
+    <!-- SCREEN LOGIN -->
+    <div id="auth-screen" class="screen">
+        <h1>Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Telefòn (ex: 31594645)"> <br>
+        <input type="password" id="password" placeholder="Modpas"> <br>
+        <button onclick="handleLogin()">Konekte / Enskri</button>
+    </div>
 
-    async function doDepo() {
-        const amount = document.getElementById('d-amt').value;
-        const transactionId = document.getElementById('d-id').value;
-        if(!amount || !transactionId) return alert("Ranpli tout bwat yo!");
-        
-        const res = await fetch('/request-deposit', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({phone: uPhone, amount, transactionId})
-        });
-        const data = await res.json();
-        if(data.success) alert("Depo voye! Tann admin konfime.");
-        else alert(data.message);
-    }
+    <!-- SCREEN MENU -->
+    <div id="menu-screen" class="screen hidden">
+        <h2>Byenvini! Balans: <span id="user-balance">0</span>G</h2>
+        <button onclick="showScreen('deposit-screen')">Depo</button>
+        <button onclick="showScreen('withdraw-screen')">Retrè</button>
+        <button onclick="startPlay()">Jwe Mopyon (50G)</button>
+    </div>
 
-    async function doWithdraw() {
-        const amount = document.getElementById('w-amt').value;
-        const method = document.getElementById('w-meth').value;
-        if(amount < 100) return alert("Minimòm se 100G");
-        
-        const res = await fetch('/request-withdrawal', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({phone: uPhone, password: uPass, amount, method})
-        });
-        const data = await res.json();
-        if(data.success) {
-            alert("Retrè voye!");
-            document.getElementById('user-balance').innerText = data.newBalance;
-        } else { alert("Erè nan balans ou!"); }
-    }
-    // ... (Ajoute rès lojik jwèt la isit la)
-</script>
+    <!-- SCREEN DEPOSIT -->
+    <div id="deposit-screen" class="screen hidden">
+        <h3>Fè yon Depo</h3>
+        <input type="number" id="d-amt" placeholder="Kantite lajan"> <br>
+        <input type="text" id="d-id" placeholder="Transaction ID MonCash"> <br>
+        <button onclick="doDepo()">Voye Depo</button>
+        <button onclick="showScreen('menu-screen')">Retounen</button>
+    </div>
+
+    <!-- SCREEN WITHDRAW -->
+    <div id="withdraw-screen" class="screen hidden">
+        <h3>Mande yon Retrè</h3>
+        <input type="number" id="w-amt" placeholder="Kantite (Min 100G)"> <br>
+        <select id="w-meth">
+            <option value="MonCash">MonCash</option>
+            <option value="NatCash">NatCash</option>
+        </select> <br>
+        <button onclick="doWithdraw()">Voye Demann</button>
+        <button onclick="showScreen('menu-screen')">Retounen</button>
+    </div>
+
+    <!-- JALON POU SOCKETS AK LOJIK -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let uPhone="", uPass="", myBalance=0;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        async function handleLogin() {
+            uPhone = document.getElementById('phone').value;
+            uPass = document.getElementById('password').value;
+            if(!uPhone || !uPass) return alert("Ranpli tout bwat yo");
+
+            try {
+                const res = await fetch('/login', { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body: JSON.stringify({phone: uPhone, password: uPass}) 
+                });
+                const data = await res.json();
+                if(data.success) {
+                    myBalance = data.balance;
+                    document.getElementById('user-balance').innerText = myBalance;
+                    showScreen('menu-screen');
+                } else { alert(data.message); }
+            } catch(e) { alert("Erè koneksyon ak sèvè a"); }
+        }
+
+        async function doDepo() {
+            const amount = document.getElementById('d-amt').value;
+            const transactionId = document.getElementById('d-id').value;
+            if(!amount || !transactionId) return alert("Ranpli tout bwat yo!");
+            
+            const res = await fetch('/request-deposit', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({phone: uPhone, amount, transactionId})
+            });
+            const data = await res.json();
+            if(data.success) alert("Depo voye! Tann admin konfime.");
+            else alert(data.message);
+        }
+
+        async function doWithdraw() {
+            const amount = document.getElementById('w-amt').value;
+            const method = document.getElementById('w-meth').value;
+            if(amount < 100) return alert("Minimòm se 100G");
+            
+            const res = await fetch('/request-withdrawal', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({phone: uPhone, password: uPass, amount, method})
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert("Retrè voye!");
+                document.getElementById('user-balance').innerText = data.newBalance;
+            } else { alert("Erè nan balans ou!"); }
+        }
+
+        function startPlay() {
+            alert("Sistèm jwèt la ap prepare...");
+            // Isit la ou ka ajoute lojik pou ouvri chanm mopyon an
+        }
+    </script>
+</body>
+</html>
