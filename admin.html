@@ -9,14 +9,11 @@
             const res = await fetch('/admin/deposits');
             const data = await res.json();
             const cont = document.getElementById('list');
-            cont.innerHTML = data.length ? '' : '<p>Pa gen demand pou kounye a.</p>';
+            cont.innerHTML = data.length ? '' : '<p>Pa gen demand.</p>';
             data.forEach(d => {
                 cont.innerHTML += `
                     <div class="p-6 bg-gray-800 rounded-xl flex justify-between items-center border border-gray-700">
-                        <div>
-                            <p class="text-xl font-bold text-green-400">${d.amount} Goud</p>
-                            <p class="text-sm text-gray-400">Nimewo: ${d.phone} | ID: ${d.transactionId}</p>
-                        </div>
+                        <div><p class="text-xl font-bold text-green-400">${d.amount} Goud</p><p class="text-sm">Nimewo: ${d.phone} | ID: ${d.transactionId}</p></div>
                         <button onclick="confirm(${d.id})" class="bg-green-600 px-6 py-2 rounded font-bold">KONFIME</button>
                     </div>`;
             });
