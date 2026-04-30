@@ -1,27 +1,45 @@
 <!DOCTYPE html>
 <html>
-<head><title>Admin | Konfimasyon</title><script src="https://tailwindcss.com"></script></head>
+<head><title>Admin | Mopyon</title><script src="https://tailwindcss.com"></script></head>
 <body class="bg-gray-900 text-white p-8">
-    <h1 class="text-3xl font-bold mb-8 text-orange-500">DEPO KI PANDYE</h1>
-    <div id="list" class="grid gap-4"></div>
+    <h1 class="text-2xl font-bold text-orange-500 mb-4">DEPO KI PANDYE</h1>
+    <div id="depo-list" class="grid gap-2 mb-8"></div>
+
+    <h1 class="text-2xl font-bold text-blue-500 mb-4">RETRÈ KI PANDYE</h1>
+    <div id="retrait-list" class="grid gap-2"></div>
+
     <script>
         async function load() {
-            const res = await fetch('/admin/deposits');
-            const data = await res.json();
-            const cont = document.getElementById('list');
-            cont.innerHTML = data.length ? '' : '<p>Pa gen demand.</p>';
-            data.forEach(d => {
-                cont.innerHTML += `
-                    <div class="p-6 bg-gray-800 rounded-xl flex justify-between items-center border border-gray-700">
-                        <div><p class="text-xl font-bold text-green-400">${d.amount} Goud</p><p class="text-sm">Nimewo: ${d.phone} | ID: ${d.transactionId}</p></div>
-                        <button onclick="confirm(${d.id})" class="bg-green-600 px-6 py-2 rounded font-bold">KONFIME</button>
-                    </div>`;
-            });
+            const res = await fetch('/admin/data');
+            const { deposits, withdrawals } = await res.json();
+            
+            const dCont = document.getElementById('depo-list');
+            dCont.innerHTML = deposits.map(d => `
+                <div class="p-4 bg-gray-800 rounded border border-gray-700 flex justify-between">
+                    <span>${d.amount}G | ${d.phone} (ID: ${d.transactionId})</span>
+                    <button onclick="confirmDepo(${d.id})" class="bg-green-600 px-4 py-1 rounded">KONFIME</button>
+                </div>
+            `).join('');
+
+            const wCont = document.getElementById('retrait-list');
+            wCont.innerHTML = withdrawals.map(w => `
+                <div class="p-4 bg-gray-800 rounded border border-blue-700 flex justify-between">
+                    <span>${w.amount}G pou nimewo: <b>${w.method}</b> (Jwè: ${w.userPhone})</span>
+                    <button onclick="confirmRetrait(${w.id})" class="bg-blue-600 px-4 py-1 rounded">MWEN VOYE L</button>
+                </div>
+            `).join('');
         }
-        async function confirm(id) {
+
+        async function confirmDepo(id) {
             await fetch('/admin/confirm-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ depositId: id }) });
             load();
         }
+
+        async function confirmRetrait(id) {
+            await fetch('/admin/confirm-withdrawal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
+            load();
+        }
+
         load(); setInterval(load, 5000);
     </script>
 </body>
