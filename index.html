@@ -8,31 +8,34 @@
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
         .hidden { display: none; } .screen { padding: 20px; }
         input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
         .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
         .x { color: #007bff; } .o { color: #ff4757; }
         .finance { background: #222; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+        .status-box { background: #222; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
     </style>
 </head>
 <body>
-    <!-- LOGIN SCREEN -->
+
+    <!-- PAJ KONEKSYON -->
     <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Telefòn">
+        <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <input type="text" id="ref" placeholder="Paren (Opsyonèl)">
-        <button onclick="login()">Konekte</button>
+        <input type="text" id="ref" placeholder="Nimewo Paren (Opsyonèl)">
+        <button onclick="login()">Konekte pou Jwe</button>
     </div>
 
-    <!-- GAME SCREEN -->
+    <!-- PAJ JWÈT LA (Li moute dirèk apre login) -->
     <div id="game-screen" class="screen hidden">
-        <div style="background:#222; padding:10px; border-radius:10px; margin-bottom:15px;">
+        <div class="status-box">
             <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status">Chwazi yon opsyon 👇</div>
+            <div id="status">Byenvini! Chwazi yon mòd 👇</div>
         </div>
         
-        <div id="game-menu">
+        <div id="main-menu">
             <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
             <div style="margin: 10px 0; color:#888;">— OSWA —</div>
             <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
@@ -41,6 +44,7 @@
             <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
         </div>
 
+        <!-- Tablo a ap parèt isit la lè jwèt kòmanse -->
         <div id="board" class="grid hidden"></div>
 
         <div class="finance">
@@ -52,7 +56,7 @@
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
             <button onclick="alert('Demann voye!')">Voye Depo</button>
         </div>
-        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti / Rekòmanse</button>
+        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti / Dekonekte</button>
     </div>
 
     <script>
@@ -61,24 +65,33 @@
 
         async function login() {
             const res = await fetch('/login', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ phone: id('phone').value, password: id('pass').value, ref: id('ref').value })
             });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.phone; id('bal').innerText = data.balance;
-                id('auth-screen').classList.add('hidden'); id('game-screen').classList.remove('hidden');
+                myPhone = data.phone;
+                id('bal').innerText = data.balance;
+                
+                // Deklanche afichaj jwèt la dirèkteman
+                id('auth-screen').classList.add('hidden');
+                id('game-screen').classList.remove('hidden');
+                
+                // Tcheke si se Admin
                 if(myPhone === "55110103" || myPhone === "31594645") id('robotBtn').classList.remove('hidden');
-            } else alert(data.message);
+            } else {
+                alert(data.message);
+            }
         }
 
         // --- LOJIK ROBO ---
         function startRobot() {
             isRobot = true; mySymbol = "X"; myTurn = true;
             boardData = Array(100).fill("");
-            id('game-menu').classList.add('hidden');
+            id('main-menu').classList.add('hidden');
             id('board').classList.remove('hidden');
-            id('status').innerText = "Ou kont Robo! (Ou se X)";
+            id('status').innerText = "Mòd Antrenman: Ou kont Robo!";
             renderBoard();
         }
 
@@ -88,37 +101,35 @@
                 let move = empty[Math.floor(Math.random() * empty.length)];
                 boardData[move] = "O";
                 renderBoard();
-                if(checkWin5(move, "O")) {
-                    id('status').innerText = "Robo a ganyen! 🤖";
-                    myTurn = false;
-                } else {
-                    myTurn = true;
-                    id('status').innerText = "Tou pa w!";
-                }
+                if(checkWin5(move, "O")) { id('status').innerText = "Robo a ganyen! 🤖"; myTurn = false; }
+                else { myTurn = true; id('status').innerText = "Tou pa w!"; }
             }
         }
 
-        // --- JWÈT ---
+        // --- JWÈT PRIVE WHATSAPP ---
         function createPrivate() {
-            if(parseFloat(id('bal').innerText) < 50) return alert("Rechaje!");
+            if(parseFloat(id('bal').innerText) < 50) return alert("Balans ou dwe omwen 50G!");
             const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            const txt = `Vini nou jwe! Kòd: *${code}*. https://onrender.com`;
+            const txt = `Vini nou jwe Mopyon! Men kòd la: *${code}*. Antre li la: https://onrender.com`;
             window.open(`https://wa.me{encodeURIComponent(txt)}`, '_blank');
             socket.emit('createPrivate', { room: code, phone: myPhone });
-            id('status').innerText = `Kòd: ${code}. Tann zanmi an...`;
-            id('game-menu').classList.add('hidden');
+            id('status').innerText = `Kòd ou: ${code}. Tann zanmi an...`;
+            id('main-menu').classList.add('hidden');
         }
 
         function joinPrivate() {
             const code = id('join-code').value.toUpperCase();
+            if(!code) return alert("Antre kòd la!");
             socket.emit('joinPrivate', { room: code, phone: myPhone });
-            id('game-menu').classList.add('hidden');
+            id('main-menu').classList.add('hidden');
         }
 
         socket.on('gameStart', (data) => {
-            currentRoom = data.room; mySymbol = data.players.includes(myPhone) ? (data.players[0] === myPhone ? 'X' : 'O') : 'O';
-            myTurn = (mySymbol === 'X'); id('board').classList.remove('hidden');
-            id('status').innerText = `Ou se ${mySymbol}. ${myTurn?'Tou pa w!':'Tou pa li.'}`;
+            currentRoom = data.room;
+            mySymbol = data.players.includes(myPhone) ? (data.players[0] === myPhone ? 'X' : 'O') : 'O';
+            myTurn = (mySymbol === 'X');
+            id('board').classList.remove('hidden');
+            id('status').innerText = `Jwèt kòmanse! Ou se ${mySymbol}`;
             renderBoard();
         });
 
@@ -137,17 +148,17 @@
             boardData[i] = mySymbol; myTurn = false; renderBoard();
             
             if(checkWin5(i, mySymbol)) {
-                id('status').innerText = "🎉 Ou Ganyen!";
+                id('status').innerText = "🎉 BRAVO, OU GANYEN!";
                 if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
                 return;
             }
 
             if(isRobot) {
-                id('status').innerText = "Robo a ap jwe...";
+                id('status').innerText = "Robo ap kalkile...";
                 setTimeout(robotLogic, 600);
             } else {
                 socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-                id('status').innerText = "Tou pa li...";
+                id('status').innerText = "Tou pa advèsè a...";
             }
         }
 
