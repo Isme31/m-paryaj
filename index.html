@@ -3,73 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon 50g</title>
+    <title>Mopyon 50g - 5 Pwen</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #eef2f3; margin: 0; padding: 20px; }
-        h1 { color: #2c3e50; margin-bottom: 10px; }
-        #status { font-size: 1.2em; margin-bottom: 20px; font-weight: bold; color: #34495e; }
-        .board { display: grid; grid-template-columns: repeat(3, 100px); gap: 8px; justify-content: center; margin: 0 auto; }
-        .cell { width: 100px; height: 100px; background: white; border-radius: 10px; border: none; font-size: 2.5em; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
-        .cell:active { transform: scale(0.95); }
-        .cell:hover { background: #fdfdfd; }
-        .reset-btn { margin-top: 30px; padding: 12px 25px; font-size: 1em; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; }
-        .reset-btn:hover { background-color: #c0392b; }
+        body { font-family: sans-serif; text-align: center; background: #eef2f3; margin: 0; padding: 10px; }
+        .board { 
+            display: grid; 
+            grid-template-columns: repeat(15, 25px); 
+            grid-template-rows: repeat(15, 25px); 
+            gap: 2px; 
+            justify-content: center; 
+            margin: 20px auto; 
+            background: #34495e;
+            padding: 5px;
+            width: fit-content;
+        }
+        .cell { 
+            width: 25px; height: 25px; background: white; 
+            font-size: 14px; display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; font-weight: bold;
+        }
+        .cell.X { color: #e74c3c; }
+        .cell.O { color: #3498db; }
+        .status { font-size: 1.2em; font-weight: bold; margin: 10px; color: #2c3e50; }
     </style>
 </head>
 <body>
-    <h1>Mopyon 50g 🎮</h1>
-    <div id="status">Se tou pa X</div>
-    
-    <div class="board" id="board">
-        <div class="cell" onclick="makeMove(0)"></div>
-        <div class="cell" onclick="makeMove(1)"></div>
-        <div class="cell" onclick="makeMove(2)"></div>
-        <div class="cell" onclick="makeMove(3)"></div>
-        <div class="cell" onclick="makeMove(4)"></div>
-        <div class="cell" onclick="makeMove(5)"></div>
-        <div class="cell" onclick="makeMove(6)"></div>
-        <div class="cell" onclick="makeMove(7)"></div>
-        <div class="cell" onclick="makeMove(8)"></div>
-    </div>
-
-    <button class="reset-btn" onclick="resetGame()">Rekòmanse Jwèt la</button>
+    <h1>Mopyon 5 Pwen 🎮</h1>
+    <div class="status" id="status">Tou pa: X</div>
+    <div class="board" id="board"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        const boardSize = 15;
+        let board = Array(boardSize * boardSize).fill(null);
         let currentPlayer = 'X';
-        const cells = document.querySelectorAll('.cell');
-        const statusText = document.getElementById('status');
+        const boardElement = document.getElementById('board');
 
-        function makeMove(index) {
-            if (cells[index].innerText === '') {
-                cells[index].innerText = currentPlayer;
-                socket.emit('mouvman', { index, player: currentPlayer });
-                togglePlayer();
+        // Kreye tablo a
+        function createBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < boardSize * boardSize; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.onclick = () => makeMove(i, true);
+                boardElement.appendChild(cell);
             }
         }
 
-        function togglePlayer() {
+        function makeMove(index, emit = false) {
+            if (board[index] || !currentPlayer) return;
+
+            board[index] = currentPlayer;
+            const cell = boardElement.children[index];
+            cell.innerText = currentPlayer;
+            cell.classList.add(currentPlayer);
+
+            if (checkWin(index)) {
+                alert("Bravo! " + currentPlayer + " genyen!");
+                socket.emit('reset'); // Rekòmanse otomatikman
+                return;
+            }
+
+            if (emit) {
+                socket.emit('mouvman', { index, player: currentPlayer });
+            }
+            
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            statusText.innerText = "Se tou pa " + currentPlayer;
+            document.getElementById('status').innerText = "Tou pa: " + currentPlayer;
         }
 
-        function resetGame() {
-            socket.emit('reset');
+        function checkWin(index) {
+            const r = Math.floor(index / boardSize);
+            const c = index % boardSize;
+            const directions = [[0,1], [1,0], [1,1], [1,-1]];
+
+            for (let [dr, dc] of directions) {
+                let count = 1;
+                // Tcheke nan yon sans
+                for (let i = 1; i < 5; i++) {
+                    let nr = r + dr*i, nc = c + dc*i;
+                    if (nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr*boardSize+nc] === currentPlayer) count++;
+                    else break;
+                }
+                // Tcheke nan lòt sans lan
+                for (let i = 1; i < 5; i++) {
+                    let nr = r - dr*i, nc = c - dc*i;
+                    if (nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr*boardSize+nc] === currentPlayer) count++;
+                    else break;
+                }
+                if (count >= 5) return true;
+            }
+            return false;
         }
 
-        // Koute lè lòt jwè a fè yon mouvman
         socket.on('mouvman', (data) => {
-            cells[data.index].innerText = data.player;
-            togglePlayer();
+            currentPlayer = data.player;
+            makeMove(data.index, false);
         });
 
-        // Koute lè yon moun klike sou reset
         socket.on('reset', () => {
-            cells.forEach(cell => cell.innerText = '');
+            board = Array(boardSize * boardSize).fill(null);
             currentPlayer = 'X';
-            statusText.innerText = "Se tou pa X";
+            document.getElementById('status').innerText = "Tou pa: X";
+            createBoard();
         });
+
+        createBoard();
     </script>
 </body>
 </html>
