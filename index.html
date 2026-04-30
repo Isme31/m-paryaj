@@ -5,16 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mopyon 50g</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
-        .board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; justify-content: center; margin-top: 20px; }
-        .cell { width: 100px; height: 100px; background: white; border: 2px solid #333; font-size: 2em; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .cell:hover { background: #ddd; }
-        h1 { color: #2c3e50; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #eef2f3; margin: 0; padding: 20px; }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        #status { font-size: 1.2em; margin-bottom: 20px; font-weight: bold; color: #34495e; }
+        .board { display: grid; grid-template-columns: repeat(3, 100px); gap: 8px; justify-content: center; margin: 0 auto; }
+        .cell { width: 100px; height: 100px; background: white; border-radius: 10px; border: none; font-size: 2.5em; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .cell:active { transform: scale(0.95); }
+        .cell:hover { background: #fdfdfd; }
+        .reset-btn { margin-top: 30px; padding: 12px 25px; font-size: 1em; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; }
+        .reset-btn:hover { background-color: #c0392b; }
     </style>
 </head>
 <body>
     <h1>Mopyon 50g 🎮</h1>
     <div id="status">Se tou pa X</div>
+    
     <div class="board" id="board">
         <div class="cell" onclick="makeMove(0)"></div>
         <div class="cell" onclick="makeMove(1)"></div>
@@ -27,25 +32,43 @@
         <div class="cell" onclick="makeMove(8)"></div>
     </div>
 
+    <button class="reset-btn" onclick="resetGame()">Rekòmanse Jwèt la</button>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let currentPlayer = 'X';
         const cells = document.querySelectorAll('.cell');
+        const statusText = document.getElementById('status');
 
         function makeMove(index) {
             if (cells[index].innerText === '') {
                 cells[index].innerText = currentPlayer;
                 socket.emit('mouvman', { index, player: currentPlayer });
-                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-                document.getElementById('status').innerText = "Se tou pa " + currentPlayer;
+                togglePlayer();
             }
         }
 
+        function togglePlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusText.innerText = "Se tou pa " + currentPlayer;
+        }
+
+        function resetGame() {
+            socket.emit('reset');
+        }
+
+        // Koute lè lòt jwè a fè yon mouvman
         socket.on('mouvman', (data) => {
             cells[data.index].innerText = data.player;
-            currentPlayer = data.player === 'X' ? 'O' : 'X';
-            document.getElementById('status').innerText = "Se tou pa " + currentPlayer;
+            togglePlayer();
+        });
+
+        // Koute lè yon moun klike sou reset
+        socket.on('reset', () => {
+            cells.forEach(cell => cell.innerText = '');
+            currentPlayer = 'X';
+            statusText.innerText = "Se tou pa X";
         });
     </script>
 </body>
