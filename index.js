@@ -6,7 +6,7 @@ const FileSync = require('lowdb/adapters/FileSync');
 
 const adapter = new FileSync('db.json');
 const db = low(adapter);
-db.defaults({ users: [], deposits: [] }).write();
+db.defaults({ users: [], deposits: [], withdrawals: [] }).write();
 
 const app = express();
 const server = http.createServer(app);
@@ -15,7 +15,7 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// --- ROUTES ---
+// LOGIN & BALANCE
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
@@ -27,6 +27,7 @@ app.post('/login', (req, res) => {
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
+// MIZE 50G
 app.post('/bet', (req, res) => {
     const { phone } = req.body;
     let user = db.get('users').find({ phone }).value();
@@ -37,14 +38,29 @@ app.post('/bet', (req, res) => {
     } else res.json({ success: false, message: "Ou pa gen ase kòb (50G)" });
 });
 
+// DEPO & RETRÈ
 app.post('/request-deposit', (req, res) => {
     const { phone, amount, transactionId } = req.body;
     db.get('deposits').push({ id: Date.now(), phone, amount: parseInt(amount), transactionId, status: 'pending' }).write();
     res.json({ success: true, message: "Demand voye! Tann admin konfime l." });
 });
 
-app.get('/admin/deposits', (req, res) => {
-    res.json(db.get('deposits').filter({ status: 'pending' }).value());
+app.post('/request-withdrawal', (req, res) => {
+    const { phone, amount, method } = req.body;
+    let user = db.get('users').find({ phone }).value();
+    if (user && user.balance >= amount && amount >= 100) {
+        const newBalance = user.balance - amount;
+        db.get('users').find({ phone }).assign({ balance: newBalance }).write();
+        db.get('withdrawals').push({ id: Date.now(), userPhone: phone, amount, method, status: 'pending' }).write();
+        res.json({ success: true, message: "Demann retrè voye!", newBalance });
+    } else res.json({ success: false, message: "Balans ensifizan (Min 100G)" });
+});
+
+// ADMIN ROUTES
+app.get('/admin/data', (req, res) => {
+    const deposits = db.get('deposits').filter({ status: 'pending' }).value();
+    const withdrawals = db.get('withdrawals').filter({ status: 'pending' }).value();
+    res.json({ deposits, withdrawals });
 });
 
 app.post('/admin/confirm-deposit', (req, res) => {
@@ -55,37 +71,39 @@ app.post('/admin/confirm-deposit', (req, res) => {
         db.get('users').find({ phone: dep.phone }).assign({ balance: (user.balance || 0) + dep.amount }).write();
         db.get('deposits').find({ id: depositId }).assign({ status: 'confirmed' }).write();
         res.json({ success: true });
-    } else res.json({ success: false });
+    }
 });
 
-// --- SOCKET.IO ---
+app.post('/admin/confirm-withdrawal', (req, res) => {
+    const { id } = req.body;
+    db.get('withdrawals').find({ id }).assign({ status: 'confirmed' }).write();
+    res.json({ success: true });
+});
+
+// SOCKET.IO (JWÈT)
 io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
         const { roomCode, phone } = data;
         socket.join(roomCode);
         socket.myRoom = roomCode; socket.phone = phone;
         const clients = io.sockets.adapter.rooms.get(roomCode);
-        const role = (clients && clients.size === 1) ? 'X' : 'O';
+        const role = (clients.size === 1) ? 'X' : 'O';
         socket.emit('player-role', role);
-        if (clients && clients.size === 2) io.to(roomCode).emit('start-game', 'X');
+        if (clients.size === 2) io.to(roomCode).emit('start-game', 'X');
     });
 
     socket.on('mouvman', (data) => socket.to(data.room).emit('mouvman', data));
 
     socket.on('game-over', (data) => {
-        const { room, winner, winnerPhone } = data;
+        const { room, winnerPhone } = data;
         if (winnerPhone) {
             let user = db.get('users').find({ phone: winnerPhone }).value();
-            if (user) {
-                const updatedBalance = user.balance + 90; // Admin pran 10G
-                db.get('users').find({ phone: winnerPhone }).assign({ balance: updatedBalance }).write();
-                io.to(room).emit('update-balance', { phone: winnerPhone, balance: updatedBalance });
-            }
+            const updatedBalance = (user.balance || 0) + 90;
+            db.get('users').find({ phone: winnerPhone }).assign({ balance: updatedBalance }).write();
+            io.to(room).emit('update-balance', { phone: winnerPhone, balance: updatedBalance });
         }
-        io.to(room).emit('reset', winner);
+        io.to(room).emit('reset');
     });
-
-    socket.on('disconnect', () => { if (socket.myRoom) socket.to(socket.myRoom).emit('player-left'); });
 });
 
 server.listen(3000, () => console.log('Sèvè prè sou pò 3000'));
