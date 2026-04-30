@@ -6,16 +6,17 @@
     <title>Mopyon 50G | Blitz</title>
     <script src="https://tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; }
+        body { font-family: sans-serif; background: #0f172a; color: white; text-align: center; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
-        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .cell.X { color: #f87171; } .cell.O { color: #60a5fa; }
+        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 2px; }
+        .cell.X { color: #f87171; text-shadow: 0 0 5px #ef4444; }
+        .cell.O { color: #60a5fa; text-shadow: 0 0 5px #3b82f6; }
         .timer-bar { height: 4px; background: #22c55e; width: 100%; transition: width 1s linear; }
         .hidden { display: none; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 text-center">
+<body class="min-h-screen flex items-center justify-center p-4">
 
     <!-- LOGIN -->
     <div id="auth-screen" class="w-full max-w-md">
@@ -30,24 +31,26 @@
 
     <!-- LOBBY -->
     <div id="lobby-screen" class="hidden glass p-8 rounded-3xl w-full max-w-md">
-        <h2 class="text-xl mb-4">Balans: <span id="user-balance" class="text-green-400 font-bold">0 G</span></h2>
+        <h2 class="text-xl mb-4 font-bold">Balans: <span id="user-balance" class="text-green-400">0 G</span></h2>
         
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-2 gap-4 mb-4">
             <button onclick="generateRoom()" class="bg-blue-600/30 border border-blue-500 py-3 rounded-xl text-xs">KREYE KÒD</button>
             <button onclick="showJoin()" class="bg-purple-600/30 border border-purple-500 py-3 rounded-xl text-xs">ANTRE KÒD</button>
         </div>
 
-        <div id="room-controls" class="hidden mb-6">
+        <button onclick="playWithAI()" class="w-full mb-6 bg-red-600/30 border border-red-500 py-3 rounded-xl text-xs font-bold text-red-400">JWE KONT ROBOT (50G)</button>
+
+        <div id="room-controls" class="hidden mb-6 p-4 bg-slate-800/50 rounded-xl">
             <input type="text" id="room-id" placeholder="Kòd Chanm" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-center border border-blue-500 outline-none">
-            <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold">MIZE 50G & JWE</button>
+            <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold transition hover:bg-green-700">MIZE 50G & JWE</button>
             <p id="share-text" class="mt-2 text-[10px] text-blue-300 hidden"></p>
         </div>
         
-        <div class="border-t border-gray-700 pt-4 mt-4">
-            <p class="text-xs text-gray-500 mb-2 uppercase">Depo Kòb</p>
-            <input type="number" id="depo-amount" placeholder="Kantite Goud" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm">
-            <input type="text" id="depo-id" placeholder="ID MonCash/Natcash" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm">
-            <button onclick="sendDeposit()" class="w-full bg-orange-600 py-2 rounded text-xs font-bold">VOYE PRÈV</button>
+        <div class="border-t border-gray-700 pt-4">
+            <p class="text-[10px] text-gray-500 mb-2 uppercase italic">Depo Kòb (MonCash/Natcash)</p>
+            <input type="number" id="depo-amount" placeholder="Kantite Goud" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm outline-none">
+            <input type="text" id="depo-id" placeholder="ID Tranzaksyon" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm outline-none">
+            <button onclick="sendDeposit()" class="w-full bg-orange-600 py-2 rounded text-xs font-bold transition hover:bg-orange-700">VOYE PRÈV</button>
         </div>
     </div>
 
@@ -63,7 +66,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let userPhone = "", myRole = "", currentPlayer = "X", currentRoom = "", board = Array(225).fill(null), timerInterval = null;
+        let userPhone = "", myRole = "", currentPlayer = "X", currentRoom = "", board = Array(225).fill(null), timerInterval = null, isAI = false;
 
         async function handleLogin() {
             userPhone = document.getElementById('phone').value;
@@ -76,25 +79,32 @@
             } else { document.getElementById('auth-error').innerText = data.message; }
         }
 
+        async function playWithAI() {
+            const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone}) });
+            const data = await res.json();
+            if(data.success) {
+                isAI = true; myRole = "X"; currentPlayer = "X"; currentRoom = "SOLO";
+                document.getElementById('lobby-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                createBoard(); updateStatus(); startTimer();
+            } else alert(data.message);
+        }
+
         function generateRoom() {
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
             document.getElementById('room-id').value = code;
             document.getElementById('room-controls').classList.remove('hidden');
-            document.getElementById('share-text').innerText = "Voye kòd sa bay zanmi w: " + code;
+            document.getElementById('share-text').innerText = "Voye bay zanmi: " + code;
             document.getElementById('share-text').classList.remove('hidden');
         }
 
-        function showJoin() {
-            document.getElementById('room-controls').classList.remove('hidden');
-            document.getElementById('room-id').value = "";
-            document.getElementById('share-text').classList.add('hidden');
-        }
+        function showJoin() { document.getElementById('room-controls').classList.remove('hidden'); document.getElementById('share-text').classList.add('hidden'); }
 
         async function sendDeposit() {
             const amount = document.getElementById('depo-amount').value;
-            const transactionId = document.getElementById('depo-id').value;
-            if(!amount || !transactionId) return alert("Ranpli tout bwat yo!");
-            const res = await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, transactionId}) });
+            const tid = document.getElementById('depo-id').value;
+            if(!amount || !tid) return alert("Ranpli tout bwat yo!");
+            const res = await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, transactionId: tid}) });
             const d = await res.json(); alert(d.message);
         }
 
@@ -104,7 +114,7 @@
             const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone}) });
             const data = await res.json();
             if(data.success) {
-                socket.emit('join-room', { roomCode: currentRoom, phone: userPhone });
+                isAI = false; socket.emit('join-room', { roomCode: currentRoom, phone: userPhone });
                 document.getElementById('lobby-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
                 createBoard();
@@ -116,10 +126,21 @@
             for(let i=0; i<225; i++) {
                 const c = document.createElement('div'); c.className = 'cell'; c.id = "c-"+i;
                 c.onclick = () => { if(!board[i] && myRole === currentPlayer) {
-                    socket.emit('mouvman', { room: currentRoom, index: i, role: myRole });
+                    if(!isAI) socket.emit('mouvman', { room: currentRoom, index: i, role: myRole });
                     makeMove(i, myRole);
+                    if(isAI && !checkWin(i, myRole)) { 
+                        currentPlayer = "O"; setTimeout(robotMove, 800); 
+                    }
                 }};
                 b.appendChild(c);
+            }
+        }
+
+        function robotMove() {
+            let empty = board.map((v, idx) => v === null ? idx : null).filter(v => v !== null);
+            if(empty.length > 0) {
+                let randomIdx = empty[Math.floor(Math.random() * empty.length)];
+                makeMove(randomIdx, "O"); currentPlayer = "X"; updateStatus();
             }
         }
 
@@ -129,10 +150,10 @@
             if(checkWin(i, p)) {
                 clearInterval(timerInterval);
                 if(p === myRole) socket.emit('game-over', { room: currentRoom, winner: myRole, winnerPhone: userPhone });
+                else if(isAI) alert("Robot a bat ou! Ou pèdi.");
                 return;
             }
-            currentPlayer = (p === 'X' ? 'O' : 'X');
-            updateStatus(); startTimer();
+            if(!isAI || p === "O") { currentPlayer = (p === 'X' ? 'O' : 'X'); updateStatus(); startTimer(); }
         }
 
         function startTimer() {
@@ -157,13 +178,13 @@
             return false;
         }
 
-        function updateStatus() { document.getElementById('status').innerText = (myRole === currentPlayer) ? "TOU PA W!" : "ATANN LÒT LA..."; }
+        function updateStatus() { document.getElementById('status').innerText = (myRole === currentPlayer) ? "TOU PA W!" : "ATANN..."; }
         socket.on('player-role', r => myRole = r);
         socket.on('start-game', s => { currentPlayer = s; updateStatus(); startTimer(); });
         socket.on('mouvman', d => { if(d.role !== myRole) makeMove(d.index, d.role); });
         socket.on('update-balance', d => { if(d.phone === userPhone) document.getElementById('user-balance').innerText = d.balance + " G"; });
         socket.on('reset', w => { alert("Gayan: " + w); location.reload(); });
-        socket.on('player-left', () => { alert("Lòt la dekonekte!"); location.reload(); });
+        socket.on('player-left', () => { alert("Lòt la pati!"); location.reload(); });
     </script>
 </body>
 </html>
