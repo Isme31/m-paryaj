@@ -16,15 +16,35 @@
     <script>
         const key = new URLSearchParams(window.location.search).get('key');
         if(key !== "hugues") document.body.innerHTML = "<h1 class='text-center text-red-500 mt-20 font-black'>AKSÈ REFIZE</h1>";
+
         async function fetchAll() {
             const res = await fetch(`/admin/data?key=${key}`);
             const { deposits, withdrawals } = await res.json();
-            document.getElementById('d-list').innerHTML = deposits.map(d => `<div class="p-4 bg-slate-900 rounded-2xl flex justify-between items-center text-xs"><span><b>${d.amount}G</b> | ${d.phone} | ID: ${d.transactionId}</span><button onclick="confD(${d.id})" class="bg-green-600 px-4 py-1 rounded-xl font-bold uppercase">OK</button></div>`).join('') || 'Vid.';
-            document.getElementById('w-list').innerHTML = withdrawals.map(w => `<div class="p-4 bg-slate-900 rounded-2xl flex justify-between items-center text-xs"><span><b>${w.amount}G</b> | ${w.method}</span><button onclick="confW(${w.id})" class="bg-blue-600 px-4 py-1 rounded-xl font-bold uppercase">VOYE</button></div>`).join('') || 'Vid.';
+            
+            // Itilize d._id pou MongoDB
+            document.getElementById('d-list').innerHTML = deposits.map(d => `
+                <div class="p-4 bg-slate-900 rounded-2xl flex justify-between items-center text-xs">
+                    <span><b>${d.amount}G</b> | ${d.phone} | ID: ${d.transactionId}</span>
+                    <button onclick="confD('${d._id}')" class="bg-green-600 px-4 py-1 rounded-xl font-bold uppercase">OK</button>
+                </div>`).join('') || 'Vid.';
+
+            document.getElementById('w-list').innerHTML = withdrawals.map(w => `
+                <div class="p-4 bg-slate-900 rounded-2xl flex justify-between items-center text-xs">
+                    <span><b>${w.amount}G</b> | ${w.method}</span>
+                    <button onclick="confW('${w._id}')" class="bg-blue-600 px-4 py-1 rounded-xl font-bold uppercase">VOYE</button>
+                </div>`).join('') || 'Vid.';
         }
-        async function confD(id) { await fetch('/admin/confirm-deposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, id}) }); fetchAll(); }
-        async function confW(id) { await fetch('/admin/confirm-withdrawal', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, id}) }); fetchAll(); }
-        if(key === "hugues") { fetchAll(); setInterval(fetchAll, 5000); }
+
+        async function confD(id) { 
+            await fetch('/admin/confirm-deposit', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body: JSON.stringify({key, id}) 
+            }); 
+            fetchAll(); 
+        }
+
+        if(key === "hugues") { fetchAll(); setInterval(fetchAll, 8000); }
     </script>
 </body>
 </html>
