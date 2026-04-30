@@ -3,122 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz</title>
+    <title>Mopyon Blitz ⚡</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; text-align: center; margin: 0; padding: 0; }
         .hidden { display: none; }
-        .screen { padding: 20px; }
-        input, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; }
-        button { background: #007bff; color: white; cursor: pointer; }
-        .grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; justify-content: center; margin-top: 20px; }
-        .cell { width: 100px; height: 100px; background: #333; font-size: 2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .screen { padding: 20px; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        input, button, select { padding: 12px; margin: 10px 5px; border-radius: 8px; border: none; width: 80%; max-width: 300px; font-size: 1rem; }
+        button { background: #007bff; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #0056b3; transform: scale(1.05); }
+        .btn-game { background: #28a745; width: auto; padding: 12px 25px; }
+
+        /* Style Tablo Mopyon */
+        .grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 10px; justify-content: center; margin: 20px auto; }
+        .cell { width: 100px; height: 100px; background: #1e1e1e; border: 2px solid #333; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; border-radius: 10px; }
+        .cell:hover { background: #252525; }
+        .cell.taken { cursor: not-allowed; }
+        
+        #game-status { font-size: 1.2rem; color: #ffc107; margin-bottom: 10px; }
+        .balance-badge { background: #333; padding: 5px 15px; border-radius: 20px; display: inline-block; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN LOGIN -->
+    <!-- 1. EKRAN KONEKSYON -->
     <div id="auth-screen" class="screen">
-        <h1>Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Telefòn (ex: 31594645)"> <br>
+        <h1>Blitz Mopyon ⚡</h1>
+        <p>Konekte pou w kòmanse fè kòb</p>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn"> <br>
         <input type="password" id="password" placeholder="Modpas"> <br>
         <button onclick="handleLogin()">Konekte / Enskri</button>
     </div>
 
-    <!-- SCREEN MENU -->
+    <!-- 2. EKRAN MENU PRENSIPAL -->
     <div id="menu-screen" class="screen hidden">
-        <h2>Byenvini! Balans: <span id="user-balance">0</span>G</h2>
-        <button onclick="showScreen('deposit-screen')">Depo</button>
-        <button onclick="showScreen('withdraw-screen')">Retrè</button>
-        <button onclick="startPlay()">Jwe Mopyon (50G)</button>
+        <h1>Blitz Jwèt</h1>
+        <div class="balance-badge">Balans ou: <span id="user-balance">0</span>G</div> <br>
+        <div style="display: flex; justify-content: center; gap: 10px;">
+            <button style="width: 80px;" onclick="showScreen('deposit-screen')">Depo</button>
+            <button style="width: 80px;" onclick="showScreen('withdraw-screen')">Retrè</button>
+            <button class="btn-game" onclick="startPlay()">Jwe Mopyon (50G)</button>
+        </div>
     </div>
 
-    <!-- SCREEN DEPOSIT -->
+    <!-- 3. EKRAN DEPO -->
     <div id="deposit-screen" class="screen hidden">
-        <h3>Fè yon Depo</h3>
-        <input type="number" id="d-amt" placeholder="Kantite lajan"> <br>
-        <input type="text" id="d-id" placeholder="Transaction ID MonCash"> <br>
-        <button onclick="doDepo()">Voye Depo</button>
-        <button onclick="showScreen('menu-screen')">Retounen</button>
+        <h2>Fè yon Depo (MonCash)</h2>
+        <p>Voye lajan sou: <b>31594645</b></p>
+        <input type="number" id="d-amt" placeholder="Kantite lajan (G)"> <br>
+        <input type="text" id="d-id" placeholder="ID Transaksyon"> <br>
+        <button onclick="doDepo()">Konfime Depo</button> <br>
+        <button style="background: #6c757d;" onclick="showScreen('menu-screen')">Anile</button>
     </div>
 
-    <!-- SCREEN WITHDRAW -->
+    <!-- 4. EKRAN RETRÈ -->
     <div id="withdraw-screen" class="screen hidden">
-        <h3>Mande yon Retrè</h3>
+        <h2>Mande Retrè</h2>
         <input type="number" id="w-amt" placeholder="Kantite (Min 100G)"> <br>
         <select id="w-meth">
             <option value="MonCash">MonCash</option>
             <option value="NatCash">NatCash</option>
         </select> <br>
-        <button onclick="doWithdraw()">Voye Demann</button>
-        <button onclick="showScreen('menu-screen')">Retounen</button>
+        <button onclick="doWithdraw()">Voye Demann</button> <br>
+        <button style="background: #6c757d;" onclick="showScreen('menu-screen')">Anile</button>
     </div>
 
-    <!-- JALON POU SOCKETS AK LOJIK -->
+    <!-- 5. EKRAN JWÈT MOPYON -->
+    <div id="game-screen" class="screen hidden">
+        <h2 id="game-status">Atann yon lòt jwè...</h2>
+        <div class="grid" id="board">
+            <div class="cell" onclick="makeMove(0)" id="c0"></div>
+            <div class="cell" onclick="makeMove(1)" id="c1"></div>
+            <div class="cell" onclick="makeMove(2)" id="c2"></div>
+            <div class="cell" onclick="makeMove(3)" id="c3"></div>
+            <div class="cell" onclick="makeMove(4)" id="c4"></div>
+            <div class="cell" onclick="makeMove(5)" id="c5"></div>
+            <div class="cell" onclick="makeMove(6)" id="c6"></div>
+            <div class="cell" onclick="makeMove(7)" id="c7"></div>
+            <div class="cell" onclick="makeMove(8)" id="c8"></div>
+        </div>
+        <button style="background: #dc3545;" onclick="location.reload()">Kite Jwèt la</button>
+    </div>
+
+    <!-- SCRIPTS -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let uPhone="", uPass="", myBalance=0;
+        let myRole = ""; // X oswa O
+        let myRoom = "blitz_global";
 
-        function showScreen(screenId) {
+        function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-            document.getElementById(screenId).classList.remove('hidden');
+            document.getElementById(id).classList.remove('hidden');
         }
 
         async function handleLogin() {
             uPhone = document.getElementById('phone').value;
             uPass = document.getElementById('password').value;
-            if(!uPhone || !uPass) return alert("Ranpli tout bwat yo");
+            if(!uPhone || !uPass) return alert("Ranpli tout bwat yo!");
 
-            try {
-                const res = await fetch('/login', { 
-                    method:'POST', 
-                    headers:{'Content-Type':'application/json'}, 
-                    body: JSON.stringify({phone: uPhone, password: uPass}) 
-                });
-                const data = await res.json();
-                if(data.success) {
-                    myBalance = data.balance;
-                    document.getElementById('user-balance').innerText = myBalance;
-                    showScreen('menu-screen');
-                } else { alert(data.message); }
-            } catch(e) { alert("Erè koneksyon ak sèvè a"); }
-        }
-
-        async function doDepo() {
-            const amount = document.getElementById('d-amt').value;
-            const transactionId = document.getElementById('d-id').value;
-            if(!amount || !transactionId) return alert("Ranpli tout bwat yo!");
-            
-            const res = await fetch('/request-deposit', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({phone: uPhone, amount, transactionId})
-            });
-            const data = await res.json();
-            if(data.success) alert("Depo voye! Tann admin konfime.");
-            else alert(data.message);
-        }
-
-        async function doWithdraw() {
-            const amount = document.getElementById('w-amt').value;
-            const method = document.getElementById('w-meth').value;
-            if(amount < 100) return alert("Minimòm se 100G");
-            
-            const res = await fetch('/request-withdrawal', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({phone: uPhone, password: uPass, amount, method})
+            const res = await fetch('/login', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body: JSON.stringify({phone: uPhone, password: uPass}) 
             });
             const data = await res.json();
             if(data.success) {
-                alert("Retrè voye!");
-                document.getElementById('user-balance').innerText = data.newBalance;
-            } else { alert("Erè nan balans ou!"); }
+                myBalance = data.balance;
+                document.getElementById('user-balance').innerText = myBalance;
+                showScreen('menu-screen');
+            } else { alert(data.message); }
         }
 
-        function startPlay() {
-            alert("Sistèm jwèt la ap prepare...");
-            // Isit la ou ka ajoute lojik pou ouvri chanm mopyon an
+        async function startPlay() {
+            if(myBalance < 50) return alert("Ou bezwen omwen 50G pou w jwe!");
+            
+            const res = await fetch('/bet', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({phone: uPhone, password: uPass})
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                myBalance = data.newBalance;
+                document.getElementById('user-balance').innerText = myBalance;
+                showScreen('game-screen');
+                socket.emit('join-room', { roomCode: myRoom });
+            }
+        }
+
+        // --- LOJIK JWÈT (SOCKET) ---
+        socket.on('player-role', (role) => {
+            myRole = role;
+            document.getElementById('game-status').innerText = "Ou se Jwè " + role + ". Atann advèsè...";
+        });
+
+        socket.on('start-game', (turn) => {
+            document.getElementById('game-status').innerText = "Jwèt Kòmanse! Tou pa: " + turn;
+        });
+
+        function makeMove(idx) {
+            const cell = document.getElementById('c' + idx);
+            if(cell.innerText === "") {
+                socket.emit('mouvman', { room: myRoom, index: idx, role: myRole });
+            }
+        }
+
+        socket.on('mouvman', (d) => {
+            document.getElementById('c' + d.index).innerText = d.role;
+            document.getElementById('c' + d.index).classList.add('taken');
+            checkWinner();
+        });
+
+        function checkWinner() {
+            const cells = Array.from(document.querySelectorAll('.cell')).map(c => c.innerText);
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            
+            for(let combo of wins) {
+                if(cells[combo[0]] && cells[combo[0]] === cells[combo[1]] && cells[combo[0]] === cells[combo[2]]) {
+                    const winner = cells[combo[0]];
+                    alert("Jwè " + winner + " Ganye!");
+                    if(winner === myRole) {
+                        fetch('/win-game', {
+                            method:'POST',
+                            headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({phone: uPhone, password: uPass})
+                        }).then(() => location.reload());
+                    } else { location.reload(); }
+                    return;
+                }
+            }
+        }
+
+        // --- DEPO AK RETRÈ ---
+        async function doDepo() {
+            const amt = document.getElementById('d-amt').value;
+            const tid = document.getElementById('d-id').value;
+            await fetch('/request-deposit', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({phone: uPhone, amount: amt, transactionId: tid})
+            });
+            alert("Depo voye! Tann admin konfime.");
+            showScreen('menu-screen');
+        }
+
+        async function doWithdraw() {
+            const amt = document.getElementById('w-amt').value;
+            const meth = document.getElementById('w-meth').value;
+            const res = await fetch('/request-withdrawal', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({phone: uPhone, password: uPass, amount: amt, method: meth})
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert("Retrè anrejistre!");
+                myBalance = data.newBalance;
+                document.getElementById('user-balance').innerText = myBalance;
+                showScreen('menu-screen');
+            } else { alert("Balans ensifizan!"); }
         }
     </script>
 </body>
