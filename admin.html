@@ -3,14 +3,14 @@
 <head>
     <title>Admin Blitz</title>
     <style>
-        body { background:#111; color:white; font-family:sans-serif; padding:20px; }
+        body { background:#111; color:white; font-family:sans-serif; padding:20px; text-align:center; }
         .card { background:#222; border:1px solid #444; padding:15px; border-radius:10px; margin-bottom:10px; }
-        button { background:green; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; }
+        button { background:#28a745; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; }
     </style>
 </head>
 <body>
-    <h1>Panèl Admin Blitz ⚡</h1>
-    <div id="list">Chajman...</div>
+    <h1>Kontwòl Depo Blitz ⚡</h1>
+    <div id="list">Ap chaje...</div>
     <script>
         const KEY = "hugues";
         async function load() {
@@ -18,14 +18,14 @@
             const data = await res.json();
             let h = "";
             data.deposits.forEach(d => {
-                h += `<div class="card"><p>Tel: ${d.phone} | Kantite: ${d.amount}G</p><p>ID: ${d.transactionId}</p>
-                <button onclick="ok('${d._id}')">Konfime Lajan an</button></div>`;
+                h += `<div class="card"><p>Tel: ${d.phone} | ${d.amount}G</p><p>ID: ${d.transactionId}</p>
+                <button onclick="ok('${d._id}')">Konfime</button></div>`;
             });
-            document.getElementById('list').innerHTML = h || "Pa gen depo an atant.";
+            document.getElementById('list').innerHTML = h || "Pa gen depo.";
         }
         async function ok(id) {
             await fetch('/admin/confirm-deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:KEY,id:id})});
-            alert("Lajan an moute!"); load();
+            alert("Konfime!"); load();
         }
         load();
     </script>
