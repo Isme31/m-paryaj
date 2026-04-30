@@ -3,96 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡</title>
+    <title>Mopyon Blitz 5⚡ Pro</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; text-align: center; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; }
         .hidden { display: none; }
-        .screen { padding: 20px; animation: fadeIn 0.5s; }
+        .screen { padding: 20px; animation: fadeIn 0.4s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        input, button, select { padding: 12px; margin: 10px 5px; border-radius: 8px; border: none; width: 80%; max-width: 300px; font-size: 1rem; }
-        button { background: #007bff; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #0056b3; transform: scale(1.05); }
-        .btn-game { background: #28a745; width: auto; padding: 12px 25px; }
-
-        /* Style Tablo Mopyon */
-        .grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 10px; justify-content: center; margin: 20px auto; }
-        .cell { width: 100px; height: 100px; background: #1e1e1e; border: 2px solid #333; font-size: 2.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; border-radius: 10px; }
+        /* Tablo 10x10 */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(10, 35px); 
+            gap: 2px; 
+            justify-content: center; 
+            margin: 15px auto; 
+            background: #333;
+            border: 3px solid #444;
+            width: fit-content;
+        }
+        .cell { 
+            width: 35px; height: 35px; background: #1a1a1a; 
+            font-size: 1.1rem; display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; transition: 0.2s;
+        }
         .cell:hover { background: #252525; }
         .cell.taken { cursor: not-allowed; }
+        .timer-box { font-size: 1.4rem; color: #ff4444; margin: 10px; font-weight: bold; border: 2px solid #ff4444; display: inline-block; padding: 5px 15px; border-radius: 10px; }
+        .status { color: #ffc107; font-weight: bold; height: 25px; }
         
-        #game-status { font-size: 1.2rem; color: #ffc107; margin-bottom: 10px; }
-        .balance-badge { background: #333; padding: 5px 15px; border-radius: 20px; display: inline-block; margin-bottom: 20px; }
+        button { padding: 12px 20px; margin: 8px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; width: 85%; max-width: 300px; }
+        input { padding: 12px; margin: 8px; border-radius: 8px; border: 1px solid #333; background: #1e1e1e; color: white; width: 80%; max-width: 280px; }
     </style>
 </head>
 <body>
 
-    <!-- 1. EKRAN KONEKSYON -->
+    <!-- 1. LOGIN -->
     <div id="auth-screen" class="screen">
-        <h1>Blitz Mopyon ⚡</h1>
-        <p>Konekte pou w kòmanse fè kòb</p>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn"> <br>
+        <h1>Blitz Mopyon 5⚡</h1>
+        <input type="text" id="phone" placeholder="Telefòn (ex: 31594645)"> <br>
         <input type="password" id="password" placeholder="Modpas"> <br>
         <button onclick="handleLogin()">Konekte / Enskri</button>
     </div>
 
-    <!-- 2. EKRAN MENU PRENSIPAL -->
+    <!-- 2. MENU -->
     <div id="menu-screen" class="screen hidden">
-        <h1>Blitz Jwèt</h1>
-        <div class="balance-badge">Balans ou: <span id="user-balance">0</span>G</div> <br>
-        <div style="display: flex; justify-content: center; gap: 10px;">
-            <button style="width: 80px;" onclick="showScreen('deposit-screen')">Depo</button>
-            <button style="width: 80px;" onclick="showScreen('withdraw-screen')">Retrè</button>
-            <button class="btn-game" onclick="startPlay()">Jwe Mopyon (50G)</button>
-        </div>
+        <h2>Balans: <span id="user-balance">0</span>G</h2>
+        <button onclick="prepareGame(false)" style="background: #007bff;">Jwe ak yon Moun (50G)</button>
+        <button onclick="prepareGame(true)" style="background: #28a745;">Jwe ak Robot (IA Fò)</button>
+        <button onclick="showScreen('deposit-screen')" style="background: #555;">Depo / Retrè</button>
     </div>
 
-    <!-- 3. EKRAN DEPO -->
-    <div id="deposit-screen" class="screen hidden">
-        <h2>Fè yon Depo (MonCash)</h2>
-        <p>Voye lajan sou: <b>31594645</b></p>
-        <input type="number" id="d-amt" placeholder="Kantite lajan (G)"> <br>
-        <input type="text" id="d-id" placeholder="ID Transaksyon"> <br>
-        <button onclick="doDepo()">Konfime Depo</button> <br>
-        <button style="background: #6c757d;" onclick="showScreen('menu-screen')">Anile</button>
-    </div>
-
-    <!-- 4. EKRAN RETRÈ -->
-    <div id="withdraw-screen" class="screen hidden">
-        <h2>Mande Retrè</h2>
-        <input type="number" id="w-amt" placeholder="Kantite (Min 100G)"> <br>
-        <select id="w-meth">
-            <option value="MonCash">MonCash</option>
-            <option value="NatCash">NatCash</option>
-        </select> <br>
-        <button onclick="doWithdraw()">Voye Demann</button> <br>
-        <button style="background: #6c757d;" onclick="showScreen('menu-screen')">Anile</button>
-    </div>
-
-    <!-- 5. EKRAN JWÈT MOPYON -->
+    <!-- 3. JWÈT -->
     <div id="game-screen" class="screen hidden">
-        <h2 id="game-status">Atann yon lòt jwè...</h2>
-        <div class="grid" id="board">
-            <div class="cell" onclick="makeMove(0)" id="c0"></div>
-            <div class="cell" onclick="makeMove(1)" id="c1"></div>
-            <div class="cell" onclick="makeMove(2)" id="c2"></div>
-            <div class="cell" onclick="makeMove(3)" id="c3"></div>
-            <div class="cell" onclick="makeMove(4)" id="c4"></div>
-            <div class="cell" onclick="makeMove(5)" id="c5"></div>
-            <div class="cell" onclick="makeMove(6)" id="c6"></div>
-            <div class="cell" onclick="makeMove(7)" id="c7"></div>
-            <div class="cell" onclick="makeMove(8)" id="c8"></div>
-        </div>
-        <button style="background: #dc3545;" onclick="location.reload()">Kite Jwèt la</button>
+        <div class="timer-box">⏳ <span id="time-left">30</span>s</div>
+        <div class="status" id="game-status">Atann...</div>
+        <div class="grid" id="board"></div>
+        <button onclick="location.reload()" style="background: #dc3545;">Kite Jwèt la</button>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let uPhone="", uPass="", myBalance=0;
-        let myRole = ""; // X oswa O
-        let myRoom = "blitz_global";
+        let uPhone="", uPass="", myBalance=0, isAdmin=false;
+        let board = Array(100).fill("");
+        let myRole = "X", currentTurn = "X", isRobotGame = false;
+        let timer, timeLeft = 30;
+        let lastWinner = "X"; // Pou konnen kilès k ap kòmanse
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -102,8 +78,6 @@
         async function handleLogin() {
             uPhone = document.getElementById('phone').value;
             uPass = document.getElementById('password').value;
-            if(!uPhone || !uPass) return alert("Ranpli tout bwat yo!");
-
             const res = await fetch('/login', { 
                 method:'POST', 
                 headers:{'Content-Type':'application/json'}, 
@@ -112,101 +86,171 @@
             const data = await res.json();
             if(data.success) {
                 myBalance = data.balance;
+                isAdmin = data.isAdmin;
                 document.getElementById('user-balance').innerText = myBalance;
                 showScreen('menu-screen');
             } else { alert(data.message); }
         }
 
-        async function startPlay() {
-            if(myBalance < 50) return alert("Ou bezwen omwen 50G pou w jwe!");
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = "";
+            board = Array(100).fill("");
+            for(let i=0; i<100; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = 'c' + i;
+                cell.onclick = () => makeMove(i);
+                boardDiv.appendChild(cell);
+            }
+        }
+
+        async function prepareGame(withRobot) {
+            isRobotGame = withRobot;
+            // Admin jwe gratis, lòt moun peye 50G
+            if(!isAdmin) {
+                const res = await fetch('/bet', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({phone: uPhone, password: uPass})
+                });
+                const data = await res.json();
+                if(!data.success) return alert("Balans ou twò piti!");
+                myBalance = data.newBalance;
+                document.getElementById('user-balance').innerText = myBalance;
+            }
+
+            createBoard();
+            showScreen('game-screen');
             
-            const res = await fetch('/bet', {
+            if(isRobotGame) {
+                myRole = "X";
+                currentTurn = lastWinner; // Ganyan an kòmanse
+                document.getElementById('game-status').innerText = "W ap jwe ak Robot (Ou se X)";
+                if(currentTurn === "O") setTimeout(robotMove, 800);
+                startTimer();
+            } else {
+                socket.emit('join-room', { roomCode: "global_5_v1" });
+            }
+        }
+
+        function makeMove(idx) {
+            if(board[idx] !== "" || currentTurn !== myRole) return;
+            executeMove(idx, myRole);
+            if(isRobotGame && board.includes("")) {
+                currentTurn = "O";
+                setTimeout(robotMove, 600);
+            } else if (!isRobotGame) {
+                socket.emit('mouvman', { room: "global_5_v1", index: idx, role: myRole });
+            }
+        }
+
+        function executeMove(idx, role) {
+            board[idx] = role;
+            const cell = document.getElementById('c' + idx);
+            cell.innerText = role;
+            cell.classList.add('taken');
+            cell.style.color = role === "X" ? "#007bff" : "#ff4444";
+            
+            if(checkWin(idx, role)) {
+                clearInterval(timer);
+                lastWinner = role;
+                setTimeout(() => {
+                    alert("Jwè " + role + " Ganyen!");
+                    if(role === myRole) winPrize();
+                    else location.reload();
+                }, 100);
+            } else {
+                startTimer(); // Reset tan an pou lòt jwè a
+            }
+        }
+
+        // --- ROBOT IA FÒ ---
+        function robotMove() {
+            let move = findBestMove("O"); // Atak
+            if (move === -1) move = findBestMove("X"); // Defans (Bloke moun)
+            if (move === -1) {
+                // Si l pa jwenn anyen, li jwe toupre "O" oswa nan mitan
+                let empty = board.map((v, i) => v === "" ? i : -1).filter(v => v !== -1);
+                move = empty[Math.floor(Math.random() * empty.length)];
+            }
+            executeMove(move, "O");
+            currentTurn = "X";
+        }
+
+        function findBestMove(role) {
+            // Chèche si gen yon kote ki ka fè 4 oswa 5 pwen
+            for(let i=0; i<100; i++) {
+                if(board[i] === "") {
+                    if(countInAnyDir(i, role) >= 4) return i;
+                }
+            }
+            // Sinon chèche kote ki ka fè 3 pwen
+            for(let i=0; i<100; i++) {
+                if(board[i] === "") {
+                    if(countInAnyDir(i, role) >= 3) return i;
+                }
+            }
+            return -1;
+        }
+
+        function countInAnyDir(idx, role) {
+            const dirs = [1, 10, 11, 9];
+            let max = 0;
+            for(let d of dirs) {
+                let c = 1 + countDir(idx, d, role) + countDir(idx, -d, role);
+                if(c > max) max = c;
+            }
+            return max;
+        }
+
+        // --- LOJIK JWÈT ---
+        function checkWin(idx, role) {
+            return countInAnyDir(idx, role) >= 5;
+        }
+
+        function countDir(idx, dir, role) {
+            let count = 0, curr = idx + dir;
+            // Tcheke limit tablo a (10x10)
+            while(curr >= 0 && curr < 100 && board[curr] === role) {
+                // Prevni "wrapping" sou bò tablo a
+                if(Math.abs(dir) === 1 && Math.floor(curr/10) !== Math.floor((curr-dir)/10)) break;
+                count++;
+                curr += dir;
+            }
+            return count;
+        }
+
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = 30;
+            document.getElementById('time-left').innerText = timeLeft;
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time-left').innerText = timeLeft;
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    alert("Tan fini! Ou pèdi.");
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        async function winPrize() {
+            await fetch('/win-game', {
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({phone: uPhone, password: uPass})
             });
-            const data = await res.json();
-            
-            if(data.success) {
-                myBalance = data.newBalance;
-                document.getElementById('user-balance').innerText = myBalance;
-                showScreen('game-screen');
-                socket.emit('join-room', { roomCode: myRoom });
-            }
-        }
-
-        // --- LOJIK JWÈT (SOCKET) ---
-        socket.on('player-role', (role) => {
-            myRole = role;
-            document.getElementById('game-status').innerText = "Ou se Jwè " + role + ". Atann advèsè...";
-        });
-
-        socket.on('start-game', (turn) => {
-            document.getElementById('game-status').innerText = "Jwèt Kòmanse! Tou pa: " + turn;
-        });
-
-        function makeMove(idx) {
-            const cell = document.getElementById('c' + idx);
-            if(cell.innerText === "") {
-                socket.emit('mouvman', { room: myRoom, index: idx, role: myRole });
-            }
+            location.reload();
         }
 
         socket.on('mouvman', (d) => {
-            document.getElementById('c' + d.index).innerText = d.role;
-            document.getElementById('c' + d.index).classList.add('taken');
-            checkWinner();
-        });
-
-        function checkWinner() {
-            const cells = Array.from(document.querySelectorAll('.cell')).map(c => c.innerText);
-            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-            
-            for(let combo of wins) {
-                if(cells[combo[0]] && cells[combo[0]] === cells[combo[1]] && cells[combo[0]] === cells[combo[2]]) {
-                    const winner = cells[combo[0]];
-                    alert("Jwè " + winner + " Ganye!");
-                    if(winner === myRole) {
-                        fetch('/win-game', {
-                            method:'POST',
-                            headers:{'Content-Type':'application/json'},
-                            body: JSON.stringify({phone: uPhone, password: uPass})
-                        }).then(() => location.reload());
-                    } else { location.reload(); }
-                    return;
-                }
+            if(d.role !== myRole) {
+                executeMove(d.index, d.role);
+                currentTurn = myRole;
             }
-        }
-
-        // --- DEPO AK RETRÈ ---
-        async function doDepo() {
-            const amt = document.getElementById('d-amt').value;
-            const tid = document.getElementById('d-id').value;
-            await fetch('/request-deposit', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({phone: uPhone, amount: amt, transactionId: tid})
-            });
-            alert("Depo voye! Tann admin konfime.");
-            showScreen('menu-screen');
-        }
-
-        async function doWithdraw() {
-            const amt = document.getElementById('w-amt').value;
-            const meth = document.getElementById('w-meth').value;
-            const res = await fetch('/request-withdrawal', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({phone: uPhone, password: uPass, amount: amt, method: meth})
-            });
-            const data = await res.json();
-            if(data.success) {
-                alert("Retrè anrejistre!");
-                myBalance = data.newBalance;
-                document.getElementById('user-balance').innerText = myBalance;
-                showScreen('menu-screen');
-            } else { alert("Balans ensifizan!"); }
-        }
+        });
     </script>
 </body>
 </html>
