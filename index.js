@@ -9,82 +9,44 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- CONFIGURATION ---
 const ADMIN_KEY = "hugues"; 
-// LYEN PROJET RENDER OU A RANJE ISIT:
 const URL_APLIKASYON_AN = "https://onrender.com"; 
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority";
 
-// --- CONNEXION MONGODB ---
-mongoose.connect(dbURI)
-    .then(() => console.log("✅ MongoDB Konekte ak siksè!"))
-    .catch(err => console.log("❌ Erè MongoDB:", err));
+mongoose.connect(dbURI).then(() => console.log("✅ MongoDB Konekte!"));
 
-// --- MODÈLES DE DONNÉES ---
-const User = mongoose.model('User', { 
-    phone: String, 
-    password: String, 
-    balance: {type: Number, default: 100} 
-});
+const User = mongoose.model('User', { phone: String, password: String, balance: {type: Number, default: 0} });
+const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, transactionId: {type: String, unique: true}, status: {type: String, default: 'pending'} });
+const Withdrawal = mongoose.model('Withdrawal', { userPhone: String, amount: Number, method: String, status: {type: String, default: 'pending'} });
 
-const Deposit = mongoose.model('Deposit', { 
-    phone: String, 
-    amount: Number, 
-    transactionId: String, 
-    status: {type: String, default: 'pending'}
-});
-
-const Withdrawal = mongoose.model('Withdrawal', { 
-    userPhone: String, 
-    amount: Number, 
-    method: String, 
-    status: {type: String, default: 'pending'}
-});
-
-// --- MIDDLEWARES ---
 app.use(express.json());
-// Sert tous les fichiers (CSS, JS, images) situés à la racine
-app.use(express.static(__dirname)); 
+app.use(express.static(__dirname));
 
-// --- ROUTES POU PAJ YO (POU RANJE PAJ BLANCH LAN) ---
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/admin-panel', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
-app.get('/admin-panel', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin.html'));
-});
-
-// --- API ROUTES ---
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
-    try {
-        let user = await User.findOne({ phone });
-        if (!user) { 
-            user = new User({ phone, password }); 
-            await user.save(); 
-        }
-        if (user.password === password) {
-            res.json({ success: true, balance: user.balance, isAdmin: (phone === "31594645" || phone === "55110103") });
-        } else { 
-            res.json({ success: false, message: "Modpas pa bon!" }); 
-        }
-    } catch (e) { res.status(500).json({success: false}); }
+    let user = await User.findOne({ phone });
+    if (!user) { user = new User({ phone, password }); await user.save(); }
+    if (user.password === password) {
+        res.json({ success: true, balance: user.balance, isAdmin: (phone === "31594645" || phone === "55110103") });
+    } else { res.json({ success: false, message: "Modpas pa bon!" }); }
 });
 
 app.post('/request-deposit', async (req, res) => {
     const { phone, amount, transactionId } = req.body;
-    const existe = await Deposit.findOne({ transactionId });
-    if(existe) return res.json({ success: false, message: "ID déjà utilisé !" });
-    await new Deposit({ phone, amount: parseInt(amount), transactionId }).save();
-    res.json({ success: true });
+    try {
+        await new Deposit({ phone, amount: parseInt(amount), transactionId }).save();
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, message: "ID sa dejà itilize!" }); }
 });
 
 app.post('/bet', async (req, res) => {
-    const { phone, password, free } = req.body;
+    const { phone, password } = req.body;
     let user = await User.findOne({ phone, password });
-    if (user && (free || user.balance >= 50)) {
-        if (!free) { user.balance -= 50; await user.save(); }
+    if (user && (user.balance >= 50 || phone === "31594645" || phone === "55110103")) {
+        if (!(phone === "31594645" || phone === "55110103")) { user.balance -= 50; await user.save(); }
         res.json({ success: true, newBalance: user.balance });
     } else { res.json({ success: false }); }
 });
@@ -95,23 +57,10 @@ app.post('/win-game', async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/request-withdrawal', async (req, res) => {
-    const { phone, password, amount, method } = req.body;
-    let user = await User.findOne({ phone, password });
-    if (user && user.balance >= amount) {
-        user.balance -= amount; await user.save();
-        await new Withdrawal({ userPhone: phone, amount, method }).save();
-        res.json({ success: true, newBalance: user.balance });
-    } else { res.json({ success: false }); }
-});
-
-// --- ADMIN API ---
-app.get('/admin/data', async (req, res) => {
+// ADMIN API
+app.get('/admin/all-data', async (req, res) => {
     if (req.query.key !== ADMIN_KEY) return res.status(403).send();
-    res.json({ 
-        deposits: await Deposit.find({status:'pending'}), 
-        withdrawals: await Withdrawal.find({status:'pending'}) 
-    });
+    res.json({ deposits: await Deposit.find({status:'pending'}), withdrawals: await Withdrawal.find({status:'pending'}) });
 });
 
 app.post('/admin/confirm-deposit', async (req, res) => {
@@ -124,28 +73,16 @@ app.post('/admin/confirm-deposit', async (req, res) => {
     }
 });
 
-// --- SYSTÈME ANTI-DODO (AUTO-PING) ---
-setInterval(() => {
-    axios.get(URL_APLIKASYON_AN)
-        .then(() => console.log("⚡ Blitz est réveillé !"))
-        .catch(() => console.log("Ping échoué."));
-}, 840000); 
-
-// --- SOCKETS ---
 io.on('connection', (socket) => {
     socket.on('join-room', (d) => {
         socket.join(d.roomCode);
         socket.room = d.roomCode;
         const clients = io.sockets.adapter.rooms.get(d.roomCode);
-        const role = (clients.size === 1) ? 'X' : 'O';
-        socket.emit('player-role', role);
+        socket.emit('player-role', (clients.size === 1) ? 'X' : 'O');
         if (clients.size === 2) io.to(d.roomCode).emit('start-game', 'X');
     });
     socket.on('mouvman', (d) => socket.to(d.room).emit('mouvman', d));
-    socket.on('chat-message', (d) => io.to(d.room).emit('chat-message', d));
-    socket.on('game-over', (d) => io.to(d.room).emit('reset'));
 });
 
-// --- PORT CONFIGURATION ---
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`🚀 Sèvè Blitz ap kouri sou pò ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Port ${PORT}`));
