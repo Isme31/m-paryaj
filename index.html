@@ -9,8 +9,9 @@
         .hidden { display: none; } .screen { padding: 20px; }
         input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
         button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; }
-        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .x { color: #007bff; } .o { color: #ff4757; }
         .finance { background: #222; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
     </style>
 </head>
@@ -24,7 +25,7 @@
         <button onclick="login()">Konekte</button>
     </div>
 
-    <!-- GAME SCREEN (DIREK APRE LOGIN) -->
+    <!-- GAME SCREEN -->
     <div id="game-screen" class="screen hidden">
         <div style="background:#222; padding:10px; border-radius:10px; margin-bottom:15px;">
             <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
@@ -51,11 +52,12 @@
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
             <button onclick="alert('Demann voye!')">Voye Depo</button>
         </div>
+        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti / Rekòmanse</button>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill("");
+        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
 
         async function login() {
             const res = await fetch('/login', {
@@ -70,10 +72,37 @@
             } else alert(data.message);
         }
 
+        // --- LOJIK ROBO ---
+        function startRobot() {
+            isRobot = true; mySymbol = "X"; myTurn = true;
+            boardData = Array(100).fill("");
+            id('game-menu').classList.add('hidden');
+            id('board').classList.remove('hidden');
+            id('status').innerText = "Ou kont Robo! (Ou se X)";
+            renderBoard();
+        }
+
+        function robotLogic() {
+            let empty = boardData.map((v,i) => v === "" ? i : null).filter(v => v !== null);
+            if(empty.length > 0) {
+                let move = empty[Math.floor(Math.random() * empty.length)];
+                boardData[move] = "O";
+                renderBoard();
+                if(checkWin5(move, "O")) {
+                    id('status').innerText = "Robo a ganyen! 🤖";
+                    myTurn = false;
+                } else {
+                    myTurn = true;
+                    id('status').innerText = "Tou pa w!";
+                }
+            }
+        }
+
+        // --- JWÈT ---
         function createPrivate() {
-            if(parseFloat(id('bal').innerText) < 50) return alert("Rechaje kont ou!");
+            if(parseFloat(id('bal').innerText) < 50) return alert("Rechaje!");
             const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            const txt = `Vini nou jwe Mopyon! Men kòd la: *${code}*. Isit la: https://onrender.com`;
+            const txt = `Vini nou jwe! Kòd: *${code}*. https://onrender.com`;
             window.open(`https://wa.me{encodeURIComponent(txt)}`, '_blank');
             socket.emit('createPrivate', { room: code, phone: myPhone });
             id('status').innerText = `Kòd: ${code}. Tann zanmi an...`;
@@ -98,16 +127,49 @@
             boardData.forEach((val, i) => {
                 const cell = document.createElement('div');
                 cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
-                cell.onclick = () => {
-                    if(!myTurn || boardData[i] !== "") return;
-                    boardData[i] = mySymbol; myTurn = false; renderBoard();
-                    socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-                };
+                cell.onclick = () => makeMove(i);
                 b.appendChild(cell);
             });
         }
 
-        socket.on('opponentMove', (data) => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); });
+        function makeMove(i) {
+            if(!myTurn || boardData[i] !== "") return;
+            boardData[i] = mySymbol; myTurn = false; renderBoard();
+            
+            if(checkWin5(i, mySymbol)) {
+                id('status').innerText = "🎉 Ou Ganyen!";
+                if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
+                return;
+            }
+
+            if(isRobot) {
+                id('status').innerText = "Robo a ap jwe...";
+                setTimeout(robotLogic, 600);
+            } else {
+                socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                id('status').innerText = "Tou pa li...";
+            }
+        }
+
+        function checkWin5(idx, sym) {
+            const size = 10; const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const r = Math.floor(idx/size), c = idx%size;
+            for(let [dr, dc] of dirs) {
+                let count = 1;
+                for(let s=1; s<5; s++) {
+                    let nr=r+dr*s, nc=c+dc*s;
+                    if(nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===sym) count++; else break;
+                }
+                for(let s=1; s<5; s++) {
+                    let nr=r-dr*s, nc=c-dc*s;
+                    if(nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===sym) count++; else break;
+                }
+                if(count >= 5) return true;
+            }
+            return false;
+        }
+
+        socket.on('opponentMove', (data) => { boardData[data.index] = data.symbol; myTurn = true; id('status').innerText = "Tou pa w!"; renderBoard(); });
         function id(n) { return document.getElementById(n); }
     </script>
 </body>
