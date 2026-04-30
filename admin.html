@@ -3,30 +3,36 @@
 <head>
     <title>Admin Blitz</title>
     <style>
-        body { background:#111; color:white; font-family:sans-serif; padding:20px; text-align:center; }
-        .card { background:#222; border:1px solid #444; padding:15px; border-radius:10px; margin-bottom:10px; }
-        button { background:#28a745; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; }
+        body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
+        .card { background:#222; border:1px solid #444; padding:15px; margin:10px auto; max-width:400px; border-radius:10px; }
+        button { background:#28a745; color:white; border:none; padding:10px; cursor:pointer; width:100%; border-radius:5px; }
     </style>
 </head>
 <body>
-    <h1>Kontwòl Depo Blitz ⚡</h1>
-    <div id="list">Ap chaje...</div>
+    <h1>Panèl Kontwòl ⚡</h1>
+    <div id="list">Ap chaje depo...</div>
     <script>
         const KEY = "hugues";
         async function load() {
-            const res = await fetch('/admin/all-data?key='+KEY);
+            const res = await fetch('/admin/all-data?key='+KEY); // Ou bezwen kreye wout sa nan index.js
             const data = await res.json();
-            let h = "";
-            data.deposits.forEach(d => {
-                h += `<div class="card"><p>Tel: ${d.phone} | ${d.amount}G</p><p>ID: ${d.transactionId}</p>
-                <button onclick="ok('${d._id}')">Konfime</button></div>`;
-            });
-            document.getElementById('list').innerHTML = h || "Pa gen depo.";
+            id('list').innerHTML = data.deposits.map(d => `
+                <div class="card">
+                    <p>Tel: ${d.phone} | <b>${d.amount}G</b></p>
+                    <p>Tranzaksyon: ${d.transactionId}</p>
+                    <button onclick="ok('${d._id}')">Konfime Depo</button>
+                </div>
+            `).join('') || "Pa gen depo an tann.";
         }
         async function ok(id) {
-            await fetch('/admin/confirm-deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:KEY,id:id})});
-            alert("Konfime!"); load();
+            await fetch('/admin/confirm-deposit', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({key:KEY, id:id})
+            });
+            alert("Kòb la ajoute!"); load();
         }
+        function id(n) { return document.getElementById(n); }
         load();
     </script>
 </body>
