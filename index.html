@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz 5⚡</title>
+    <title>Mopyon Blitz⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
         .hidden { display: none; }
-        .screen { padding: 15px; }
-        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; font-size: 16px; }
-        button { background: #007bff; color: white; border: none; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 20px auto; background: #444; border: 2px solid #444; }
-        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .screen { padding: 20px; }
+        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; font-size: 16px; border: none; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
         .x { color: #007bff; } .o { color: #ff4757; }
     </style>
 </head>
@@ -20,48 +20,59 @@
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <input type="text" id="ref" placeholder="Nimewo Parren (opsyonèl)">
-        <button onclick="login()">Konekte / Enskri</button>
+        <input type="text" id="ref" placeholder="Paren (opsyonèl)">
+        <button onclick="login()">Konekte</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <p>Balans: <span id="bal">0</span>G | Tel: <span id="myPhone"></span></p>
-        <div id="status">Klike bouton an pou kòmanse</div>
-        <button id="findBtn" onclick="findGame()">Chèche Advèsè (Pari 10G)</button>
+        <p>Balans: <span id="bal" style="color:#00ff00">0</span> G</p>
+        <div id="status">Pare pou jwe?</div>
+        
+        <button id="findBtn" onclick="findGame()">Jwe pou 50G</button>
+        <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
+
         <div id="board" class="grid hidden"></div>
+        <button onclick="location.reload()" style="background:#444">Soti</button>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill("");
+        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
 
         async function login() {
+            const phone = document.getElementById('phone').value;
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value, ref: id('ref').value })
+                body: JSON.stringify({ phone, password: id('pass').value, ref: id('ref').value })
             });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.phone; id('bal').innerText = data.balance;
-                id('myPhone').innerText = myPhone;
+                myPhone = phone; id('bal').innerText = data.balance;
                 id('auth-screen').classList.add('hidden'); id('game-screen').classList.remove('hidden');
+                if(phone === "hugues") id('robotBtn').classList.remove('hidden'); // Sèlman admin
             } else alert(data.message);
         }
 
         function findGame() {
+            if(parseFloat(id('bal').innerText) < 50) {
+                id('status').innerHTML = "<b style='color:red'>Rechaje kont ou!</b>";
+                return;
+            }
             socket.emit('findGame', { phone: myPhone });
-            id('findBtn').classList.add('hidden'); id('status').innerText = "Rechèch ankou...";
+            id('status').innerText = "Ap chèche advèsè...";
         }
 
         socket.on('gameStart', (data) => {
             currentRoom = data.room;
-            mySymbol = data.players[0] === myPhone ? 'X' : 'O';
+            mySymbol = data.players[socket.id];
             myTurn = (mySymbol === 'X');
-            id('status').innerText = `Ou se ${mySymbol}. ${myTurn ? 'Tou pa w!' : 'Tou advèsè a.'}`;
             id('board').classList.remove('hidden');
+            id('status').innerText = `Jwèt la kòmanse! Ou se ${mySymbol}`;
             renderBoard();
         });
+
+        socket.on('error_msg', (m) => { id('status').innerHTML = `<b style='color:red'>${m}</b>`; });
 
         function renderBoard() {
             const b = id('board'); b.innerHTML = "";
@@ -77,19 +88,59 @@
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
             boardData[i] = mySymbol;
-            myTurn = false;
-            id('status').innerText = "Tou advèsè a...";
-            renderBoard();
-            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            // Isit la ou ta dwe ajoute checkWin(i) pou tcheke 5 pyon
+            myTurn = false; renderBoard();
+            
+            if(checkWin5(i, mySymbol)) {
+                id('status').innerText = "Ou Ganyen! 🎉";
+                if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
+                return;
+            }
+
+            if(isRobot) { setTimeout(robotLogic, 500); } 
+            else { socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol }); }
         }
 
         socket.on('opponentMove', (data) => {
             boardData[data.index] = data.symbol;
-            myTurn = true;
-            id('status').innerText = "Tou pa w!";
-            renderBoard();
+            myTurn = true; renderBoard();
         });
+
+        // Lojik 5 pyon aliyen
+        function checkWin5(idx, sym) {
+            const size = 10;
+            const dirs = [[1,0], [0,1], [1,1], [1,-1]];
+            const r = Math.floor(idx/size), c = idx%size;
+            for(let [dr, dc] of dirs) {
+                let count = 1;
+                for(let s=1; s<5; s++) {
+                    let nr=r+dr*s, nc=c+dc*s;
+                    if(nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===sym) count++; else break;
+                }
+                for(let s=1; s<5; s++) {
+                    let nr=r-dr*s, nc=c-dc*s;
+                    if(nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===sym) count++; else break;
+                }
+                if(count >= 5) return true;
+            }
+            return false;
+        }
+
+        // Robo Admin
+        function startRobot() {
+            isRobot = true; mySymbol = "X"; myTurn = true;
+            id('board').classList.remove('hidden');
+            id('status').innerText = "Ou kont Robo Blitz!";
+            renderBoard();
+        }
+
+        function robotLogic() {
+            let empty = boardData.map((v,i) => v === "" ? i : null).filter(v => v !== null);
+            if(empty.length > 0) {
+                let move = empty[Math.floor(Math.random() * empty.length)];
+                boardData[move] = "O"; myTurn = true; renderBoard();
+                if(checkWin5(move, "O")) id('status').innerText = "Robo a ganyen! 🤖";
+            }
+        }
 
         function id(n) { return document.getElementById(n); }
     </script>
