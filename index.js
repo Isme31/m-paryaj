@@ -12,7 +12,7 @@ const io = new Server(server);
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority";
 mongoose.connect(dbURI).then(() => console.log("✅ Sèvè Blitz Pare!"));
 
-// Modèl Done yo
+// Modèl Done
 const User = mongoose.model('User', { 
     phone: String, 
     password: String, 
@@ -20,14 +20,18 @@ const User = mongoose.model('User', {
     referredBy: String 
 });
 
-const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, transactionId: String, status: { type: String, default: 'pending' } });
+const Deposit = mongoose.model('Deposit', { 
+    phone: String, 
+    amount: Number, 
+    transactionId: String, 
+    status: { type: String, default: 'pending' } 
+});
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
 // --- ROUTES ---
 
-// Login ak Parrainage (5G)
 app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     try {
@@ -35,6 +39,7 @@ app.post('/login', async (req, res) => {
         if (!user) { 
             user = new User({ phone, password, referredBy: ref }); 
             await user.save();
+            // Parrainage: bay paren an 5G
             if(ref && ref !== phone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5 } });
         }
         if (user.password === password) {
@@ -43,7 +48,12 @@ app.post('/login', async (req, res) => {
     } catch(e) { res.status(500).json({ success: false }); }
 });
 
-// Admin: Konfime Depo
+app.get('/admin/all-data', async (req, res) => {
+    if (req.query.key !== "hugues") return res.status(403).send();
+    const deposits = await Deposit.find({ status: 'pending' });
+    res.json({ deposits });
+});
+
 app.post('/admin/confirm-deposit', async (req, res) => {
     const { key, id } = req.body;
     if (key !== "hugues") return res.status(403).send();
@@ -56,16 +66,13 @@ app.post('/admin/confirm-deposit', async (req, res) => {
     }
 });
 
-// --- SOCKET.IO (JWÈT LA) ---
+// --- SOCKET.IO (JWÈT MULTIPLAYER) ---
 let waitingPlayer = null;
 
 io.on('connection', (socket) => {
     socket.on('findGame', async (userData) => {
         const user = await User.findOne({ phone: userData.phone });
-        
-        if (!user || user.balance < 50) {
-            return socket.emit('error_msg', "Balans ou ensifizan. Rechaje kont ou (min 50G)!");
-        }
+        if (!user || user.balance < 50) return socket.emit('error_msg', "Rechaje kont ou (min 50G)!");
 
         if (waitingPlayer && waitingPlayer.userData.phone !== userData.phone) {
             const room = `room_${Date.now()}`;
@@ -82,19 +89,19 @@ io.on('connection', (socket) => {
             });
             waitingPlayer = null;
         } else {
-            waitingPlayer = socket;
-            socket.userData = userData;
-            socket.emit('status', "Ap chèche yon advèsè...");
+            waitingPlayer = socket; socket.userData = userData;
+            socket.emit('status', "Ap chèche advèsè...");
         }
     });
 
-    socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
+    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
     socket.on('win', async (data) => {
-        // Ganyen touche 90G (100G - 10% komisyon)
+        // Ganyen touche 90G (10G komisyon pou admin)
         await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: 90 } });
         io.to(data.room).emit('gameOver', { winner: data.phone });
     });
 });
 
-server.listen(process.env.PORT || 10000);
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => console.log(`🚀 Blitz kouri sou pòt ${PORT}`));
