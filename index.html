@@ -3,31 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon 50g | Elit Jwèt</title>
+    <title>Mopyon 50g | 30s Blitz</title>
     <script src="https://tailwindcss.com"></script>
     <style>
         @import url('https://googleapis.com');
-        body { font-family: 'Poppins', sans-serif; background: #0f172a; color: white; overflow-x: hidden; }
+        body { font-family: 'Poppins', sans-serif; background: #0f172a; color: white; overflow: hidden; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 10px; border-radius: 8px; }
+        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 8px; border-radius: 8px; width: fit-content; margin: 0 auto; }
         .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 2px; }
         .cell.X { color: #f87171; text-shadow: 0 0 8px #ef4444; }
         .cell.O { color: #60a5fa; text-shadow: 0 0 8px #3b82f6; }
-        .animate-pop { animation: pop 0.3s ease-out; }
-        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+        .timer-bar { height: 4px; background: #22c55e; width: 100%; transition: width 1s linear; }
         .hidden { display: none; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-2">
 
-    <div id="welcome-screen" class="text-center max-w-lg">
-        <h1 class="text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">MOPYON 50G</h1>
-        <button onclick="startGame()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg">KÒMANSE JWE</button>
+    <div id="welcome-screen" class="text-center">
+        <h1 class="text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-blue-500">MOPYON 30S</h1>
+        <p class="mb-6 text-gray-400">Atansyon: Ou gen sèlman 30 segonn pou w jwe!</p>
+        <button onclick="startGame()" class="bg-blue-600 px-10 py-4 rounded-xl font-bold shadow-lg hover:bg-blue-500 transition">ANTRE NAN BATAY LA</button>
     </div>
 
-    <div id="game-screen" class="hidden w-full max-w-4xl text-center">
-        <div id="status" class="glass px-6 py-2 rounded-full font-bold mb-4">Chaje...</div>
-        <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
+    <div id="game-screen" class="hidden w-full max-w-xl text-center">
+        <div class="glass p-4 rounded-2xl mb-4">
+            <div id="status" class="text-xl font-bold mb-2">Tou pa: X</div>
+            <div class="w-full bg-gray-700 rounded-full overflow-hidden">
+                <div id="timer-visual" class="timer-bar"></div>
+            </div>
+            <div id="timer-text" class="text-xs mt-1 text-gray-400">30 segonn rete</div>
+        </div>
+        
+        <div class="overflow-auto"><div class="board" id="board"></div></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -36,13 +43,10 @@
         const boardSize = 15;
         let board = Array(boardSize * boardSize).fill(null);
         let currentPlayer = '';
+        let timeLeft = 30;
+        let timerInterval = null;
 
-        socket.on('start-player', (player) => {
-            if (!currentPlayer) {
-                currentPlayer = player;
-                updateStatus();
-            }
-        });
+        socket.on('start-player', (player) => { if (!currentPlayer) { currentPlayer = player; updateStatus(); startTimer(); } });
 
         function startGame() {
             document.getElementById('welcome-screen').classList.add('hidden');
@@ -56,42 +60,65 @@
             for (let i = 0; i < boardSize * boardSize; i++) {
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
-                cell.dataset.index = i;
                 cell.onclick = () => makeMove(i, true);
                 boardElement.appendChild(cell);
             }
         }
 
-        function updateStatus() {
-            const statusBox = document.getElementById('status');
-            statusBox.innerText = "Tou pa: " + currentPlayer;
-            statusBox.style.color = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 30;
+            updateTimerUI();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    const loser = currentPlayer;
+                    const winner = loser === 'X' ? 'O' : 'X';
+                    alert("Tan fini! Jwè " + loser + " pèdi. Jwè " + winner + " genyen!");
+                    socket.emit('game-over', winner);
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            const bar = document.getElementById('timer-visual');
+            const text = document.getElementById('timer-text');
+            const percentage = (timeLeft / 30) * 100;
+            bar.style.width = percentage + "%";
+            bar.style.background = timeLeft < 10 ? "#ef4444" : "#22c55e";
+            text.innerText = timeLeft + " segonn rete";
         }
 
         function makeMove(index, emit = false) {
             if (board[index] || !currentPlayer) return;
-
             board[index] = currentPlayer;
             const cell = document.getElementById('board').children[index];
             cell.innerText = currentPlayer;
-            cell.classList.add(currentPlayer, 'animate-pop');
+            cell.classList.add(currentPlayer);
 
             if (checkWin(index)) {
-                setTimeout(() => {
-                    alert("🏆 " + currentPlayer + " genyen!");
-                    socket.emit('game-over', currentPlayer);
-                }, 100);
+                clearInterval(timerInterval);
+                setTimeout(() => { alert("🏆 BRAVO! " + currentPlayer + " genyen!"); socket.emit('game-over', currentPlayer); }, 100);
                 return;
             }
 
             if (emit) socket.emit('mouvman', { index, player: currentPlayer });
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             updateStatus();
+            startTimer(); // Rekòmanse timer pou lòt moun nan
+        }
+
+        function updateStatus() {
+            const s = document.getElementById('status');
+            s.innerText = "Tou pa: " + currentPlayer;
+            s.style.color = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
         }
 
         function checkWin(index) {
             const r = Math.floor(index / boardSize), c = index % boardSize;
-            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+            const directions = [[0,1],[1,0],[1,1],[1,-1]];
             for (let [dr, dc] of directions) {
                 let count = 1;
                 for (let i = 1; i < 5; i++) {
@@ -107,16 +134,14 @@
             return false;
         }
 
-        socket.on('mouvman', (data) => {
-            currentPlayer = data.player;
-            makeMove(data.index, false);
-        });
-
+        socket.on('mouvman', (data) => { currentPlayer = data.player; makeMove(data.index, false); });
         socket.on('reset', (nextStartPlayer) => {
+            clearInterval(timerInterval);
             board = Array(boardSize * boardSize).fill(null);
             currentPlayer = nextStartPlayer;
             createBoard();
             updateStatus();
+            startTimer();
         });
     </script>
 </body>
