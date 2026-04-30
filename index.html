@@ -3,34 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon 50g - 5 Pwen</title>
+    <title>Mopyon 50g | Elit Jwèt</title>
+    <script src="https://tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #eef2f3; margin: 0; padding: 10px; }
-        .board { 
-            display: grid; 
-            grid-template-columns: repeat(15, 25px); 
-            grid-template-rows: repeat(15, 25px); 
-            gap: 2px; 
-            justify-content: center; 
-            margin: 20px auto; 
-            background: #34495e;
-            padding: 5px;
-            width: fit-content;
-        }
-        .cell { 
-            width: 25px; height: 25px; background: white; 
-            font-size: 14px; display: flex; align-items: center; 
-            justify-content: center; cursor: pointer; font-weight: bold;
-        }
-        .cell.X { color: #e74c3c; }
-        .cell.O { color: #3498db; }
-        .status { font-size: 1.2em; font-weight: bold; margin: 10px; color: #2c3e50; }
+        @import url('https://googleapis.com');
+        body { font-family: 'Poppins', sans-serif; background: #0f172a; color: white; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 10px; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 2px; }
+        .cell:hover { background: #475569; }
+        .cell.X { color: #f87171; text-shadow: 0 0 8px #ef4444; }
+        .cell.O { color: #60a5fa; text-shadow: 0 0 8px #3b82f6; }
+        .hidden { display: none; }
+        .animate-pop { animation: pop 0.3s ease-out; }
+        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
     </style>
 </head>
-<body>
-    <h1>Mopyon 5 Pwen 🎮</h1>
-    <div class="status" id="status">Tou pa: X</div>
-    <div class="board" id="board"></div>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- PAJ AKEY (WELCOME SCREEN) -->
+    <div id="welcome-screen" class="text-center animate-pop max-w-lg">
+        <h1 class="text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">MOPYON 50G</h1>
+        <p class="text-gray-400 mb-8 text-lg italic">Defi zanmi w nan yon batay entèlijans. Aliyen 5 pwen pou w genyen!</p>
+        
+        <div class="glass p-8 rounded-3xl shadow-2xl mb-8">
+            <div class="flex justify-around mb-6">
+                <div class="text-center"><span class="block text-3xl text-red-400">X</span><span class="text-xs uppercase">Jwè 1</span></div>
+                <div class="text-center text-gray-500 text-2xl font-light">VS</div>
+                <div class="text-center"><span class="block text-3xl text-blue-400">O</span><span class="text-xs uppercase">Jwè 2</span></div>
+            </div>
+            <button onclick="startGame()" class="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-105 shadow-lg">
+                KÒMANSE JWE KOUNYA
+            </button>
+        </div>
+        <p class="text-xs text-gray-500">Devlope ak ❤️ pou kominote 50g la.</p>
+    </div>
+
+    <!-- PAJ JWÈT (GAME SCREEN) -->
+    <div id="game-screen" class="hidden w-full max-w-4xl text-center">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-blue-400">Mopyon 50g</h2>
+            <div id="status" class="glass px-6 py-2 rounded-full font-bold border-blue-500">Tou pa: X</div>
+            <button onclick="resetRequest()" class="text-xs bg-red-900/30 text-red-400 px-3 py-1 rounded hover:bg-red-900/50">Reset</button>
+        </div>
+        
+        <div class="flex justify-center overflow-auto py-4">
+            <div class="board" id="board"></div>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -38,10 +58,15 @@
         const boardSize = 15;
         let board = Array(boardSize * boardSize).fill(null);
         let currentPlayer = 'X';
-        const boardElement = document.getElementById('board');
 
-        // Kreye tablo a
+        function startGame() {
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            createBoard();
+        }
+
         function createBoard() {
+            const boardElement = document.getElementById('board');
             boardElement.innerHTML = '';
             for (let i = 0; i < boardSize * boardSize; i++) {
                 const cell = document.createElement('div');
@@ -56,47 +81,46 @@
             if (board[index] || !currentPlayer) return;
 
             board[index] = currentPlayer;
-            const cell = boardElement.children[index];
+            const cell = document.getElementById('board').children[index];
             cell.innerText = currentPlayer;
-            cell.classList.add(currentPlayer);
+            cell.classList.add(currentPlayer, 'animate-pop');
 
             if (checkWin(index)) {
-                alert("Bravo! " + currentPlayer + " genyen!");
-                socket.emit('reset'); // Rekòmanse otomatikman
+                setTimeout(() => {
+                    alert("🏆 BRAVO! Jwè " + currentPlayer + " genyen batay la!");
+                    socket.emit('reset');
+                }, 100);
                 return;
             }
 
-            if (emit) {
-                socket.emit('mouvman', { index, player: currentPlayer });
-            }
+            if (emit) socket.emit('mouvman', { index, player: currentPlayer });
             
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            document.getElementById('status').innerText = "Tou pa: " + currentPlayer;
+            const statusBox = document.getElementById('status');
+            statusBox.innerText = "Tou pa: " + currentPlayer;
+            statusBox.style.borderColor = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
         }
 
         function checkWin(index) {
             const r = Math.floor(index / boardSize);
             const c = index % boardSize;
-            const directions = [[0,1], [1,0], [1,1], [1,-1]];
-
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
             for (let [dr, dc] of directions) {
                 let count = 1;
-                // Tcheke nan yon sans
                 for (let i = 1; i < 5; i++) {
                     let nr = r + dr*i, nc = c + dc*i;
-                    if (nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr*boardSize+nc] === currentPlayer) count++;
-                    else break;
+                    if (nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr*boardSize+nc] === currentPlayer) count++; else break;
                 }
-                // Tcheke nan lòt sans lan
                 for (let i = 1; i < 5; i++) {
                     let nr = r - dr*i, nc = c - dc*i;
-                    if (nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr*boardSize+nc] === currentPlayer) count++;
-                    else break;
+                    if (nr>=0 && nr<boardSize && nc>=0 && nc<boardSize && board[nr*boardSize+nc] === currentPlayer) count++; else break;
                 }
                 if (count >= 5) return true;
             }
             return false;
         }
+
+        function resetRequest() { socket.emit('reset'); }
 
         socket.on('mouvman', (data) => {
             currentPlayer = data.player;
@@ -109,8 +133,6 @@
             document.getElementById('status').innerText = "Tou pa: X";
             createBoard();
         });
-
-        createBoard();
     </script>
 </body>
 </html>
