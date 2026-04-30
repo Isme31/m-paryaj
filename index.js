@@ -7,21 +7,26 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Liy sa a ap sèvi tout fichye ki nan rasin pwojè a (HTML, CSS, JS)
+// Sèvi fichye static (HTML, CSS, JS) ki nan rasin pwojè a
 app.use(express.static(__dirname));
 
-// Liy sa a ap voye index.html bay moun k ap vizite sit la
+// Voye index.html lè yon moun vizite sit la
 app.get('/', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
-// Jesyon Socket.io pou jwèt la
+// Jesyon kominikasyon an dirèk ak Socket.io
 io.on('connection', (socket) => {
   console.log('Yon jwè konekte: ' + socket.id);
 
+  // Lè yon jwè fè yon mouvman, voye l bay tout lòt moun
   socket.on('mouvman', (data) => {
-    // Voye mouvman an bay tout lòt jwè yo
     socket.broadcast.emit('mouvman', data);
+  });
+
+  // Lè yon moun klike sou bouton "Rekòmanse", reset pou tout moun
+  socket.on('reset', () => {
+    io.emit('reset');
   });
 
   socket.on('disconnect', () => {
@@ -29,7 +34,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Render ap toujou bay yon pò nan "process.env.PORT"
+// Sèvi ak pò Render bay la oswa 3000 pa defo
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Sèvè a ap kouri sou pò ${PORT}`);
