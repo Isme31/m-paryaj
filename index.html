@@ -1,149 +1,49 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blitz Mopyon 5⚡</title>
+    <title>Mopyon Blitz</title>
     <style>
-        body { font-family: sans-serif; background: #0a0a0a; color: white; text-align: center; margin: 0; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; }
         .hidden { display: none; }
-        .screen { padding: 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; grid-template-columns: repeat(10, 35px); gap: 2px; background: #333; padding: 5px; margin: 10px auto; border-radius: 5px; border: 2px solid #444; }
-        .cell { width: 35px; height: 35px; background: #111; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; }
-        .timer { font-size: 1.4rem; color: #ff4444; font-weight: bold; margin-bottom: 5px; border: 2px solid; width: 60px; border-radius: 10px; }
-        button { padding: 12px; margin: 5px; border-radius: 10px; border: none; background: #007bff; color: white; font-weight: bold; width: 90%; max-width: 320px; cursor: pointer; }
-        input { padding: 12px; margin: 8px; width: 85%; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; }
-        .back-arrow { font-size: 2.5rem; cursor: pointer; margin-top: 20px; color: #555; }
-        .status { color: #ffc107; font-weight: bold; margin: 10px; }
+        .screen { padding: 20px; }
+        input, button { padding: 12px; margin: 10px; border-radius: 8px; width: 80%; max-width: 300px; }
+        button { background: #007bff; color: white; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="auth-screen" class="screen">
-        <h1 style="color:#007bff">Mopyon Blitz 5⚡</h1>
+        <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Telefòn"> <br>
         <input type="password" id="password" placeholder="Modpas"> <br>
         <button onclick="handleLogin()">Konekte</button>
     </div>
 
     <div id="menu-screen" class="screen hidden">
-        <h2>Balans: <span id="user-balance" style="color:#28a745">0</span>G</h2>
-        <button onclick="startMode('online')" style="background:#ffc107; color:black">Chèche Moun Online</button>
-        <button onclick="startMode('robot')" style="background:#28a745">Jwe ak Robot (MÈT)</button>
-        <button onclick="showScreen('deposit-screen')" style="background:#444">Depo / Retrè</button>
+        <h2>Byenvini!</h2>
+        <p>Balans ou: <span id="user-balance">0</span>G</p>
+        <button onclick="location.reload()">Soti</button>
     </div>
 
-    <div id="game-screen" class="screen hidden">
-        <div class="timer" id="time-left">30</div>
-        <div id="game-status" class="status">Pre...</div>
-        <div class="grid" id="board"></div>
-        <div id="game-over-box" class="hidden">
-            <h2 id="win-text"></h2>
-            <button onclick="replay()" style="background:#28a745">REJWE</button>
-        </div>
-        <div class="back-arrow" onclick="backToMenu()">⬅️</div>
-    </div>
-
-    <div id="deposit-screen" class="screen hidden">
-        <h3>Depo: 31594645</h3>
-        <input type="number" id="d-amt" placeholder="Kantite">
-        <input type="text" id="d-id" placeholder="ID Transaksyon">
-        <button onclick="doDepo()">Voye</button>
-        <div class="back-arrow" onclick="backToMenu()">⬅️</div>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        let uPhone, uPass, myBalance=0, isAdmin=false, board=Array(100).fill("");
-        let myRole="X", currentTurn="X", isRobot=false, timer, timeLeft=30, currentMode="";
-
-        function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-        function backToMenu() { clearInterval(timer); showScreen('menu-screen'); }
-
         async function handleLogin() {
-            uPhone = document.getElementById('phone').value; uPass = document.getElementById('password').value;
-            const res = await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-            const data = await res.json();
-            if(data.success) { myBalance=data.balance; isAdmin=data.isAdmin; document.getElementById('user-balance').innerText=myBalance; showScreen('menu-screen'); }
-            else alert(data.message);
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ phone, password })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('user-balance').innerText = data.balance;
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('menu-screen').classList.remove('hidden');
+                } else { alert(data.message); }
+            } catch(e) { alert("Erè koneksyon ak sèvè a"); }
         }
-
-        async function startMode(mode) {
-            currentMode = mode;
-            const res = await fetch('/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-            const data = await res.json();
-            if(!data.success) return alert("Balans ensifizan!");
-            myBalance=data.newBalance; document.getElementById('user-balance').innerText=myBalance;
-            initGame(mode);
-        }
-
-        function initGame(mode) {
-            board=Array(100).fill(""); document.getElementById('board').innerHTML="";
-            document.getElementById('game-over-box').classList.add('hidden');
-            for(let i=0; i<100; i++) {
-                let c=document.createElement('div'); c.className='cell'; c.id='c'+i;
-                c.onclick=()=>makeMove(i); document.getElementById('board').appendChild(c);
-            }
-            showScreen('game-screen');
-            isRobot = (mode === 'robot');
-            if(isRobot) { myRole="X"; currentTurn="X"; startTimer(); }
-            else socket.emit('find-match');
-        }
-
-        function replay() { startMode(currentMode); }
-
-        function makeMove(i) {
-            if(board[i] || currentTurn !== myRole) return;
-            executeMove(i, myRole);
-            if(isRobot) { currentTurn="O"; setTimeout(robotAI, 600); }
-            else socket.emit('mouvman',{index:i, role:myRole});
-        }
-
-        function executeMove(i, role) {
-            board[i]=role; let c=document.getElementById('c'+i); c.innerText=role;
-            c.style.color=(role==='X')?'#007bff':'#ff4444';
-            if(checkWin(i, role)) {
-                clearInterval(timer); document.getElementById('win-text').innerText="Jwè "+role+" Ganyen!";
-                document.getElementById('game-over-box').classList.remove('hidden');
-                if(role===myRole) fetch('/win-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-            } else { currentTurn = (role==='X')?'O':'X'; startTimer(); }
-        }
-
-        function robotAI() {
-            let bestS=-1, move=-1;
-            for(let i=0; i<100; i++) {
-                if(board[i]==="") {
-                    let s = eval(i);
-                    if(s > bestS) { bestS=s; move=i; }
-                }
-            }
-            executeMove(move, "O");
-        }
-
-        function eval(i) {
-            let s=0; const dirs=[,,, [1,-1]];
-            dirs.forEach(([dx,dy])=>{
-                let r=count(i,dx,dy,"O"), u=count(i,dx,dy,"X");
-                if(r>=5) s+=10000; if(u>=5) s+=5000; if(r>=4) s+=1000; if(u>=4) s+=500;
-            }); return s;
-        }
-
-        function checkWin(i, r) { return [,,, [1,-1]].some(([dx,dy])=> count(i,dx,dy,r)>=5); }
-        function count(i,dx,dy,r) {
-            let c=1; [1,-1].forEach(s=>{
-                let x=i%10, y=Math.floor(i/10);
-                while(true) { x+=dx*s; y+=dy*s; let ni=y*10+x; if(x<0||x>=10||y<0||y>=10||board[ni]!==r)break; c++; }
-            }); return c;
-        }
-
-        function startTimer() {
-            clearInterval(timer); timeLeft=30; document.getElementById('time-left').innerText=timeLeft;
-            timer=setInterval(()=>{ timeLeft--; document.getElementById('time-left').innerText=timeLeft; if(timeLeft<=0){alert("Tan fini!"); backToMenu();} },1000);
-        }
-
-        socket.on('player-role', r=>myRole=r);
-        socket.on('start-game', t=>{currentTurn=t; startTimer();});
-        socket.on('mouvman', d=>{executeMove(d.index, d.role);});
     </script>
 </body>
 </html>
