@@ -19,20 +19,18 @@
 </head>
 <body>
 
-    <!-- PAJ KONEKSYON -->
     <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <input type="text" id="ref" placeholder="Nimewo Paren (Opsyonèl)">
+        <input type="text" id="ref" placeholder="Paren (Opsyonèl)">
         <button onclick="login()">Konekte pou Jwe</button>
     </div>
 
-    <!-- PAJ JWÈT LA (Li moute dirèk apre login) -->
     <div id="game-screen" class="screen hidden">
         <div class="status-box">
             <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status">Byenvini! Chwazi yon mòd 👇</div>
+            <div id="status">Chwazi yon mòd 👇</div>
         </div>
         
         <div id="main-menu">
@@ -44,7 +42,6 @@
             <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
         </div>
 
-        <!-- Tablo a ap parèt isit la lè jwèt kòmanse -->
         <div id="board" class="grid hidden"></div>
 
         <div class="finance">
@@ -63,6 +60,20 @@
         const socket = io();
         let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
 
+        // --- SISTÈM SON (BEEP) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(freq = 440, type = 'sine', duration = 0.1) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
         async function login() {
             const res = await fetch('/login', {
                 method: 'POST',
@@ -73,25 +84,19 @@
             if(data.success) {
                 myPhone = data.phone;
                 id('bal').innerText = data.balance;
-                
-                // Deklanche afichaj jwèt la dirèkteman
                 id('auth-screen').classList.add('hidden');
                 id('game-screen').classList.remove('hidden');
-                
-                // Tcheke si se Admin
                 if(myPhone === "55110103" || myPhone === "31594645") id('robotBtn').classList.remove('hidden');
-            } else {
-                alert(data.message);
-            }
+            } else alert(data.message);
         }
 
-        // --- LOJIK ROBO ---
+        // --- JWÈT ---
         function startRobot() {
             isRobot = true; mySymbol = "X"; myTurn = true;
             boardData = Array(100).fill("");
             id('main-menu').classList.add('hidden');
             id('board').classList.remove('hidden');
-            id('status').innerText = "Mòd Antrenman: Ou kont Robo!";
+            id('status').innerText = "Ou kont Robo Blitz!";
             renderBoard();
         }
 
@@ -100,15 +105,15 @@
             if(empty.length > 0) {
                 let move = empty[Math.floor(Math.random() * empty.length)];
                 boardData[move] = "O";
+                playBeep(300, 'triangle'); // Son robo a
                 renderBoard();
-                if(checkWin5(move, "O")) { id('status').innerText = "Robo a ganyen! 🤖"; myTurn = false; }
+                if(checkWin5(move, "O")) { id('status').innerText = "Robo a ganyen! 🤖"; myTurn = false; playBeep(150, 'sawtooth', 0.5); }
                 else { myTurn = true; id('status').innerText = "Tou pa w!"; }
             }
         }
 
-        // --- JWÈT PRIVE WHATSAPP ---
         function createPrivate() {
-            if(parseFloat(id('bal').innerText) < 50) return alert("Balans ou dwe omwen 50G!");
+            if(parseFloat(id('bal').innerText) < 50) return alert("Balans ou ensifizan!");
             const code = Math.random().toString(36).substring(2, 7).toUpperCase();
             const txt = `Vini nou jwe Mopyon! Men kòd la: *${code}*. Antre li la: https://onrender.com`;
             window.open(`https://wa.me{encodeURIComponent(txt)}`, '_blank');
@@ -126,10 +131,11 @@
 
         socket.on('gameStart', (data) => {
             currentRoom = data.room;
-            mySymbol = data.players.includes(myPhone) ? (data.players[0] === myPhone ? 'X' : 'O') : 'O';
+            mySymbol = data.players.includes(myPhone) ? (data.players === myPhone ? 'X' : 'O') : 'O';
             myTurn = (mySymbol === 'X');
             id('board').classList.remove('hidden');
             id('status').innerText = `Jwèt kòmanse! Ou se ${mySymbol}`;
+            playBeep(600, 'sine', 0.3); // Son kòmansman
             renderBoard();
         });
 
@@ -146,15 +152,16 @@
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
             boardData[i] = mySymbol; myTurn = false; renderBoard();
-            
+            playBeep(800); // Son lè w poze pyon
+
             if(checkWin5(i, mySymbol)) {
-                id('status').innerText = "🎉 BRAVO, OU GANYEN!";
+                id('status').innerText = "🎉 OU GANYEN!";
+                playBeep(1000, 'sine', 0.6); // Son viktwa
                 if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
                 return;
             }
 
             if(isRobot) {
-                id('status').innerText = "Robo ap kalkile...";
                 setTimeout(robotLogic, 600);
             } else {
                 socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
@@ -162,8 +169,16 @@
             }
         }
 
+        socket.on('opponentMove', (data) => {
+            boardData[data.index] = data.symbol;
+            myTurn = true;
+            id('status').innerText = "Tou pa w!";
+            playBeep(440, 'square'); // Son lè advèsè a jwe
+            renderBoard();
+        });
+
         function checkWin5(idx, sym) {
-            const size = 10; const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const size = 10; const dirs = [,,,[1,-1]];
             const r = Math.floor(idx/size), c = idx%size;
             for(let [dr, dc] of dirs) {
                 let count = 1;
@@ -180,7 +195,6 @@
             return false;
         }
 
-        socket.on('opponentMove', (data) => { boardData[data.index] = data.symbol; myTurn = true; id('status').innerText = "Tou pa w!"; renderBoard(); });
         function id(n) { return document.getElementById(n); }
     </script>
 </body>
