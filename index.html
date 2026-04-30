@@ -7,7 +7,7 @@
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
         .hidden { display: none; } .screen { padding: 20px; }
-        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; }
+        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
         button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; }
         .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
@@ -15,6 +15,7 @@
     </style>
 </head>
 <body>
+    <!-- LOGIN SCREEN -->
     <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Telefòn">
@@ -23,27 +24,32 @@
         <button onclick="login()">Konekte</button>
     </div>
 
+    <!-- GAME SCREEN (DIREK APRE LOGIN) -->
     <div id="game-screen" class="screen hidden">
-        <p>Balans: <span id="bal" style="color:#00ff00">0</span> G</p>
-        <div id="status">Chwazi yon mòd</div>
+        <div style="background:#222; padding:10px; border-radius:10px; margin-bottom:15px;">
+            <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
+            <div id="status">Chwazi yon opsyon 👇</div>
+        </div>
         
-        <div id="menu-btns">
-            <button onclick="createPrivate()" style="background:#28a745">Voye kòd WhatsApp (50G)</button>
-            <br>
+        <div id="game-menu">
+            <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
+            <div style="margin: 10px 0; color:#888;">— OSWA —</div>
             <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
-            <button onclick="joinPrivate()" style="background:#ffc107; color:black">Antre nan jwèt la</button>
+            <button onclick="joinPrivate()" style="background:#ffc107; color:black">Antre nan Tab la</button>
+            <br><br>
+            <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
 
         <div class="finance">
-            <div style="display:flex; justify-content:center; gap:10px;">
+            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
                 <img src="https://digicelgroup.com" width="60">
                 <img src="https://natcom.com.ht" width="60">
             </div>
-            <p style="font-size:12px;">Voye sou: <b>55110103 / 31594645</b></p>
+            <p style="font-size:12px;">Depo/Retrè: <b>55110103 / 31594645</b></p>
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
-            <button onclick="alert('Voye!')">Fè Depo</button>
+            <button onclick="alert('Demann voye!')">Voye Depo</button>
         </div>
     </div>
 
@@ -60,25 +66,28 @@
             if(data.success) {
                 myPhone = data.phone; id('bal').innerText = data.balance;
                 id('auth-screen').classList.add('hidden'); id('game-screen').classList.remove('hidden');
+                if(myPhone === "55110103" || myPhone === "31594645") id('robotBtn').classList.remove('hidden');
             } else alert(data.message);
         }
 
         function createPrivate() {
-            if(parseFloat(id('bal').innerText) < 50) return alert("Rechaje!");
+            if(parseFloat(id('bal').innerText) < 50) return alert("Rechaje kont ou!");
             const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            const txt = `Vini nou jwe Mopyon! Men kòd la: *${code}*. Antre li isit la: https://onrender.com`;
+            const txt = `Vini nou jwe Mopyon! Men kòd la: *${code}*. Isit la: https://onrender.com`;
             window.open(`https://wa.me{encodeURIComponent(txt)}`, '_blank');
             socket.emit('createPrivate', { room: code, phone: myPhone });
-            id('status').innerText = `Kòd ou: ${code}. Tann zanmi an...`;
+            id('status').innerText = `Kòd: ${code}. Tann zanmi an...`;
+            id('game-menu').classList.add('hidden');
         }
 
         function joinPrivate() {
             const code = id('join-code').value.toUpperCase();
             socket.emit('joinPrivate', { room: code, phone: myPhone });
+            id('game-menu').classList.add('hidden');
         }
 
         socket.on('gameStart', (data) => {
-            currentRoom = data.room; mySymbol = data.players[0] === myPhone ? 'X' : 'O';
+            currentRoom = data.room; mySymbol = data.players.includes(myPhone) ? (data.players[0] === myPhone ? 'X' : 'O') : 'O';
             myTurn = (mySymbol === 'X'); id('board').classList.remove('hidden');
             id('status').innerText = `Ou se ${mySymbol}. ${myTurn?'Tou pa w!':'Tou pa li.'}`;
             renderBoard();
