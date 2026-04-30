@@ -5,12 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mopyon 50G | Blitz</title>
     <script src="https://tailwindcss.com"></script>
+    <link href="https://googleapis.com" rel="stylesheet">
     <style>
-        @import url('https://googleapis.com');
         body { font-family: 'Poppins', sans-serif; background: #0f172a; color: white; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
-        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 2px; }
+        .board { 
+            display: grid; 
+            grid-template-columns: repeat(15, 25px); 
+            gap: 2px; 
+            background: #1e293b; 
+            padding: 5px; 
+            border-radius: 8px; 
+            width: fit-content; 
+            margin: 0 auto; 
+        }
+        .cell { 
+            width: 25px; height: 25px; 
+            background: #334155; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 2px; 
+        }
         .cell.X { color: #f87171; text-shadow: 0 0 5px #ef4444; }
         .cell.O { color: #60a5fa; text-shadow: 0 0 5px #3b82f6; }
         .timer-bar { height: 4px; background: #22c55e; width: 100%; transition: width 1s linear; }
@@ -19,16 +33,16 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <!-- LOGIN -->
+    <!-- EKRAN KONEKSYON -->
     <div id="auth-screen" class="w-full max-w-md text-center">
-        <h1 class="text-4xl font-bold mb-6 text-blue-400">MOPYON 50G</h1>
+        <h1 class="text-4xl font-bold mb-6 text-blue-400 italic">MOPYON 50G</h1>
         <div class="glass p-8 rounded-3xl shadow-2xl">
-            <input type="text" id="phone" placeholder="Nimewo Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-white">
-            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 text-white">
-            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold">ANTRE NAN JWÈT LA</button>
+            <input type="text" id="phone" placeholder="Nimewo Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-white outline-none border border-transparent focus:border-blue-500">
+            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 text-white outline-none border border-transparent focus:border-blue-500">
+            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold transition">ANTRE NAN JWÈT LA</button>
             
             <div class="mt-6">
-                <p class="text-[10px] text-gray-500 mb-2 italic">BEZWEN ASISTAN? KONTAKTE NOU:</p>
+                <p class="text-[10px] text-gray-500 mb-2 italic text-uppercase">BEZWEN ASISTAN? KONTAKTE NOU:</p>
                 <div class="flex justify-center gap-2">
                     <a href="https://wa.me" target="_blank" class="text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-600/30">31594645</a>
                     <a href="https://wa.me" target="_blank" class="text-[10px] bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-600/30">55110103</a>
@@ -38,104 +52,211 @@
         </div>
     </div>
 
-    <!-- LOBBY -->
+    <!-- EKRAN LOBBY -->
     <div id="lobby-screen" class="hidden text-center glass p-8 rounded-3xl w-full max-w-md">
         <h2 class="text-xl mb-4">Pare pou batay la?</h2>
-        <p class="mb-6 text-gray-400">Balans ou: <span id="user-balance" class="text-green-400 font-bold">--</span></p>
-        <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold shadow-lg">MIZE 50G POU JWE</button>
+        <div class="mb-6 p-4 bg-slate-800/50 rounded-2xl">
+            <p class="text-gray-400 text-sm">Balans ou:</p>
+            <p id="user-balance" class="text-3xl text-green-400 font-bold">0 G</p>
+        </div>
+        
+        <input type="text" id="room-id" placeholder="Antre Kòd Chanm nan" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-white text-center">
+        
+        <button onclick="placeBet()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold shadow-lg transition">MIZE 50G POU JWE</button>
+        <p class="mt-4 text-xs text-gray-500 italic">Mete menm kòd ak zanmi w lan</p>
     </div>
 
-    <!-- JWÈT -->
+    <!-- EKRAN JWÈT -->
     <div id="game-screen" class="hidden w-full max-w-4xl text-center">
         <div class="glass p-3 rounded-2xl mb-4 max-w-xs mx-auto">
-            <div id="status" class="font-bold text-sm mb-1">Tou pa: X</div>
+            <div id="status" class="font-bold text-sm mb-1 uppercase tracking-widest text-blue-400">Atann lòt jwè a...</div>
             <div class="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
                 <div id="timer-visual" class="timer-bar"></div>
             </div>
         </div>
-        <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
+        <div class="flex justify-center overflow-auto">
+            <div class="board" id="board"></div>
+        </div>
+        <p class="mt-4 text-xs text-gray-500">Wòl ou: <span id="my-role-display">?</span></p>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let userPhone = "", currentPlayer = "", board = Array(225).fill(null);
+        let userPhone = "", myRole = "", currentPlayer = "X", currentRoom = "";
+        let board = Array(225).fill(null);
         let timeLeft = 30, timerInterval = null;
 
         async function handleLogin() {
             userPhone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
-            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, password}) });
+            if(!userPhone || !password) return;
+
+            const res = await fetch('/login', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({phone: userPhone, password}) 
+            });
             const data = await res.json();
+
             if(data.success) {
                 document.getElementById('user-balance').innerText = data.balance + " G";
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('lobby-screen').classList.remove('hidden');
-            } else { document.getElementById('auth-error').innerText = data.message; }
-        }
-
-        async function placeBet() {
-            const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone}) });
-            const data = await res.json();
-            if(data.success) {
-                document.getElementById('lobby-screen').classList.add('hidden');
-                document.getElementById('game-screen').classList.remove('hidden');
-                createBoard(); startTimer();
-            } else { alert(data.message); }
-        }
-
-        function createBoard() {
-            const b = document.getElementById('board'); b.innerHTML = '';
-            for(let i=0; i<225; i++) {
-                const c = document.createElement('div'); c.classList.add('cell');
-                c.onclick = () => makeMove(i, true); b.appendChild(c);
+            } else { 
+                document.getElementById('auth-error').innerText = data.message; 
             }
         }
 
+        async function placeBet() {
+            currentRoom = document.getElementById('room-id').value;
+            if(!currentRoom) return alert("Mete yon kòd chanm!");
+
+            const res = await fetch('/bet', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({phone: userPhone}) 
+            });
+            const data = await res.json();
+
+            if(data.success) {
+                document.getElementById('user-balance').innerText = data.newBalance + " G";
+                socket.emit('join-room', { roomCode: currentRoom, phone: userPhone });
+                
+                document.getElementById('lobby-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                createBoard();
+            } else { 
+                alert(data.message); 
+            }
+        }
+
+        function createBoard() {
+            const b = document.getElementById('board'); 
+            b.innerHTML = '';
+            for(let i=0; i<225; i++) {
+                const c = document.createElement('div'); 
+                c.classList.add('cell');
+                c.id = "cell-" + i;
+                c.onclick = () => handleMoveRequest(i); 
+                b.appendChild(c);
+            }
+        }
+
+        function handleMoveRequest(i) {
+            if(board[i] || myRole !== currentPlayer) return;
+            
+            // Nou egzekite mouvman an lokalman
+            makeMove(i, currentPlayer);
+            
+            // Nou voye l bay lòt moun nan
+            socket.emit('mouvman', { room: currentRoom, index: i, role: myRole });
+        }
+
+        function makeMove(i, player) {
+            board[i] = player;
+            const cell = document.getElementById('cell-' + i);
+            cell.innerText = player;
+            cell.classList.add(player);
+
+            if(checkWin(i, player)) {
+                clearInterval(timerInterval);
+                if(player === myRole) {
+                    socket.emit('game-over', { room: currentRoom, winner: myRole, winnerPhone: userPhone });
+                }
+                return;
+            }
+
+            // Chanje tou
+            currentPlayer = (player === 'X' ? 'O' : 'X');
+            updateStatusDisplay();
+            startTimer();
+        }
+
         function startTimer() {
-            clearInterval(timerInterval); timeLeft = 30;
+            clearInterval(timerInterval);
+            timeLeft = 30;
+            document.getElementById('timer-visual').style.width = "100%";
+            
             timerInterval = setInterval(() => {
                 timeLeft--; 
                 document.getElementById('timer-visual').style.width = (timeLeft/30)*100 + "%";
                 if(timeLeft <= 0) { 
                     clearInterval(timerInterval); 
-                    socket.emit('game-over', currentPlayer === 'X' ? 'O' : 'X'); 
-                    alert("Tan fini! Ou pèdi.");
+                    if(currentPlayer === myRole) {
+                        alert("Tan fini! Ou pèdi.");
+                        socket.emit('game-over', { room: currentRoom, winner: (myRole === 'X' ? 'O' : 'X') });
+                    }
                 }
             }, 1000);
         }
 
-        function makeMove(i, emit) {
-            if(board[i] || !currentPlayer) return;
-            board[i] = currentPlayer;
-            const cell = document.getElementById('board').children[i];
-            cell.innerText = currentPlayer; cell.classList.add(currentPlayer);
-            if(checkWin(i)) {
-                clearInterval(timerInterval);
-                setTimeout(() => { alert(currentPlayer + " GENYEN!"); socket.emit('game-over', currentPlayer); }, 100);
-                return;
+        function updateStatusDisplay() {
+            const statusEl = document.getElementById('status');
+            if(myRole === currentPlayer) {
+                statusEl.innerText = "TOU PA W!";
+                statusEl.classList.replace('text-blue-400', 'text-green-400');
+            } else {
+                statusEl.innerText = "TOU PA LÒT LA...";
+                statusEl.classList.replace('text-green-400', 'text-blue-400');
             }
-            if(emit) socket.emit('mouvman', {index: i, player: currentPlayer});
-            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            document.getElementById('status').innerText = "Tou pa: " + currentPlayer;
-            startTimer();
         }
 
-        function checkWin(index) {
+        function checkWin(index, player) {
             const r = Math.floor(index / 15), c = index % 15;
             const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for(let [dr, dc] of dirs) {
                 let cnt = 1;
-                for(let i=1; i<5; i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0&&nr<15&&nc>=0&&nc<15&&board[nr*15+nc]===currentPlayer) cnt++; else break; }
-                for(let i=1; i<5; i++) { let nr=r-dr*i, nc=c-dc*i; if(nr>=0&&nr<15&&nc>=0&&nc<15&&board[nr*15+nc]===currentPlayer) cnt++; else break; }
+                for(let i=1; i<5; i++) { 
+                    let nr=r+dr*i, nc=c+dc*i; 
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*15+nc] === player) cnt++; 
+                    else break; 
+                }
+                for(let i=1; i<5; i++) { 
+                    let nr=r-dr*i, nc=c-dc*i; 
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*15+nc] === player) cnt++; 
+                    else break; 
+                }
                 if(cnt >= 5) return true;
             }
             return false;
         }
 
-        socket.on('start-player', p => { if(!currentPlayer) {currentPlayer=p; document.getElementById('status').innerText = "Tou pa: " + p;} });
-        socket.on('mouvman', d => { currentPlayer=d.player; makeMove(d.index, false); });
-        socket.on('reset', p => { board.fill(null); currentPlayer=p; createBoard(); startTimer(); });
+        // --- ECOUTEURS SOCKET ---
+
+        socket.on('player-role', role => {
+            myRole = role;
+            document.getElementById('my-role-display').innerText = role;
+        });
+
+        socket.on('start-game', starter => {
+            currentPlayer = starter;
+            updateStatusDisplay();
+            startTimer();
+        });
+
+        socket.on('mouvman', data => {
+            if(data.role !== myRole) {
+                makeMove(data.index, data.role);
+            }
+        });
+
+        socket.on('update-balance', data => {
+            if(data.phone === userPhone) {
+                document.getElementById('user-balance').innerText = data.balance + " G";
+            }
+        });
+
+        socket.on('reset', winner => {
+            clearInterval(timerInterval);
+            alert("Jwèt la fini! Gayan an se: " + winner);
+            location.reload();
+        });
+
+        socket.on('player-left', () => {
+            alert("Lòt jwè a dekonekte.");
+            location.reload();
+        });
     </script>
 </body>
 </html>
