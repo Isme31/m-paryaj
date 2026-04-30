@@ -17,7 +17,7 @@ const ADMIN_KEY = "hugues";
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// LOGIN & BETS
+// LOGIN
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
@@ -26,6 +26,7 @@ app.post('/login', (req, res) => {
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
+// BET (KONT MOUN OSWA ROBO)
 app.post('/bet', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone, password }).value();
@@ -33,7 +34,18 @@ app.post('/bet', (req, res) => {
         const newBalance = user.balance - 50;
         db.get('users').find({ phone }).assign({ balance: newBalance }).write();
         res.json({ success: true, newBalance });
-    } else res.json({ success: false, message: "Kòb ensifizan!" });
+    } else res.json({ success: false, message: "Kòb ensifizan (50G)!" });
+});
+
+// LÈ YON MOUN GENYEN (KONT MOUN OSWA ROBO)
+app.post('/win-game', (req, res) => {
+    const { phone, password } = req.body;
+    let user = db.get('users').find({ phone, password }).value();
+    if(user) {
+        const newB = (user.balance || 0) + 90;
+        db.get('users').find({ phone }).assign({ balance: newB }).write();
+        res.json({ success: true, balance: newB });
+    }
 });
 
 // TRANZAKSYON
@@ -55,7 +67,7 @@ app.post('/request-deposit', (req, res) => {
     res.json({ success: true });
 });
 
-// ADMIN API (hugues)
+// ADMIN API (URL: admin.html?key=hugues)
 app.get('/admin/data', (req, res) => {
     if (req.query.key !== ADMIN_KEY) return res.status(403).send();
     res.json({ deposits: db.get('deposits').filter({status:'pending'}).value(), withdrawals: db.get('withdrawals').filter({status:'pending'}).value() });
@@ -78,29 +90,18 @@ app.post('/admin/confirm-withdrawal', (req, res) => {
     res.json({ success: true });
 });
 
-// SOCKETS (GAME & CHAT)
+// SOCKETS
 io.on('connection', (socket) => {
-    socket.on('join-room', (data) => {
-        socket.join(data.roomCode);
-        socket.room = data.roomCode;
-        const clients = io.sockets.adapter.rooms.get(data.roomCode);
+    socket.on('join-room', (d) => {
+        socket.join(d.roomCode); socket.room = d.roomCode;
+        const clients = io.sockets.adapter.rooms.get(d.roomCode);
         const role = (clients.size === 1) ? 'X' : 'O';
         socket.emit('player-role', role);
-        if (clients.size === 2) io.to(data.roomCode).emit('start-game', 'X');
+        if (clients.size === 2) io.to(d.roomCode).emit('start-game', 'X');
     });
-    socket.on('mouvman', (data) => socket.to(data.room).emit('mouvman', data));
-    socket.on('chat-message', (data) => io.to(data.room).emit('chat-message', data));
-    socket.on('game-over', (data) => {
-        if (data.winnerPhone) {
-            let user = db.get('users').find({ phone: data.winnerPhone }).value();
-            if(user) {
-                const newB = (user.balance || 0) + 90;
-                db.get('users').find({ phone: data.winnerPhone }).assign({ balance: newB }).write();
-                io.to(data.room).emit('update-balance', { phone: data.winnerPhone, balance: newB });
-            }
-        }
-        io.to(data.room).emit('reset');
-    });
+    socket.on('mouvman', (d) => socket.to(d.room).emit('mouvman', d));
+    socket.on('chat-message', (d) => io.to(d.room).emit('chat-message', d));
+    socket.on('game-over', (d) => io.to(d.room).emit('reset'));
 });
 
-server.listen(3000, () => console.log('Sèvè prè!'));
+server.listen(3000, () => console.log('Sèvè prè sou pò 3000'));
