@@ -15,37 +15,46 @@
         .hidden { display: none; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4 text-center">
 
     <!-- LOGIN -->
-    <div id="auth-screen" class="w-full max-w-md text-center">
+    <div id="auth-screen" class="w-full max-w-md">
         <h1 class="text-4xl font-bold mb-6 text-blue-400 italic">MOPYON 50G</h1>
-        <div class="glass p-8 rounded-3xl shadow-2xl">
-            <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 outline-none">
-            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 outline-none">
+        <div class="glass p-8 rounded-3xl">
+            <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 outline-none border border-transparent focus:border-blue-500">
+            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 outline-none border border-transparent focus:border-blue-500">
             <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold">ANTRE NAN JWÈT LA</button>
             <p id="auth-error" class="text-red-400 text-xs mt-4"></p>
         </div>
     </div>
 
     <!-- LOBBY -->
-    <div id="lobby-screen" class="hidden text-center glass p-8 rounded-3xl w-full max-w-md">
+    <div id="lobby-screen" class="hidden glass p-8 rounded-3xl w-full max-w-md">
         <h2 class="text-xl mb-4">Balans: <span id="user-balance" class="text-green-400 font-bold">0 G</span></h2>
-        <input type="text" id="room-id" placeholder="Kòd Chanm" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-center outline-none">
-        <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold mb-6">MIZE 50G (GENYEN 90G)</button>
         
-        <div class="border-t border-gray-700 pt-4">
-            <p class="text-xs text-gray-400 mb-2">RECHAJE KONT</p>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <button onclick="generateRoom()" class="bg-blue-600/30 border border-blue-500 py-3 rounded-xl text-xs">KREYE KÒD</button>
+            <button onclick="showJoin()" class="bg-purple-600/30 border border-purple-500 py-3 rounded-xl text-xs">ANTRE KÒD</button>
+        </div>
+
+        <div id="room-controls" class="hidden mb-6">
+            <input type="text" id="room-id" placeholder="Kòd Chanm" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-center border border-blue-500 outline-none">
+            <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold">MIZE 50G & JWE</button>
+            <p id="share-text" class="mt-2 text-[10px] text-blue-300 hidden"></p>
+        </div>
+        
+        <div class="border-t border-gray-700 pt-4 mt-4">
+            <p class="text-xs text-gray-500 mb-2 uppercase">Depo Kòb</p>
             <input type="number" id="depo-amount" placeholder="Kantite Goud" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm">
-            <input type="text" id="depo-id" placeholder="ID Tranzaksyon" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm">
+            <input type="text" id="depo-id" placeholder="ID MonCash/Natcash" class="w-full bg-slate-800 p-2 rounded mb-2 text-sm">
             <button onclick="sendDeposit()" class="w-full bg-orange-600 py-2 rounded text-xs font-bold">VOYE PRÈV</button>
         </div>
     </div>
 
     <!-- JWÈT -->
-    <div id="game-screen" class="hidden w-full text-center">
+    <div id="game-screen" class="hidden w-full">
         <div class="glass p-3 rounded-2xl mb-4 max-w-xs mx-auto">
-            <div id="status" class="font-bold text-sm mb-1 text-blue-400 uppercase">Atann lòt la...</div>
+            <div id="status" class="font-bold text-sm mb-1 text-blue-400">ATANN LÒT LA...</div>
             <div class="w-full bg-gray-700 h-1 rounded-full overflow-hidden"><div id="timer-visual" class="timer-bar"></div></div>
         </div>
         <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
@@ -67,18 +76,31 @@
             } else { document.getElementById('auth-error').innerText = data.message; }
         }
 
+        function generateRoom() {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('room-id').value = code;
+            document.getElementById('room-controls').classList.remove('hidden');
+            document.getElementById('share-text').innerText = "Voye kòd sa bay zanmi w: " + code;
+            document.getElementById('share-text').classList.remove('hidden');
+        }
+
+        function showJoin() {
+            document.getElementById('room-controls').classList.remove('hidden');
+            document.getElementById('room-id').value = "";
+            document.getElementById('share-text').classList.add('hidden');
+        }
+
         async function sendDeposit() {
             const amount = document.getElementById('depo-amount').value;
             const transactionId = document.getElementById('depo-id').value;
-            if(!amount || !transactionId) return alert("Mete tout info yo!");
+            if(!amount || !transactionId) return alert("Ranpli tout bwat yo!");
             const res = await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, transactionId}) });
-            const data = await res.json();
-            alert(data.message);
+            const d = await res.json(); alert(d.message);
         }
 
         async function placeBet() {
             currentRoom = document.getElementById('room-id').value;
-            if(!currentRoom) return alert("Mete kòd chanm nan!");
+            if(!currentRoom) return alert("Mete kòd la!");
             const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone}) });
             const data = await res.json();
             if(data.success) {
@@ -86,7 +108,7 @@
                 document.getElementById('lobby-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
                 createBoard();
-            } else { alert(data.message); }
+            } else alert(data.message);
         }
 
         function createBoard() {
@@ -141,7 +163,7 @@
         socket.on('mouvman', d => { if(d.role !== myRole) makeMove(d.index, d.role); });
         socket.on('update-balance', d => { if(d.phone === userPhone) document.getElementById('user-balance').innerText = d.balance + " G"; });
         socket.on('reset', w => { alert("Gayan: " + w); location.reload(); });
-        socket.on('player-left', () => { alert("Lòt la pati!"); location.reload(); });
+        socket.on('player-left', () => { alert("Lòt la dekonekte!"); location.reload(); });
     </script>
 </body>
 </html>
