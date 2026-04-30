@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 
+// Konfigirasyon Database
 const adapter = new FileSync('db.json');
 const db = low(adapter);
 db.defaults({ users: [], deposits: [], withdrawals: [] }).write();
@@ -17,33 +18,46 @@ const ADMIN_KEY = "hugues";
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// LOGIN & BALANCE
+// --- ROUTES ---
+
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
-    if (!user) { user = { phone, password, balance: 100 }; db.get('users').push(user).write(); }
-    if (user.password === password) res.json({ success: true, balance: user.balance, isAdmin: (phone === "31594645" || phone === "55110103") });
-    else res.json({ success: false, message: "Modpas pa bon!" });
+    if (!user) {
+        user = { phone, password, balance: 100 };
+        db.get('users').push(user).write();
+    }
+    if (user.password === password) {
+        res.json({ success: true, balance: user.balance, isAdmin: (phone === "31594645" || phone === "55110103") });
+    } else {
+        res.json({ success: false, message: "Modpas pa kòrèk!" });
+    }
 });
 
-// DEPO AK VERIFIKASYON ID (Anti-Vòl)
 app.post('/request-deposit', (req, res) => {
     const { phone, amount, transactionId } = req.body;
-    const exists = db.get('deposits').find({ transactionId }).value();
     
-    if (exists) {
-        return res.json({ success: false, message: "ID sa a itilize deja!" });
+    // SEKIRITE: Tcheke si ID sa a te deja itilize nan sistèm nan
+    const idExists = db.get('deposits').find({ transactionId }).value();
+    if (idExists) {
+        return res.json({ success: false, message: "ID sa a deja itilize nan yon lòt tranzaksyon!" });
     }
-    
-    db.get('deposits').push({ id: Date.now(), phone, amount: parseInt(amount), transactionId, status: 'pending' }).write();
-    res.json({ success: true, message: "Depo voye!" });
+
+    db.get('deposits').push({ 
+        id: Date.now(), 
+        phone, 
+        amount: parseInt(amount), 
+        transactionId, 
+        status: 'pending' 
+    }).write();
+    res.json({ success: true, message: "Depo voye! Admin ap verifye sa." });
 });
 
-// MIZE (BET) - Admin jwe gratis
 app.post('/bet', (req, res) => {
     const { phone, password, free } = req.body;
     let user = db.get('users').find({ phone, password }).value();
     
+    // Admin jwe gratis
     if (free && (phone === "31594645" || phone === "55110103")) {
         return res.json({ success: true, newBalance: user.balance });
     }
@@ -52,24 +66,43 @@ app.post('/bet', (req, res) => {
         const newBalance = user.balance - 50;
         db.get('users').find({ phone }).assign({ balance: newBalance }).write();
         res.json({ success: true, newBalance });
-    } else res.json({ success: false, message: "Mize a se 50G!" });
+    } else {
+        res.json({ success: false, message: "Ou bezwen 50G pou jwe!" });
+    }
 });
 
-// VIKTWA
 app.post('/win-game', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone, password }).value();
     if(user) {
-        const newB = (user.balance || 0) + 90;
+        const newB = user.balance + 90;
         db.get('users').find({ phone }).assign({ balance: newB }).write();
         res.json({ success: true, balance: newB });
     }
 });
 
-// ADMIN DATA
+app.post('/request-withdrawal', (req, res) => {
+    const { phone, password, amount, method } = req.body;
+    const val = parseInt(amount);
+    let user = db.get('users').find({ phone, password }).value();
+    if (user && val >= 100 && user.balance >= val) {
+        const newBal = user.balance - val;
+        db.get('users').find({ phone }).assign({ balance: newBal }).write();
+        db.get('withdrawals').push({ id: Date.now(), userPhone: phone, amount: val, method, status: 'pending' }).write();
+        res.json({ success: true, message: "Demand retrè voye!", newBalance: newBal });
+    } else {
+        res.json({ success: false, message: "Erè nan balans lan!" });
+    }
+});
+
+// --- ADMIN API ---
+
 app.get('/admin/data', (req, res) => {
-    if (req.query.key !== ADMIN_KEY) return res.status(403).send();
-    res.json({ deposits: db.get('deposits').filter({status:'pending'}).value(), withdrawals: db.get('withdrawals').filter({status:'pending'}).value() });
+    if (req.query.key !== ADMIN_KEY) return res.status(403).send("Refize");
+    res.json({ 
+        deposits: db.get('deposits').filter({status:'pending'}).value(), 
+        withdrawals: db.get('withdrawals').filter({status:'pending'}).value() 
+    });
 });
 
 app.post('/admin/confirm-deposit', (req, res) => {
@@ -89,7 +122,8 @@ app.post('/admin/confirm-withdrawal', (req, res) => {
     res.json({ success: true });
 });
 
-// SOCKETS
+// --- SOCKETS ---
+
 io.on('connection', (socket) => {
     socket.on('join-room', (d) => {
         socket.join(d.roomCode); socket.room = d.roomCode;
@@ -103,4 +137,5 @@ io.on('connection', (socket) => {
     socket.on('game-over', (d) => io.to(d.room).emit('reset'));
 });
 
-server.listen(3000, () => console.log('Blitz Sèvè Online!'));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Sèvè Blitz ap kouri sou pò ${PORT}`));
