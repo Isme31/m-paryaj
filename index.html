@@ -3,254 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz 5⚡ Pro</title>
+    <title>Blitz Mopyon 5⚡</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; }
+        body { font-family: sans-serif; background: #0a0a0a; color: white; text-align: center; margin: 0; }
         .hidden { display: none; }
-        .screen { padding: 20px; animation: fadeIn 0.4s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        /* Tablo 10x10 */
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(10, 35px); 
-            gap: 2px; 
-            justify-content: center; 
-            margin: 15px auto; 
-            background: #333;
-            border: 3px solid #444;
-            width: fit-content;
-        }
-        .cell { 
-            width: 35px; height: 35px; background: #1a1a1a; 
-            font-size: 1.1rem; display: flex; align-items: center; 
-            justify-content: center; cursor: pointer; transition: 0.2s;
-        }
-        .cell:hover { background: #252525; }
-        .cell.taken { cursor: not-allowed; }
-        .timer-box { font-size: 1.4rem; color: #ff4444; margin: 10px; font-weight: bold; border: 2px solid #ff4444; display: inline-block; padding: 5px 15px; border-radius: 10px; }
-        .status { color: #ffc107; font-weight: bold; height: 25px; }
-        
-        button { padding: 12px 20px; margin: 8px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; width: 85%; max-width: 300px; }
-        input { padding: 12px; margin: 8px; border-radius: 8px; border: 1px solid #333; background: #1e1e1e; color: white; width: 80%; max-width: 280px; }
+        .screen { padding: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(10, 35px); gap: 2px; justify-content: center; background: #333; padding: 5px; margin: 10px auto; width: fit-content; border-radius: 5px; }
+        .cell { width: 35px; height: 35px; background: #111; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; border-radius: 3px; }
+        .timer { font-size: 1.5rem; color: #ff4444; border: 2px solid; width: 60px; margin: 5px auto; border-radius: 10px; }
+        button { padding: 12px; margin: 5px; border-radius: 8px; border: none; background: #007bff; color: white; font-weight: bold; width: 85%; max-width: 300px; }
+        input { padding: 12px; margin: 5px; width: 80%; border-radius: 8px; border: none; background: #222; color: white; }
     </style>
 </head>
 <body>
-
-    <!-- 1. LOGIN -->
     <div id="auth-screen" class="screen">
-        <h1>Blitz Mopyon 5⚡</h1>
-        <input type="text" id="phone" placeholder="Telefòn (ex: 31594645)"> <br>
+        <h1>Mopyon Blitz ⚡</h1>
+        <p>Sipò: 31594645 / 55110103</p>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn"> <br>
         <input type="password" id="password" placeholder="Modpas"> <br>
-        <button onclick="handleLogin()">Konekte / Enskri</button>
+        <button onclick="handleLogin()">Konekte</button>
     </div>
 
-    <!-- 2. MENU -->
     <div id="menu-screen" class="screen hidden">
         <h2>Balans: <span id="user-balance">0</span>G</h2>
-        <button onclick="prepareGame(false)" style="background: #007bff;">Jwe ak yon Moun (50G)</button>
-        <button onclick="prepareGame(true)" style="background: #28a745;">Jwe ak Robot (IA Fò)</button>
-        <button onclick="showScreen('deposit-screen')" style="background: #555;">Depo / Retrè</button>
+        <button onclick="playWithFriend()">Jwe ak yon Zanmi (Kòd)</button>
+        <button onclick="startGame(true)" style="background:#28a745">Jwe ak Robot (IA Fò)</button>
+        <button onclick="showScreen('deposit-screen')" style="background:#555">Depo / Retrè</button>
+        <p style="font-size:0.8rem">Sipò: 31594645 / 55110103</p>
     </div>
 
-    <!-- 3. JWÈT -->
     <div id="game-screen" class="screen hidden">
-        <div class="timer-box">⏳ <span id="time-left">30</span>s</div>
-        <div class="status" id="game-status">Atann...</div>
+        <div class="timer" id="time-left">30</div>
+        <div id="game-status" style="margin:10px">Atann...</div>
         <div class="grid" id="board"></div>
-        <button onclick="location.reload()" style="background: #dc3545;">Kite Jwèt la</button>
+        <button onclick="location.reload()" style="background:#dc3545">Kite Jwèt la</button>
+    </div>
+
+    <div id="deposit-screen" class="screen hidden">
+        <h3>Voye sou: 31594645</h3>
+        <input type="number" id="d-amt" placeholder="Kantite Lajan"> <br>
+        <input type="text" id="d-id" placeholder="ID Transaksyon"> <br>
+        <button onclick="doDepo()">Voye Demann</button>
+        <button onclick="showScreen('menu-screen')" style="background:#666">Retounen</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let uPhone="", uPass="", myBalance=0, isAdmin=false;
-        let board = Array(100).fill("");
-        let myRole = "X", currentTurn = "X", isRobotGame = false;
-        let timer, timeLeft = 30;
-        let lastWinner = "X"; // Pou konnen kilès k ap kòmanse
+        let uPhone, uPass, myBalance=0, isAdmin=false, board=Array(100).fill("");
+        let myRole="X", currentTurn="X", isRobot=false, myRoom="global", timer, timeLeft=30;
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
+        function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 
         async function handleLogin() {
-            uPhone = document.getElementById('phone').value;
-            uPass = document.getElementById('password').value;
-            const res = await fetch('/login', { 
-                method:'POST', 
-                headers:{'Content-Type':'application/json'}, 
-                body: JSON.stringify({phone: uPhone, password: uPass}) 
-            });
+            uPhone = document.getElementById('phone').value; uPass = document.getElementById('password').value;
+            const res = await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
             const data = await res.json();
-            if(data.success) {
-                myBalance = data.balance;
-                isAdmin = data.isAdmin;
-                document.getElementById('user-balance').innerText = myBalance;
-                showScreen('menu-screen');
-            } else { alert(data.message); }
+            if(data.success) { myBalance=data.balance; isAdmin=data.isAdmin; document.getElementById('user-balance').innerText=myBalance; showScreen('menu-screen'); }
         }
 
-        function createBoard() {
-            const boardDiv = document.getElementById('board');
-            boardDiv.innerHTML = "";
-            board = Array(100).fill("");
-            for(let i=0; i<100; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.id = 'c' + i;
-                cell.onclick = () => makeMove(i);
-                boardDiv.appendChild(cell);
-            }
-        }
+        function playWithFriend() { let code = prompt("Mete yon kòd chanm:"); if(code) { myRoom="room_"+code; startGame(false); } }
 
-        async function prepareGame(withRobot) {
-            isRobotGame = withRobot;
-            // Admin jwe gratis, lòt moun peye 50G
-            if(!isAdmin) {
-                const res = await fetch('/bet', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({phone: uPhone, password: uPass})
-                });
-                const data = await res.json();
-                if(!data.success) return alert("Balans ou twò piti!");
-                myBalance = data.newBalance;
-                document.getElementById('user-balance').innerText = myBalance;
-            }
-
-            createBoard();
+        async function startGame(withRobot) {
+            isRobot = withRobot;
+            const res = await fetch('/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
+            const data = await res.json();
+            if(!data.success) return alert("Balans ou ensifizan!");
+            myBalance=data.newBalance; document.getElementById('user-balance').innerText=myBalance;
+            
+            board=Array(100).fill(""); document.getElementById('board').innerHTML="";
+            for(let i=0; i<100; i++) { let c=document.createElement('div'); c.className='cell'; c.id='c'+i; c.onclick=()=>makeMove(i); document.getElementById('board').appendChild(c); }
             showScreen('game-screen');
-            
-            if(isRobotGame) {
-                myRole = "X";
-                currentTurn = lastWinner; // Ganyan an kòmanse
-                document.getElementById('game-status').innerText = "W ap jwe ak Robot (Ou se X)";
-                if(currentTurn === "O") setTimeout(robotMove, 800);
-                startTimer();
-            } else {
-                socket.emit('join-room', { roomCode: "global_5_v1" });
-            }
+            if(isRobot) { myRole="X"; currentTurn="X"; document.getElementById('game-status').innerText="Ou se X"; startTimer(); }
+            else { socket.emit('join-room',{roomCode:myRoom}); }
         }
 
-        function makeMove(idx) {
-            if(board[idx] !== "" || currentTurn !== myRole) return;
-            executeMove(idx, myRole);
-            if(isRobotGame && board.includes("")) {
-                currentTurn = "O";
-                setTimeout(robotMove, 600);
-            } else if (!isRobotGame) {
-                socket.emit('mouvman', { room: "global_5_v1", index: idx, role: myRole });
-            }
+        function makeMove(i) {
+            if(board[i] || currentTurn !== myRole) return;
+            executeMove(i, myRole);
+            if(isRobot) { currentTurn="O"; setTimeout(robotMove, 600); }
+            else { socket.emit('mouvman',{room:myRoom, index:i, role:myRole}); currentTurn="O"; }
         }
 
-        function executeMove(idx, role) {
-            board[idx] = role;
-            const cell = document.getElementById('c' + idx);
-            cell.innerText = role;
-            cell.classList.add('taken');
-            cell.style.color = role === "X" ? "#007bff" : "#ff4444";
-            
-            if(checkWin(idx, role)) {
-                clearInterval(timer);
-                lastWinner = role;
-                setTimeout(() => {
-                    alert("Jwè " + role + " Ganyen!");
-                    if(role === myRole) winPrize();
-                    else location.reload();
-                }, 100);
-            } else {
-                startTimer(); // Reset tan an pou lòt jwè a
-            }
+        function executeMove(i, role) {
+            board[i]=role; let c=document.getElementById('c'+i); c.innerText=role; c.style.color=role==='X'?'#007bff':'#ff4444';
+            if(checkWin(i, role)) { alert("Jwè "+role+" Ganyen!"); location.reload(); if(role===myRole) fetch('/win-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})}); }
+            else { startTimer(); }
         }
 
-        // --- ROBOT IA FÒ ---
         function robotMove() {
-            let move = findBestMove("O"); // Atak
-            if (move === -1) move = findBestMove("X"); // Defans (Bloke moun)
-            if (move === -1) {
-                // Si l pa jwenn anyen, li jwe toupre "O" oswa nan mitan
-                let empty = board.map((v, i) => v === "" ? i : -1).filter(v => v !== -1);
-                move = empty[Math.floor(Math.random() * empty.length)];
-            }
-            executeMove(move, "O");
-            currentTurn = "X";
+            let move = board.findIndex((v,i)=>v==="" && countInAnyDir(i,"X")>=4); // Bloke 4
+            if(move===-1) move = board.findIndex((v,i)=>v==="" && countInAnyDir(i,"O")>=4); // Ganye si 4
+            if(move===-1) move = board.findIndex(v=>v==="");
+            executeMove(move, "O"); currentTurn="X";
         }
 
-        function findBestMove(role) {
-            // Chèche si gen yon kote ki ka fè 4 oswa 5 pwen
-            for(let i=0; i<100; i++) {
-                if(board[i] === "") {
-                    if(countInAnyDir(i, role) >= 4) return i;
-                }
-            }
-            // Sinon chèche kote ki ka fè 3 pwen
-            for(let i=0; i<100; i++) {
-                if(board[i] === "") {
-                    if(countInAnyDir(i, role) >= 3) return i;
-                }
-            }
-            return -1;
+        function checkWin(i, r) { return countInAnyDir(i, r) >= 5; }
+        function countInAnyDir(i, r) {
+            let max=0; [[1,0],[0,1],[1,1],[1,-1]].forEach(([dx,dy])=>{
+                let c=1; [1,-1].forEach(s=>{ let x=i%10, y=Math.floor(i/10); while(true){ x+=dx*s; y+=dy*s; let ni=y*10+x; if(x<0||x>=10||y<0||y>=10||board[ni]!==r)break; c++; } });
+                if(c>max) max=c;
+            }); return max;
         }
 
-        function countInAnyDir(idx, role) {
-            const dirs = [1, 10, 11, 9];
-            let max = 0;
-            for(let d of dirs) {
-                let c = 1 + countDir(idx, d, role) + countDir(idx, -d, role);
-                if(c > max) max = c;
-            }
-            return max;
+        function startTimer() { clearInterval(timer); timeLeft=30; document.getElementById('time-left').innerText=timeLeft; timer=setInterval(()=>{timeLeft--; document.getElementById('time-left').innerText=timeLeft; if(timeLeft<=0){alert("Tan fini! Ou pèdi."); location.reload();}},1000); }
+
+        async function doDepo() {
+            const res = await fetch('/request-deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,amount:document.getElementById('d-amt').value,transactionId:document.getElementById('d-id').value})});
+            const data = await res.json(); alert(data.success?"Voye! Atann Admin.":data.message); showScreen('menu-screen');
         }
 
-        // --- LOJIK JWÈT ---
-        function checkWin(idx, role) {
-            return countInAnyDir(idx, role) >= 5;
-        }
-
-        function countDir(idx, dir, role) {
-            let count = 0, curr = idx + dir;
-            // Tcheke limit tablo a (10x10)
-            while(curr >= 0 && curr < 100 && board[curr] === role) {
-                // Prevni "wrapping" sou bò tablo a
-                if(Math.abs(dir) === 1 && Math.floor(curr/10) !== Math.floor((curr-dir)/10)) break;
-                count++;
-                curr += dir;
-            }
-            return count;
-        }
-
-        function startTimer() {
-            clearInterval(timer);
-            timeLeft = 30;
-            document.getElementById('time-left').innerText = timeLeft;
-            timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('time-left').innerText = timeLeft;
-                if(timeLeft <= 0) {
-                    clearInterval(timer);
-                    alert("Tan fini! Ou pèdi.");
-                    location.reload();
-                }
-            }, 1000);
-        }
-
-        async function winPrize() {
-            await fetch('/win-game', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({phone: uPhone, password: uPass})
-            });
-            location.reload();
-        }
-
-        socket.on('mouvman', (d) => {
-            if(d.role !== myRole) {
-                executeMove(d.index, d.role);
-                currentTurn = myRole;
-            }
-        });
+        socket.on('player-role', r=>myRole=r);
+        socket.on('start-game', t=>{currentTurn=t; document.getElementById('game-status').innerText="Turn: "+t; startTimer();});
+        socket.on('mouvman', d=>{if(d.role!==myRole){executeMove(d.index, d.role); currentTurn=myRole;}});
     </script>
 </body>
 </html>
