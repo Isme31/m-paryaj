@@ -1,20 +1,17 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
     <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
         .hidden { display: none; } .screen { padding: 20px; }
-        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { opacity: 0.8; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
-        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
+        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
         .x { color: #007bff; } .o { color: #ff4757; }
-        .finance { background: #222; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
-        .status-box { background: #222; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -24,178 +21,100 @@
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <input type="text" id="ref" placeholder="Paren (Opsyonèl)">
-        <button onclick="login()">Konekte pou Jwe</button>
+        <button onclick="login()">Konekte</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div class="status-box">
-            <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status">Chwazi yon mòd 👇</div>
-        </div>
+        <p>Balans: <span id="bal" style="color:#00ff00;">0</span> G</p>
+        <div id="status">Chwazi yon mòd 👇</div>
         
         <div id="main-menu">
             <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
-            <div style="margin: 10px 0; color:#888;">— OSWA —</div>
-            <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
-            <button onclick="joinPrivate()" style="background:#ffc107; color:black">Antre nan Tab la</button>
-            <br><br>
-            <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
+            <input type="text" id="join-code" placeholder="Antre kòd la">
+            <button onclick="joinPrivate()">Antre nan Tab la</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
 
-        <div class="finance">
-            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
-                <img src="https://digicelgroup.com" width="60">
-                <img src="https://natcom.com.ht" width="60">
-            </div>
-            <p style="font-size:12px;">Depo/Retrè: <b>55110103 / 31594645</b></p>
+        <div style="margin-top:20px; border:1px solid #444; padding:10px;">
+            <p>Depo MonCash: <b>55110103</b></p>
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
-            <button onclick="alert('Demann voye!')">Voye Depo</button>
+            <button onclick="voyeDepo()">Mande Depo</button>
         </div>
-        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti / Dekonekte</button>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
-
-        // --- SISTÈM SON (BEEP) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playBeep(freq = 440, type = 'sine', duration = 0.1) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
-        }
+        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill("");
 
         async function login() {
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value, ref: id('ref').value })
+                body: JSON.stringify({ phone: document.getElementById('phone').value, password: document.getElementById('pass').value, ref: document.getElementById('ref').value })
             });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.phone;
-                id('bal').innerText = data.balance;
-                id('auth-screen').classList.add('hidden');
-                id('game-screen').classList.remove('hidden');
-                if(myPhone === "55110103" || myPhone === "31594645") id('robotBtn').classList.remove('hidden');
-            } else alert(data.message);
-        }
-
-        // --- JWÈT ---
-        function startRobot() {
-            isRobot = true; mySymbol = "X"; myTurn = true;
-            boardData = Array(100).fill("");
-            id('main-menu').classList.add('hidden');
-            id('board').classList.remove('hidden');
-            id('status').innerText = "Ou kont Robo Blitz!";
-            renderBoard();
-        }
-
-        function robotLogic() {
-            let empty = boardData.map((v,i) => v === "" ? i : null).filter(v => v !== null);
-            if(empty.length > 0) {
-                let move = empty[Math.floor(Math.random() * empty.length)];
-                boardData[move] = "O";
-                playBeep(300, 'triangle'); // Son robo a
-                renderBoard();
-                if(checkWin5(move, "O")) { id('status').innerText = "Robo a ganyen! 🤖"; myTurn = false; playBeep(150, 'sawtooth', 0.5); }
-                else { myTurn = true; id('status').innerText = "Tou pa w!"; }
+                myPhone = data.phone; document.getElementById('bal').innerText = data.balance;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
             }
         }
 
+        async function voyeDepo() {
+            const tid = document.getElementById('tid').value;
+            if(!tid) return alert("ID manke");
+            await fetch('/submit-deposit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: myPhone, tid, amount: 50 })
+            });
+            alert("Depo voye!");
+        }
+
+        socket.on('balanceUpdate', (data) => {
+            if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance;
+        });
+
         function createPrivate() {
-            if(parseFloat(id('bal').innerText) < 50) return alert("Balans ou ensifizan!");
             const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            const txt = `Vini nou jwe Mopyon! Men kòd la: *${code}*. Antre li la: https://onrender.com`;
-            window.open(`https://wa.me{encodeURIComponent(txt)}`, '_blank');
             socket.emit('createPrivate', { room: code, phone: myPhone });
-            id('status').innerText = `Kòd ou: ${code}. Tann zanmi an...`;
-            id('main-menu').classList.add('hidden');
+            window.open(`https://wa.me{code}`, '_blank');
+            document.getElementById('status').innerText = "Kòd: " + code;
         }
 
         function joinPrivate() {
-            const code = id('join-code').value.toUpperCase();
-            if(!code) return alert("Antre kòd la!");
+            const code = document.getElementById('join-code').value.toUpperCase();
             socket.emit('joinPrivate', { room: code, phone: myPhone });
-            id('main-menu').classList.add('hidden');
         }
 
         socket.on('gameStart', (data) => {
             currentRoom = data.room;
-            mySymbol = data.players.includes(myPhone) ? (data.players === myPhone ? 'X' : 'O') : 'O';
+            mySymbol = data.players[0] === myPhone ? 'X' : 'O';
             myTurn = (mySymbol === 'X');
-            id('board').classList.remove('hidden');
-            id('status').innerText = `Jwèt kòmanse! Ou se ${mySymbol}`;
-            playBeep(600, 'sine', 0.3); // Son kòmansman
+            document.getElementById('board').classList.remove('hidden');
+            document.getElementById('status').innerText = "Ou se " + mySymbol;
             renderBoard();
+        });
+
+        socket.on('opponentMove', (data) => {
+            boardData[data.index] = data.symbol; myTurn = true; renderBoard();
         });
 
         function renderBoard() {
-            const b = id('board'); b.innerHTML = "";
+            const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const cell = document.createElement('div');
                 cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
-                cell.onclick = () => makeMove(i);
+                cell.onclick = () => {
+                    if(!myTurn || boardData[i] !== "") return;
+                    boardData[i] = mySymbol; myTurn = false;
+                    socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                    renderBoard();
+                };
                 b.appendChild(cell);
             });
         }
-
-        function makeMove(i) {
-            if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; myTurn = false; renderBoard();
-            playBeep(800); // Son lè w poze pyon
-
-            if(checkWin5(i, mySymbol)) {
-                id('status').innerText = "🎉 OU GANYEN!";
-                playBeep(1000, 'sine', 0.6); // Son viktwa
-                if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
-                return;
-            }
-
-            if(isRobot) {
-                setTimeout(robotLogic, 600);
-            } else {
-                socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-                id('status').innerText = "Tou pa advèsè a...";
-            }
-        }
-
-        socket.on('opponentMove', (data) => {
-            boardData[data.index] = data.symbol;
-            myTurn = true;
-            id('status').innerText = "Tou pa w!";
-            playBeep(440, 'square'); // Son lè advèsè a jwe
-            renderBoard();
-        });
-
-        function checkWin5(idx, sym) {
-            const size = 10; const dirs = [,,,[1,-1]];
-            const r = Math.floor(idx/size), c = idx%size;
-            for(let [dr, dc] of dirs) {
-                let count = 1;
-                for(let s=1; s<5; s++) {
-                    let nr=r+dr*s, nc=c+dc*s;
-                    if(nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===sym) count++; else break;
-                }
-                for(let s=1; s<5; s++) {
-                    let nr=r-dr*s, nc=c-dc*s;
-                    if(nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===sym) count++; else break;
-                }
-                if(count >= 5) return true;
-            }
-            return false;
-        }
-
-        function id(n) { return document.getElementById(n); }
     </script>
 </body>
 </html>
