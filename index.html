@@ -9,47 +9,25 @@
         @import url('https://googleapis.com');
         body { font-family: 'Poppins', sans-serif; background: #0f172a; color: white; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 10px; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 10px; border-radius: 8px; }
         .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 2px; }
-        .cell:hover { background: #475569; }
         .cell.X { color: #f87171; text-shadow: 0 0 8px #ef4444; }
         .cell.O { color: #60a5fa; text-shadow: 0 0 8px #3b82f6; }
-        .hidden { display: none; }
         .animate-pop { animation: pop 0.3s ease-out; }
         @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+        .hidden { display: none; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <!-- PAJ AKEY (WELCOME SCREEN) -->
-    <div id="welcome-screen" class="text-center animate-pop max-w-lg">
-        <h1 class="text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">MOPYON 50G</h1>
-        <p class="text-gray-400 mb-8 text-lg italic">Defi zanmi w nan yon batay entèlijans. Aliyen 5 pwen pou w genyen!</p>
-        
-        <div class="glass p-8 rounded-3xl shadow-2xl mb-8">
-            <div class="flex justify-around mb-6">
-                <div class="text-center"><span class="block text-3xl text-red-400">X</span><span class="text-xs uppercase">Jwè 1</span></div>
-                <div class="text-center text-gray-500 text-2xl font-light">VS</div>
-                <div class="text-center"><span class="block text-3xl text-blue-400">O</span><span class="text-xs uppercase">Jwè 2</span></div>
-            </div>
-            <button onclick="startGame()" class="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-105 shadow-lg">
-                KÒMANSE JWE KOUNYA
-            </button>
-        </div>
-        <p class="text-xs text-gray-500">Devlope ak ❤️ pou kominote 50g la.</p>
+    <div id="welcome-screen" class="text-center max-w-lg">
+        <h1 class="text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">MOPYON 50G</h1>
+        <button onclick="startGame()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg">KÒMANSE JWE</button>
     </div>
 
-    <!-- PAJ JWÈT (GAME SCREEN) -->
     <div id="game-screen" class="hidden w-full max-w-4xl text-center">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-blue-400">Mopyon 50g</h2>
-            <div id="status" class="glass px-6 py-2 rounded-full font-bold border-blue-500">Tou pa: X</div>
-            <button onclick="resetRequest()" class="text-xs bg-red-900/30 text-red-400 px-3 py-1 rounded hover:bg-red-900/50">Reset</button>
-        </div>
-        
-        <div class="flex justify-center overflow-auto py-4">
-            <div class="board" id="board"></div>
-        </div>
+        <div id="status" class="glass px-6 py-2 rounded-full font-bold mb-4">Chaje...</div>
+        <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -57,7 +35,14 @@
         const socket = io();
         const boardSize = 15;
         let board = Array(boardSize * boardSize).fill(null);
-        let currentPlayer = 'X';
+        let currentPlayer = '';
+
+        socket.on('start-player', (player) => {
+            if (!currentPlayer) {
+                currentPlayer = player;
+                updateStatus();
+            }
+        });
 
         function startGame() {
             document.getElementById('welcome-screen').classList.add('hidden');
@@ -77,6 +62,12 @@
             }
         }
 
+        function updateStatus() {
+            const statusBox = document.getElementById('status');
+            statusBox.innerText = "Tou pa: " + currentPlayer;
+            statusBox.style.color = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
+        }
+
         function makeMove(index, emit = false) {
             if (board[index] || !currentPlayer) return;
 
@@ -87,23 +78,19 @@
 
             if (checkWin(index)) {
                 setTimeout(() => {
-                    alert("🏆 BRAVO! Jwè " + currentPlayer + " genyen batay la!");
-                    socket.emit('reset');
+                    alert("🏆 " + currentPlayer + " genyen!");
+                    socket.emit('game-over', currentPlayer);
                 }, 100);
                 return;
             }
 
             if (emit) socket.emit('mouvman', { index, player: currentPlayer });
-            
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            const statusBox = document.getElementById('status');
-            statusBox.innerText = "Tou pa: " + currentPlayer;
-            statusBox.style.borderColor = currentPlayer === 'X' ? '#f87171' : '#60a5fa';
+            updateStatus();
         }
 
         function checkWin(index) {
-            const r = Math.floor(index / boardSize);
-            const c = index % boardSize;
+            const r = Math.floor(index / boardSize), c = index % boardSize;
             const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
             for (let [dr, dc] of directions) {
                 let count = 1;
@@ -120,18 +107,16 @@
             return false;
         }
 
-        function resetRequest() { socket.emit('reset'); }
-
         socket.on('mouvman', (data) => {
             currentPlayer = data.player;
             makeMove(data.index, false);
         });
 
-        socket.on('reset', () => {
+        socket.on('reset', (nextStartPlayer) => {
             board = Array(boardSize * boardSize).fill(null);
-            currentPlayer = 'X';
-            document.getElementById('status').innerText = "Tou pa: X";
+            currentPlayer = nextStartPlayer;
             createBoard();
+            updateStatus();
         });
     </script>
 </body>
