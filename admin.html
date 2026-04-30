@@ -1,28 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="ht">
 <head>
-    <title>Admin Blitz</title>
+    <meta charset="UTF-8"><title>Admin ⚡</title>
     <style>
         body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
-        .card { background:#222; border:1px solid #444; padding:15px; margin:10px auto; max-width:400px; border-radius:10px; }
+        .card { background:#222; border:1px solid #444; padding:15px; margin:10px auto; max-width:400px; border-radius:10px; text-align:left; }
         button { background:#28a745; color:white; border:none; padding:10px; cursor:pointer; width:100%; border-radius:5px; }
     </style>
 </head>
 <body>
-    <h1>Panèl Kontwòl ⚡</h1>
-    <div id="list">Ap chaje depo...</div>
+    <h1>Depo an tann ⚡</h1>
+    <div id="list">Ap chaje...</div>
     <script>
         const KEY = "hugues";
         async function load() {
-            const res = await fetch('/admin/all-data?key='+KEY); // Ou bezwen kreye wout sa nan index.js
+            const res = await fetch('/admin/all-data?key='+KEY);
             const data = await res.json();
-            id('list').innerHTML = data.deposits.map(d => `
+            document.getElementById('list').innerHTML = data.deposits.map(d => `
                 <div class="card">
-                    <p>Tel: ${d.phone} | <b>${d.amount}G</b></p>
-                    <p>Tranzaksyon: ${d.transactionId}</p>
-                    <button onclick="ok('${d._id}')">Konfime Depo</button>
+                    <p><b>Tel:</b> ${d.phone} | <b>${d.amount}G</b></p>
+                    <p><b>ID:</b> ${d.transactionId}</p>
+                    <button onclick="ok('${d._id}')">Konfime ✅</button>
                 </div>
-            `).join('') || "Pa gen depo an tann.";
+            `).join('') || "Pa gen depo.";
         }
         async function ok(id) {
             await fetch('/admin/confirm-deposit', {
@@ -30,10 +30,10 @@
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({key:KEY, id:id})
             });
-            alert("Kòb la ajoute!"); load();
+            load();
         }
-        function id(n) { return document.getElementById(n); }
         load();
+        setInterval(load, 10000);
     </script>
 </body>
 </html>
