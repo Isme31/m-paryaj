@@ -1,6 +1,52 @@
-
 <!DOCTYPE html>
-<html>
-<head><title>Mopyon Test</title></head>
-<body><h1>Sèvè a ap mache!</h1></body>
+<html lang="hat">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon 50g</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
+        .board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; justify-content: center; margin-top: 20px; }
+        .cell { width: 100px; height: 100px; background: white; border: 2px solid #333; font-size: 2em; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .cell:hover { background: #ddd; }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h1>Mopyon 50g 🎮</h1>
+    <div id="status">Se tou pa X</div>
+    <div class="board" id="board">
+        <div class="cell" onclick="makeMove(0)"></div>
+        <div class="cell" onclick="makeMove(1)"></div>
+        <div class="cell" onclick="makeMove(2)"></div>
+        <div class="cell" onclick="makeMove(3)"></div>
+        <div class="cell" onclick="makeMove(4)"></div>
+        <div class="cell" onclick="makeMove(5)"></div>
+        <div class="cell" onclick="makeMove(6)"></div>
+        <div class="cell" onclick="makeMove(7)"></div>
+        <div class="cell" onclick="makeMove(8)"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentPlayer = 'X';
+        const cells = document.querySelectorAll('.cell');
+
+        function makeMove(index) {
+            if (cells[index].innerText === '') {
+                cells[index].innerText = currentPlayer;
+                socket.emit('mouvman', { index, player: currentPlayer });
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                document.getElementById('status').innerText = "Se tou pa " + currentPlayer;
+            }
+        }
+
+        socket.on('mouvman', (data) => {
+            cells[data.index].innerText = data.player;
+            currentPlayer = data.player === 'X' ? 'O' : 'X';
+            document.getElementById('status').innerText = "Se tou pa " + currentPlayer;
+        });
+    </script>
+</body>
 </html>
