@@ -12,24 +12,20 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const ADMIN_KEY = "hugues"; // Modpas ou mande a
+const ADMIN_KEY = "hugues"; 
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// LOGIN
+// LOGIN & BETS
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
-    if (!user) {
-        user = { phone, password, balance: 100 };
-        db.get('users').push(user).write();
-    }
+    if (!user) { user = { phone, password, balance: 100 }; db.get('users').push(user).write(); }
     if (user.password === password) res.json({ success: true, balance: user.balance });
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
-// BET 50G
 app.post('/bet', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone, password }).value();
@@ -37,10 +33,10 @@ app.post('/bet', (req, res) => {
         const newBalance = user.balance - 50;
         db.get('users').find({ phone }).assign({ balance: newBalance }).write();
         res.json({ success: true, newBalance });
-    } else res.json({ success: false, message: "Kòb ou pa ase!" });
+    } else res.json({ success: false, message: "Kòb ensifizan!" });
 });
 
-// RETRÈ
+// TRANZAKSYON
 app.post('/request-withdrawal', (req, res) => {
     const { phone, password, amount, method } = req.body;
     const val = parseInt(amount);
@@ -50,23 +46,19 @@ app.post('/request-withdrawal', (req, res) => {
         db.get('users').find({ phone }).assign({ balance: newBal }).write();
         db.get('withdrawals').push({ id: Date.now(), userPhone: phone, amount: val, method, status: 'pending' }).write();
         res.json({ success: true, message: "Demann voye!", newBalance: newBal });
-    } else res.json({ success: false, message: "Erè nan balans oswa modpas!" });
+    } else res.json({ success: false, message: "Erè balans!" });
 });
 
-// DEPO
 app.post('/request-deposit', (req, res) => {
     const { phone, amount, transactionId } = req.body;
     db.get('deposits').push({ id: Date.now(), phone, amount: parseInt(amount), transactionId, status: 'pending' }).write();
-    res.json({ success: true, message: "Admin nan ap verifye sa!" });
+    res.json({ success: true });
 });
 
-// ADMIN API
+// ADMIN API (hugues)
 app.get('/admin/data', (req, res) => {
-    if (req.query.key !== ADMIN_KEY) return res.status(403).send("Aksè Refize");
-    res.json({ 
-        deposits: db.get('deposits').filter({ status: 'pending' }).value(),
-        withdrawals: db.get('withdrawals').filter({ status: 'pending' }).value()
-    });
+    if (req.query.key !== ADMIN_KEY) return res.status(403).send();
+    res.json({ deposits: db.get('deposits').filter({status:'pending'}).value(), withdrawals: db.get('withdrawals').filter({status:'pending'}).value() });
 });
 
 app.post('/admin/confirm-deposit', (req, res) => {
@@ -86,7 +78,7 @@ app.post('/admin/confirm-withdrawal', (req, res) => {
     res.json({ success: true });
 });
 
-// SOCKETS (MOPYON)
+// SOCKETS (GAME & CHAT)
 io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
         socket.join(data.roomCode);
@@ -97,6 +89,7 @@ io.on('connection', (socket) => {
         if (clients.size === 2) io.to(data.roomCode).emit('start-game', 'X');
     });
     socket.on('mouvman', (data) => socket.to(data.room).emit('mouvman', data));
+    socket.on('chat-message', (data) => io.to(data.room).emit('chat-message', data));
     socket.on('game-over', (data) => {
         if (data.winnerPhone) {
             let user = db.get('users').find({ phone: data.winnerPhone }).value();
@@ -110,4 +103,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(3000, () => console.log('Sèvè kòmanse sou pò 3000'));
+server.listen(3000, () => console.log('Sèvè prè!'));
