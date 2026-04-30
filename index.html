@@ -3,68 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz 5⚡ Pro</title>
+    <title>Blitz Mopyon 5⚡</title>
     <style>
-        body { font-family: sans-serif; background: #0a0a0a; color: white; text-align: center; margin: 0; overflow: hidden; }
+        body { font-family: sans-serif; background: #0a0a0a; color: white; text-align: center; margin: 0; }
         .hidden { display: none; }
         .screen { padding: 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
-        
-        /* Tablo 10x10 */
         .grid { display: grid; grid-template-columns: repeat(10, 35px); gap: 2px; background: #333; padding: 5px; margin: 10px auto; border-radius: 5px; border: 2px solid #444; }
-        .cell { width: 35px; height: 35px; background: #111; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
-        .cell:hover { background: #222; }
-        .cell.taken { cursor: not-allowed; }
-        
-        .timer { font-size: 1.4rem; color: #ff4444; border: 2px solid; width: 60px; border-radius: 10px; font-weight: bold; margin-bottom: 5px; }
+        .cell { width: 35px; height: 35px; background: #111; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; }
+        .timer { font-size: 1.4rem; color: #ff4444; font-weight: bold; margin-bottom: 5px; border: 2px solid; width: 60px; border-radius: 10px; }
         button { padding: 12px; margin: 5px; border-radius: 10px; border: none; background: #007bff; color: white; font-weight: bold; width: 90%; max-width: 320px; cursor: pointer; }
         input { padding: 12px; margin: 8px; width: 85%; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; }
-        
-        /* Ti flèch pou tounen */
-        .back-arrow { font-size: 2rem; cursor: pointer; margin-top: 15px; color: #888; transition: 0.3s; }
-        .back-arrow:hover { color: white; transform: scale(1.2); }
-        
-        .status { color: #ffc107; font-weight: bold; margin: 10px; height: 20px; }
-        .win-msg { color: #28a745; font-size: 1.5rem; font-weight: bold; margin: 10px; }
+        .back-arrow { font-size: 2.5rem; cursor: pointer; margin-top: 20px; color: #555; }
+        .status { color: #ffc107; font-weight: bold; margin: 10px; }
     </style>
 </head>
 <body>
-
-    <!-- 1. LOGIN -->
     <div id="auth-screen" class="screen">
         <h1 style="color:#007bff">Mopyon Blitz 5⚡</h1>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn"> <br>
+        <input type="text" id="phone" placeholder="Telefòn"> <br>
         <input type="password" id="password" placeholder="Modpas"> <br>
         <button onclick="handleLogin()">Konekte</button>
     </div>
 
-    <!-- 2. MENU -->
     <div id="menu-screen" class="screen hidden">
         <h2>Balans: <span id="user-balance" style="color:#28a745">0</span>G</h2>
         <button onclick="startMode('online')" style="background:#ffc107; color:black">Chèche Moun Online</button>
-        <button onclick="startMode('friend')">Jwe ak Zanmi</button>
-        <button onclick="startMode('robot')" style="background:#28a745">Jwe ak Robot (ULTRA FÒ)</button>
+        <button onclick="startMode('robot')" style="background:#28a745">Jwe ak Robot (MÈT)</button>
         <button onclick="showScreen('deposit-screen')" style="background:#444">Depo / Retrè</button>
     </div>
 
-    <!-- 3. JWÈT -->
     <div id="game-screen" class="screen hidden">
         <div class="timer" id="time-left">30</div>
-        <div id="game-status" class="status">Ap prepare...</div>
+        <div id="game-status" class="status">Pre...</div>
         <div class="grid" id="board"></div>
-        
         <div id="game-over-box" class="hidden">
-            <div id="win-text" class="win-msg"></div>
+            <h2 id="win-text"></h2>
             <button onclick="replay()" style="background:#28a745">REJWE</button>
         </div>
-
-        <!-- Ti flèch pou tounen anba -->
         <div class="back-arrow" onclick="backToMenu()">⬅️</div>
     </div>
 
-    <!-- 4. DEPO -->
     <div id="deposit-screen" class="screen hidden">
         <h3>Depo: 31594645</h3>
-        <input type="number" id="d-amt" placeholder="Kantite Lajan">
+        <input type="number" id="d-amt" placeholder="Kantite">
         <input type="text" id="d-id" placeholder="ID Transaksyon">
         <button onclick="doDepo()">Voye</button>
         <div class="back-arrow" onclick="backToMenu()">⬅️</div>
@@ -76,137 +57,93 @@
         let uPhone, uPass, myBalance=0, isAdmin=false, board=Array(100).fill("");
         let myRole="X", currentTurn="X", isRobot=false, timer, timeLeft=30, currentMode="";
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
-
-        function backToMenu() {
-            clearInterval(timer);
-            showScreen('menu-screen');
-        }
+        function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+        function backToMenu() { clearInterval(timer); showScreen('menu-screen'); }
 
         async function handleLogin() {
-            uPhone = document.getElementById('phone').value;
-            uPass = document.getElementById('password').value;
+            uPhone = document.getElementById('phone').value; uPass = document.getElementById('password').value;
             const res = await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
             const data = await res.json();
-            if(data.success) {
-                myBalance = data.balance; isAdmin = data.isAdmin;
-                document.getElementById('user-balance').innerText = myBalance;
-                showScreen('menu-screen');
-            }
+            if(data.success) { myBalance=data.balance; isAdmin=data.isAdmin; document.getElementById('user-balance').innerText=myBalance; showScreen('menu-screen'); }
+            else alert(data.message);
         }
 
         async function startMode(mode) {
             currentMode = mode;
-            if(!isAdmin) {
-                const res = await fetch('/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-                const data = await res.json();
-                if(!data.success) return alert("Balans ensifizan!");
-                myBalance = data.newBalance;
-                document.getElementById('user-balance').innerText = myBalance;
-            }
+            const res = await fetch('/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
+            const data = await res.json();
+            if(!data.success) return alert("Balans ensifizan!");
+            myBalance=data.newBalance; document.getElementById('user-balance').innerText=myBalance;
             initGame(mode);
         }
 
         function initGame(mode) {
-            board = Array(100).fill("");
-            document.getElementById('board').innerHTML = "";
+            board=Array(100).fill(""); document.getElementById('board').innerHTML="";
             document.getElementById('game-over-box').classList.add('hidden');
             for(let i=0; i<100; i++) {
-                let c = document.createElement('div');
-                c.className = 'cell'; c.id = 'c' + i;
-                c.onclick = () => makeMove(i);
-                document.getElementById('board').appendChild(c);
+                let c=document.createElement('div'); c.className='cell'; c.id='c'+i;
+                c.onclick=()=>makeMove(i); document.getElementById('board').appendChild(c);
             }
             showScreen('game-screen');
             isRobot = (mode === 'robot');
-            if(isRobot) { myRole="X"; currentTurn="X"; document.getElementById('game-status').innerText="Ou se X"; startTimer(); }
-            else if(mode === 'online') socket.emit('find-match');
-            else { let c = prompt("Kòd:"); socket.emit('join-room',{roomCode:"room_"+c}); }
+            if(isRobot) { myRole="X"; currentTurn="X"; startTimer(); }
+            else socket.emit('find-match');
         }
 
-        function replay() { initGame(currentMode); }
+        function replay() { startMode(currentMode); }
 
         function makeMove(i) {
             if(board[i] || currentTurn !== myRole) return;
             executeMove(i, myRole);
-            if(isRobot) { currentTurn = "O"; setTimeout(robotMèt, 600); }
+            if(isRobot) { currentTurn="O"; setTimeout(robotAI, 600); }
             else socket.emit('mouvman',{index:i, role:myRole});
         }
 
         function executeMove(i, role) {
-            board[i] = role;
-            let c = document.getElementById('c' + i);
-            c.innerText = role; c.classList.add('taken');
-            c.style.color = (role === 'X') ? '#007bff' : '#ff4444';
-            
+            board[i]=role; let c=document.getElementById('c'+i); c.innerText=role;
+            c.style.color=(role==='X')?'#007bff':'#ff4444';
             if(checkWin(i, role)) {
-                clearInterval(timer);
-                document.getElementById('win-text').innerText = "Jwè " + role + " Ganyen!";
+                clearInterval(timer); document.getElementById('win-text').innerText="Jwè "+role+" Ganyen!";
                 document.getElementById('game-over-box').classList.remove('hidden');
-                if(role === myRole) fetch('/win-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
-            } else { startTimer(); }
+                if(role===myRole) fetch('/win-game',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:uPhone,password:uPass})});
+            } else { currentTurn = (role==='X')?'O':'X'; startTimer(); }
         }
 
-        // --- ROBOT IA GRAN MÈT ---
-        function robotMèt() {
-            let bestScore = -Infinity, move = -1;
+        function robotAI() {
+            let bestS=-1, move=-1;
             for(let i=0; i<100; i++) {
-                if(board[i] === "") {
-                    let score = evalSquare(i);
-                    if(score > bestScore) { bestScore = score; move = i; }
+                if(board[i]==="") {
+                    let s = eval(i);
+                    if(s > bestS) { bestS=s; move=i; }
                 }
             }
-            executeMove(move, "O"); currentTurn = "X";
+            executeMove(move, "O");
         }
 
-        function evalSquare(i) {
-            let score = 0;
-            const directions = [,,, [1,-1]];
-            directions.forEach(([dx, dy]) => {
-                let rC = countChain(i, dx, dy, "O"), uC = countChain(i, dx, dy, "X");
-                if(rC >= 5) score += 100000; // Viktwa imedyat
-                if(uC >= 5) score += 50000;  // Bloke viktwa moun
-                if(rC === 4) score += 10000; // Atak fò
-                if(uC === 4) score += 8000;  // Defans fò
-                if(rC === 3) score += 1000;
-                if(uC === 3) score += 800;
-                score += rC * 5;
-            });
-            return score;
+        function eval(i) {
+            let s=0; const dirs=[,,, [1,-1]];
+            dirs.forEach(([dx,dy])=>{
+                let r=count(i,dx,dy,"O"), u=count(i,dx,dy,"X");
+                if(r>=5) s+=10000; if(u>=5) s+=5000; if(r>=4) s+=1000; if(u>=4) s+=500;
+            }); return s;
         }
 
-        function checkWin(i, r) {
-            return [,,, [1,-1]].some(([dx, dy]) => countChain(i, dx, dy, r) >= 5);
-        }
-
-        function countChain(i, dx, dy, r) {
-            let count = 1;
-            [1, -1].forEach(s => {
-                let x = i % 10, y = Math.floor(i / 10);
-                while(true) {
-                    x += dx * s; y += dy * s;
-                    let n = y * 10 + x;
-                    if(x<0 || x>=10 || y<0 || y>=10 || board[n] !== r) break;
-                    count++;
-                }
-            }); return count;
+        function checkWin(i, r) { return [,,, [1,-1]].some(([dx,dy])=> count(i,dx,dy,r)>=5); }
+        function count(i,dx,dy,r) {
+            let c=1; [1,-1].forEach(s=>{
+                let x=i%10, y=Math.floor(i/10);
+                while(true) { x+=dx*s; y+=dy*s; let ni=y*10+x; if(x<0||x>=10||y<0||y>=10||board[ni]!==r)break; c++; }
+            }); return c;
         }
 
         function startTimer() {
-            clearInterval(timer); timeLeft = 30;
-            document.getElementById('time-left').innerText = timeLeft;
-            timer = setInterval(() => {
-                timeLeft--; document.getElementById('time-left').innerText = timeLeft;
-                if(timeLeft <= 0) { alert("Tan fini!"); backToMenu(); }
-            }, 1000);
+            clearInterval(timer); timeLeft=30; document.getElementById('time-left').innerText=timeLeft;
+            timer=setInterval(()=>{ timeLeft--; document.getElementById('time-left').innerText=timeLeft; if(timeLeft<=0){alert("Tan fini!"); backToMenu();} },1000);
         }
 
-        socket.on('player-role', r => myRole = r);
-        socket.on('start-game', t => { currentTurn = t; startTimer(); document.getElementById('game-status').innerText = "Jwèt Kòmanse!"; });
-        socket.on('mouvman', d => { executeMove(d.index, d.role); currentTurn = myRole; });
+        socket.on('player-role', r=>myRole=r);
+        socket.on('start-game', t=>{currentTurn=t; startTimer();});
+        socket.on('mouvman', d=>{executeMove(d.index, d.role);});
     </script>
 </body>
 </html>
