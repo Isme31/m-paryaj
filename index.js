@@ -28,7 +28,7 @@ const Deposit = mongoose.model('Deposit', {
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// LOGIN / SIGNUP
+// --- ROUTES ---
 app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     let user = await User.findOne({ phone });
@@ -41,7 +41,6 @@ app.post('/login', async (req, res) => {
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
-// SOUMÈT DEPO
 app.post('/submit-deposit', async (req, res) => {
     const { phone, tid, amount } = req.body;
     const deja = await Deposit.findOne({ transactionId: tid });
@@ -51,10 +50,15 @@ app.post('/submit-deposit', async (req, res) => {
     res.json({ success: true });
 });
 
-// ADMIN: KONFIME DEPO
+app.get('/admin/all-data', async (req, res) => {
+    if (req.query.key !== "hugues") return res.status(403).send("Refize");
+    const deposits = await Deposit.find({ status: 'pending' });
+    res.json({ deposits });
+});
+
 app.post('/admin/confirm-deposit', async (req, res) => {
     const { key, id } = req.body;
-    if (key !== "hugues") return res.status(403).send("Refize");
+    if (key !== "hugues") return res.status(403).json({ success: false });
     const dep = await Deposit.findById(id);
     if (dep && dep.status === 'pending') {
         const user = await User.findOneAndUpdate({ phone: dep.phone }, { $inc: { balance: dep.amount } }, { new: true });
@@ -64,7 +68,7 @@ app.post('/admin/confirm-deposit', async (req, res) => {
     }
 });
 
-// SOCKET.IO LOJIK JWÈT
+// --- SOCKET.IO ---
 io.on('connection', (socket) => {
     socket.on('createPrivate', (data) => { 
         socket.join(data.room); 
@@ -75,16 +79,17 @@ io.on('connection', (socket) => {
         const room = io.sockets.adapter.rooms.get(data.room);
         const user = await User.findOne({ phone: data.phone });
         if (user && user.balance >= 50 && room && room.size === 1) {
-            socket.join(data.room);
             const clients = Array.from(room);
-            const hostSocket = io.sockets.sockets.get(clients[0]);
+            const hostSocketId = clients[0];
+            const hostSocket = io.sockets.sockets.get(hostSocketId);
+            
+            socket.join(data.room);
             await User.updateMany({ phone: { $in: [data.phone, hostSocket.myPhone] } }, { $inc: { balance: -50 } });
             io.to(data.room).emit('gameStart', { room: data.room, players: [hostSocket.myPhone, data.phone] });
         } else { socket.emit('error_msg', "Balans ba oswa kòd envalid"); }
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-    
     socket.on('win', async (data) => {
         await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: 90 } });
         io.to(data.room).emit('gameOver', { winner: data.phone });
