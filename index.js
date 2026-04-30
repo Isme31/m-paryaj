@@ -15,7 +15,7 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// LOGIN & BALANCE
+// --- ROUTES ---
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
@@ -27,7 +27,6 @@ app.post('/login', (req, res) => {
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
-// MIZE 50G
 app.post('/bet', (req, res) => {
     const { phone } = req.body;
     let user = db.get('users').find({ phone }).value();
@@ -38,7 +37,6 @@ app.post('/bet', (req, res) => {
     } else res.json({ success: false, message: "Ou pa gen ase kòb (50G)" });
 });
 
-// DEPO & RETRÈ
 app.post('/request-deposit', (req, res) => {
     const { phone, amount, transactionId } = req.body;
     db.get('deposits').push({ id: Date.now(), phone, amount: parseInt(amount), transactionId, status: 'pending' }).write();
@@ -56,17 +54,17 @@ app.post('/request-withdrawal', (req, res) => {
     } else res.json({ success: false, message: "Balans ensifizan (Min 100G)" });
 });
 
-// ADMIN ROUTES
 app.get('/admin/data', (req, res) => {
-    const deposits = db.get('deposits').filter({ status: 'pending' }).value();
-    const withdrawals = db.get('withdrawals').filter({ status: 'pending' }).value();
-    res.json({ deposits, withdrawals });
+    res.json({ 
+        deposits: db.get('deposits').filter({ status: 'pending' }).value(),
+        withdrawals: db.get('withdrawals').filter({ status: 'pending' }).value()
+    });
 });
 
 app.post('/admin/confirm-deposit', (req, res) => {
     const { depositId } = req.body;
     const dep = db.get('deposits').find({ id: depositId }).value();
-    if (dep && dep.status === 'pending') {
+    if (dep) {
         let user = db.get('users').find({ phone: dep.phone }).value();
         db.get('users').find({ phone: dep.phone }).assign({ balance: (user.balance || 0) + dep.amount }).write();
         db.get('deposits').find({ id: depositId }).assign({ status: 'confirmed' }).write();
@@ -75,12 +73,10 @@ app.post('/admin/confirm-deposit', (req, res) => {
 });
 
 app.post('/admin/confirm-withdrawal', (req, res) => {
-    const { id } = req.body;
-    db.get('withdrawals').find({ id }).assign({ status: 'confirmed' }).write();
+    db.get('withdrawals').find({ id: req.body.id }).assign({ status: 'confirmed' }).write();
     res.json({ success: true });
 });
 
-// SOCKET.IO (JWÈT)
 io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
         const { roomCode, phone } = data;
@@ -91,9 +87,7 @@ io.on('connection', (socket) => {
         socket.emit('player-role', role);
         if (clients.size === 2) io.to(roomCode).emit('start-game', 'X');
     });
-
     socket.on('mouvman', (data) => socket.to(data.room).emit('mouvman', data));
-
     socket.on('game-over', (data) => {
         const { room, winnerPhone } = data;
         if (winnerPhone) {
