@@ -11,7 +11,7 @@ const io = new Server(server);
 
 // --- CONFIGURATION ---
 const ADMIN_KEY = "hugues"; 
-const URL_APLIKASYON_AN = "https://onrender.com"; 
+const URL_APLIKASYON_AN = "https://mopyon-50g.onrender.com"; // CHANJE ISIT
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority";
 
 // --- CONNEXION MONGODB ---
@@ -42,17 +42,10 @@ const Withdrawal = mongoose.model('Withdrawal', {
 
 // --- MIDDLEWARES ---
 app.use(express.json());
-// Sert tous les fichiers (CSS, images) situés à la racine
-app.use(express.static(path.join(__dirname))); 
+// Sa ap pèmèt sèvè a jwenn CSS ak JS nan menm kote ak HTML la
+app.use(express.static(__dirname)); 
 
-// --- SYSTÈME ANTI-DODO (AUTO-PING) ---
-setInterval(() => {
-    axios.get(URL_APLIKASYON_AN)
-        .then(() => console.log("⚡ Blitz est réveillé !"))
-        .catch(() => console.log("Ping échoué."));
-}, 840000); 
-
-// --- ROUTES POUR LES PAGES (RÈGLE LE PROBLÈME DE PAGE BLANCHE) ---
+// --- ROUTES POU PAJ YO ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -61,7 +54,7 @@ app.get('/admin-panel', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// --- API ROUTES ---
+// --- API ROUTES (LOGIN, BET, etc.) ---
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     try {
@@ -78,57 +71,13 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json({success: false}); }
 });
 
-app.post('/request-deposit', async (req, res) => {
-    const { phone, amount, transactionId } = req.body;
-    const existe = await Deposit.findOne({ transactionId });
-    if(existe) return res.json({ success: false, message: "ID déjà utilisé !" });
-    await new Deposit({ phone, amount: parseInt(amount), transactionId }).save();
-    res.json({ success: true });
-});
+// (Mete lòt route API yo isit la...)
+// ... (Kòd ou te genyen pou /request-deposit, /bet, /win-game, /request-withdrawal)
 
-app.post('/bet', async (req, res) => {
-    const { phone, password, free } = req.body;
-    let user = await User.findOne({ phone, password });
-    if (user && (free || user.balance >= 50)) {
-        if (!free) { user.balance -= 50; await user.save(); }
-        res.json({ success: true, newBalance: user.balance });
-    } else { res.json({ success: false }); }
-});
-
-app.post('/win-game', async (req, res) => {
-    const { phone, password } = req.body;
-    await User.findOneAndUpdate({ phone, password }, { $inc: { balance: 90 } });
-    res.json({ success: true });
-});
-
-app.post('/request-withdrawal', async (req, res) => {
-    const { phone, password, amount, method } = req.body;
-    let user = await User.findOne({ phone, password });
-    if (user && user.balance >= amount) {
-        user.balance -= amount; await user.save();
-        await new Withdrawal({ userPhone: phone, amount, method }).save();
-        res.json({ success: true, newBalance: user.balance });
-    } else { res.json({ success: false }); }
-});
-
-// --- ADMIN API ---
-app.get('/admin/data', async (req, res) => {
-    if (req.query.key !== ADMIN_KEY) return res.status(403).send();
-    res.json({ 
-        deposits: await Deposit.find({status:'pending'}), 
-        withdrawals: await Withdrawal.find({status:'pending'}) 
-    });
-});
-
-app.post('/admin/confirm-deposit', async (req, res) => {
-    if (req.body.key !== ADMIN_KEY) return res.status(403).send();
-    const dep = await Deposit.findById(req.body.id);
-    if (dep) {
-        await User.findOneAndUpdate({ phone: dep.phone }, { $inc: { balance: dep.amount } });
-        dep.status = 'confirmed'; await dep.save();
-        res.json({ success: true });
-    }
-});
+// --- SYSTÈME ANTI-DODO (AUTO-PING) ---
+setInterval(() => {
+    axios.get(URL_APLIKASYON_AN).catch(() => {});
+}, 840000); 
 
 // --- SOCKETS ---
 io.on('connection', (socket) => {
@@ -145,5 +94,5 @@ io.on('connection', (socket) => {
     socket.on('game-over', (d) => io.to(d.room).emit('reset'));
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Serveur Blitz lancé sur le port ${PORT}`));
+const PORT = process.env.PORT || 10000; // Render prefere 10000
+server.listen(PORT, () => console.log(`🚀 Sèvè Blitz ap kouri sou pò ${PORT}`));
