@@ -1,40 +1,32 @@
 <!DOCTYPE html>
 <html>
-<head><title>Admin | Mopyon</title><script src="https://tailwindcss.com"></script></head>
+<head><title>Admin Panel</title><script src="https://tailwindcss.com"></script></head>
 <body class="bg-gray-900 text-white p-8">
-    <h1 class="text-3xl font-bold text-orange-500 mb-6 italic">DEPO PANDYE</h1>
-    <div id="depo-list" class="grid gap-3 mb-10"></div>
-
-    <h1 class="text-3xl font-bold text-blue-500 mb-6 italic">RETRÈ PANDYE</h1>
-    <div id="retrait-list" class="grid gap-3"></div>
-
+    <h1 class="text-3xl font-bold text-orange-500 mb-8 border-b border-orange-500 pb-2 italic">BLITZ ADMIN</h1>
+    <div class="grid md:grid-cols-2 gap-10">
+        <div><h2 class="text-xl font-bold mb-4 text-green-400">DEPO</h2><div id="d-list" class="grid gap-3"></div></div>
+        <div><h2 class="text-xl font-bold mb-4 text-blue-400">RETRÈ</h2><div id="w-list" class="grid gap-3"></div></div>
+    </div>
     <script>
-        async function load() {
-            const res = await fetch('/admin/data');
+        const key = new URLSearchParams(window.location.search).get('key');
+        if(key !== "hugues") { document.body.innerHTML = "<h1>Aksè Refize!</h1>"; }
+        async function fetchAll() {
+            const res = await fetch(`/admin/data?key=${key}`);
             const { deposits, withdrawals } = await res.json();
-            
-            document.getElementById('depo-list').innerHTML = deposits.map(d => `
-                <div class="p-4 bg-gray-800 rounded-xl border border-gray-700 flex justify-between items-center">
-                    <span><b>${d.amount}G</b> | Telefòn: ${d.phone} | ID: ${d.transactionId}</span>
-                    <button onclick="confirmDepo(${d.id})" class="bg-green-600 px-6 py-2 rounded font-bold">KONFIME</button>
-                </div>`).join('') || '<p>Pa gen depo.</p>';
-
-            document.getElementById('retrait-list').innerHTML = withdrawals.map(w => `
-                <div class="p-4 bg-gray-800 rounded-xl border border-blue-700 flex justify-between items-center">
-                    <span><b>${w.amount}G</b> | Voye sou: <b class="text-yellow-400">${w.method}</b> | Jwè: ${w.userPhone}</span>
-                    <button onclick="confirmRetrait(${w.id})" class="bg-blue-600 px-6 py-2 rounded font-bold">MWEN VOYE L</button>
-                </div>`).join('') || '<p>Pa gen retrè.</p>';
+            document.getElementById('d-list').innerHTML = deposits.map(d => `
+                <div class="p-4 bg-gray-800 rounded flex justify-between items-center border border-gray-700">
+                    <span class="text-xs"><b>${d.amount}G</b> | ${d.phone} | ID: ${d.transactionId}</span>
+                    <button onclick="confD(${d.id})" class="bg-green-600 px-3 py-1 rounded text-xs">KONFIME</button>
+                </div>`).join('') || 'Pa gen anyen.';
+            document.getElementById('w-list').innerHTML = withdrawals.map(w => `
+                <div class="p-4 bg-gray-800 rounded flex justify-between items-center border border-blue-700">
+                    <span class="text-xs"><b>${w.amount}G</b> | Nimewo: ${w.method}</span>
+                    <button onclick="confW(${w.id})" class="bg-blue-600 px-3 py-1 rounded text-xs">KONFIME</button>
+                </div>`).join('') || 'Pa gen anyen.';
         }
-
-        async function confirmDepo(id) {
-            await fetch('/admin/confirm-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ depositId: id }) });
-            load();
-        }
-        async function confirmRetrait(id) {
-            await fetch('/admin/confirm-withdrawal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
-            load();
-        }
-        load(); setInterval(load, 5000);
+        async function confD(id) { await fetch('/admin/confirm-deposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, id}) }); fetchAll(); }
+        async function confW(id) { await fetch('/admin/confirm-withdrawal', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, id}) }); fetchAll(); }
+        if(key === "hugues") { fetchAll(); setInterval(fetchAll, 5000); }
     </script>
 </body>
 </html>
