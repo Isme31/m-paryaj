@@ -4,87 +4,112 @@
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blitz Mopyon</title>
     <script src="https://tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cloudflare.com"/>
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
-        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .cell.X { color: #f87171; text-shadow: 0 0 5px #f87171; } .cell.O { color: #60a5fa; text-shadow: 0 0 5px #60a5fa; }
+        body { background: #020617; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .blitz-gradient { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #0f172a; padding: 5px; border-radius: 12px; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+        .cell { width: 25px; height: 25px; background: #1e293b; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; font-weight: 900; transition: 0.2s; border-radius: 4px; }
+        .cell:hover { background: #334155; }
+        .cell.X { color: #f87171; text-shadow: 0 0 8px #ef4444; }
+        .cell.O { color: #60a5fa; text-shadow: 0 0 8px #3b82f6; }
+        .logo-img { width: 40px; height: auto; border-radius: 4px; }
         .hidden { display: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
 
+    <!-- SPLASH SCREEN ANIMATION -->
+    <div id="splash" class="fixed inset-0 blitz-gradient flex flex-col items-center justify-center z-50 transition-opacity duration-1000">
+        <h1 class="text-7xl font-black italic animate__animated animate__zoomIn">BLITZ</h1>
+        <p class="mt-4 animate__animated animate__fadeInUp animate__delay-1s uppercase tracking-widest text-sm opacity-80 font-bold">Gaming Network</p>
+    </div>
+
     <!-- LOGIN -->
-    <div id="auth-screen" class="w-full max-w-md">
-        <h1 class="text-4xl font-bold mb-6 text-blue-400 italic">BLITZ</h1>
-        <div class="glass p-8 rounded-3xl">
-            <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 outline-none border border-transparent focus:border-blue-500">
-            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 outline-none border border-transparent focus:border-blue-500">
-            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold uppercase tracking-widest">Konekte</button>
+    <div id="auth-screen" class="hidden w-full max-w-md animate__animated animate__fadeIn">
+        <div class="glass p-10 rounded-[40px] shadow-2xl">
+            <h1 class="text-4xl font-black mb-8 text-blue-500 italic">LOGIN</h1>
+            <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-900/50 p-4 rounded-2xl mb-4 outline-none border border-white/5 focus:border-blue-500 transition-all">
+            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-900/50 p-4 rounded-2xl mb-8 outline-none border border-white/5 focus:border-blue-500 transition-all">
+            <button onclick="handleLogin()" class="w-full blitz-gradient py-4 rounded-2xl font-black text-lg shadow-lg shadow-blue-900/50">ANTRE NAN BLITZ</button>
         </div>
     </div>
 
-    <!-- MENU AK NON JWÈT LA -->
+    <!-- MENU -->
     <div id="menu-screen" class="hidden w-full max-w-md">
-        <h1 class="text-6xl font-black mb-10 text-blue-500 italic tracking-tighter shadow-blue-500/20">MOPYON</h1>
-        <p class="text-gray-400 mb-6 text-xs font-bold uppercase tracking-widest">Chwazi mòd jwèt ou</p>
+        <h1 class="text-7xl font-black mb-2 text-blue-500 italic tracking-tighter">MOPYON</h1>
+        <div class="h-1 w-20 blitz-gradient mx-auto mb-10 rounded-full"></div>
         <div class="grid gap-4">
-            <button onclick="startBet(false)" class="glass p-6 rounded-2xl w-full flex justify-between items-center border-l-4 border-blue-500 hover:bg-blue-600/20 transition transform hover:scale-105">
-                <div class="text-left"><span class="block text-xl font-extrabold uppercase">VS MOUN</span><span class="text-xs text-blue-300 italic">Mize 50G</span></div>
-                <span class="text-3xl">👥</span>
+            <button onclick="startBet(false)" class="glass p-6 rounded-3xl w-full flex justify-between items-center border-l-4 border-blue-500 hover:bg-blue-600/10 transition-transform active:scale-95">
+                <div class="text-left"><span class="block text-xl font-black uppercase italic">Multiplayer</span><span class="text-xs text-blue-400 font-bold tracking-widest">VS MOUN (50G)</span></div>
+                <span class="text-3xl">⚔️</span>
             </button>
-            <button onclick="startBet(true)" class="glass p-6 rounded-2xl w-full flex justify-between items-center border-l-4 border-red-500 hover:bg-red-600/20 transition transform hover:scale-105">
-                <div class="text-left"><span class="block text-xl font-extrabold uppercase">VS ROBO</span><span class="text-xs text-red-400 italic">Defi Robo Lejand</span></div>
+            <button onclick="startBet(true)" class="glass p-6 rounded-3xl w-full flex justify-between items-center border-l-4 border-red-500 hover:bg-red-600/10 transition-transform active:scale-95">
+                <div class="text-left"><span class="block text-xl font-black uppercase italic">Solo Mode</span><span class="text-xs text-red-400 font-bold tracking-widest">VS ROBO LEJAND (50G)</span></div>
                 <span class="text-3xl">🤖</span>
             </button>
         </div>
     </div>
 
     <!-- LOBBY -->
-    <div id="lobby-screen" class="hidden glass p-8 rounded-3xl w-full max-w-md">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-green-400"><span id="user-balance">0</span> G</h2>
-            <button onclick="location.reload()" class="text-xs text-gray-400 underline font-bold uppercase">Menu</button>
+    <div id="lobby-screen" class="hidden glass p-8 rounded-[40px] w-full max-w-md">
+        <div class="flex justify-between items-center mb-8">
+            <div class="text-left">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Balans ou</p>
+                <h2 class="text-3xl font-black text-green-400 italic"><span id="user-balance">0</span><span class="text-sm ml-1 text-white opacity-50 font-normal">G</span></h2>
+            </div>
+            <button onclick="location.reload()" class="bg-white/10 p-3 rounded-full">🏠</button>
         </div>
-        <div id="multiplayer-controls">
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <button onclick="genRoom()" class="bg-blue-600/20 border border-blue-500 py-2 rounded-xl text-[10px] font-bold">KREYE KÒD</button>
-                <button onclick="document.getElementById('room-box').classList.remove('hidden')" class="bg-purple-600/20 border border-purple-500 py-2 rounded-xl text-[10px] font-bold">ANTRE KÒD</button>
-            </div>
-            <div id="room-box" class="hidden mb-4">
-                <input type="text" id="room-id" placeholder="KÒD" class="w-full bg-slate-800 p-3 rounded-xl mb-3 text-center border border-blue-500 outline-none uppercase font-bold tracking-widest">
-                <button onclick="joinMatch()" class="w-full bg-green-600 py-3 rounded-xl font-bold uppercase">Jwe</button>
-            </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <button onclick="genRoom()" class="bg-blue-600/20 border border-blue-500/50 py-3 rounded-2xl text-[10px] font-black uppercase italic">Kreye Kòd</button>
+            <button onclick="document.getElementById('room-box').classList.remove('hidden')" class="bg-purple-600/20 border border-purple-500/50 py-3 rounded-2xl text-[10px] font-black uppercase italic">Antre Kòd</button>
         </div>
-        <div class="border-t border-gray-700 pt-4 grid grid-cols-2 gap-4 text-left">
-            <div><p class="text-[9px] text-gray-500 mb-1 uppercase font-bold">Depo</p>
-                <input id="d-amt" placeholder="Kòb" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
-                <input id="d-id" placeholder="ID" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
-                <button onclick="doDepo()" class="w-full bg-orange-600 py-1 rounded text-[10px] font-bold">VOYE</button>
+
+        <div id="room-box" class="hidden mb-8 animate__animated animate__fadeInDown">
+            <input type="text" id="room-id" placeholder="KÒD" class="w-full bg-slate-900 p-4 rounded-2xl mb-3 text-center border border-blue-500 outline-none uppercase font-black text-xl tracking-[10px]">
+            <button onclick="joinMatch()" class="w-full blitz-gradient py-4 rounded-2xl font-black uppercase italic">Jwe kounye a</button>
+        </div>
+
+        <!-- DEPO/RETRÈ AK LOGO -->
+        <div class="border-t border-white/10 pt-6 grid grid-cols-2 gap-6">
+            <div class="space-y-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <img src="https://moncash.com" class="logo-img" alt="MonCash">
+                    <span class="text-[10px] font-black uppercase text-gray-400">Depo</span>
+                </div>
+                <input id="d-amt" placeholder="Goud" class="w-full bg-slate-900 p-2 rounded-lg text-xs outline-none border border-white/5">
+                <input id="d-id" placeholder="ID Tranzaksyon" class="w-full bg-slate-900 p-2 rounded-lg text-xs outline-none border border-white/5">
+                <button onclick="doDepo()" class="w-full bg-orange-600 py-2 rounded-lg text-[10px] font-black uppercase">Voye</button>
             </div>
-            <div><p class="text-[9px] text-gray-500 mb-1 uppercase font-bold">Retrè</p>
-                <input id="w-amt" placeholder="Kòb" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
-                <select id="w-meth" class="w-full bg-slate-800 p-1 rounded text-[10px] mb-1 text-white outline-none">
-                    <option value="31594645">MonCash</option><option value="55110103">Natcash</option>
+            <div class="space-y-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <img src="https://natcom.com.ht" class="logo-img" alt="NatCash">
+                    <span class="text-[10px] font-black uppercase text-gray-400">Retrè</span>
+                </div>
+                <input id="w-amt" placeholder="Goud" class="w-full bg-slate-900 p-2 rounded-lg text-xs outline-none border border-white/5">
+                <select id="w-meth" class="w-full bg-slate-900 p-2 rounded-lg text-[10px] outline-none border border-white/5 text-white">
+                    <option value="31594645">31594645 (MC)</option>
+                    <option value="55110103">55110103 (NC)</option>
                 </select>
-                <button onclick="doWithdraw()" class="w-full bg-blue-600 py-1 rounded text-[10px] font-bold">RETIRE</button>
+                <button onclick="doWithdraw()" class="w-full bg-blue-600 py-2 rounded-lg text-[10px] font-black uppercase">Retire</button>
             </div>
         </div>
     </div>
 
-    <!-- GAME & CHAT -->
-    <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col md:flex-row gap-4 items-center justify-center">
-        <div class="glass p-2 rounded-xl">
-            <div id="status" class="mb-2 font-bold text-blue-400 uppercase text-[10px]">ATANN...</div>
+    <!-- GAME -->
+    <div id="game-screen" class="hidden w-full max-w-5xl flex flex-col md:flex-row gap-6 items-center justify-center animate__animated animate__zoomIn">
+        <div class="flex-none p-4 glass rounded-[40px] shadow-2xl">
+            <div id="status" class="mb-4 font-black text-blue-500 uppercase text-[10px] italic tracking-widest text-center">Blitz Match Online</div>
             <div class="board" id="board"></div>
         </div>
-        <div class="w-full md:w-64 glass rounded-xl flex flex-col h-[350px]">
-            <div class="p-2 border-b border-gray-700 text-[10px] font-bold text-gray-500 uppercase">Chat</div>
-            <div id="chat-box" class="flex-1 overflow-y-auto p-2 space-y-2 text-xs text-left"></div>
-            <div class="p-2 flex gap-1">
-                <input type="text" id="chat-input" placeholder="..." class="flex-1 bg-slate-800 p-1 rounded outline-none text-xs">
-                <button onclick="sendMsg()" class="bg-blue-600 px-2 rounded text-xs font-bold">➡️</button>
+        <div class="w-full md:w-72 glass rounded-[40px] flex flex-col h-[400px] border border-white/10">
+            <div class="p-4 border-b border-white/10 text-[10px] font-black text-gray-500 uppercase tracking-widest">Blitz Messenger</div>
+            <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-3 text-xs text-left scrollbar-hide"></div>
+            <div class="p-4 flex gap-2">
+                <input type="text" id="chat-input" placeholder="Ekri..." class="flex-1 bg-slate-900 p-3 rounded-2xl outline-none text-[10px] border border-white/5">
+                <button onclick="sendMsg()" class="blitz-gradient px-4 rounded-2xl">➡️</button>
             </div>
         </div>
     </div>
@@ -92,28 +117,56 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let uPhone="", uPass="", myRole="", currentPl="", room="", board=Array(225).fill(null), isAI=false;
+        let uPhone="", uPass="", myRole="", currentPl="", room="", board=Array(225).fill(null), isAI=false, isAdmin=false;
+
+        // SPLASH SCREEN LOGIC
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('splash').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('splash').classList.add('hidden');
+                    document.getElementById('auth-screen').classList.remove('hidden');
+                }, 1000);
+            }, 2500);
+        };
 
         async function handleLogin() {
             uPhone = document.getElementById('phone').value; uPass = document.getElementById('password').value;
             const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) });
             const d = await res.json();
-            if(d.success) { document.getElementById('user-balance').innerText=d.balance; document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('menu-screen').classList.remove('hidden'); }
-            else alert("Telefòn/Modpas Erè!");
+            if(d.success) { 
+                document.getElementById('user-balance').innerText=d.balance; 
+                isAdmin = d.isAdmin;
+                document.getElementById('auth-screen').classList.add('hidden'); 
+                document.getElementById('menu-screen').classList.remove('hidden'); 
+            } else alert("Kont pa bon!");
         }
 
         async function startBet(ai) {
             isAI = ai;
-            const res = await fetch('/bet', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) });
+            const res = await fetch('/bet', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body: JSON.stringify({phone:uPhone, password:uPass, free: isAdmin}) 
+            });
             const d = await res.json();
             if(d.success) {
                 document.getElementById('user-balance').innerText=d.newBalance;
                 document.getElementById('menu-screen').classList.add('hidden');
-                if(isAI) { document.getElementById('game-screen').classList.remove('hidden'); myRole="X"; currentPl="X"; makeGrid(); document.getElementById('status').innerText="VS ROBO LEJAND"; }
+                if(isAI) { document.getElementById('game-screen').classList.remove('hidden'); myRole="X"; currentPl="X"; makeGrid(); }
                 else { document.getElementById('lobby-screen').classList.remove('hidden'); }
             } else alert(d.message);
         }
 
+        async function doDepo() {
+            const amt=document.getElementById('d-amt').value; const tid=document.getElementById('d-id').value;
+            if(!amt || !tid) return alert("Ranpli tout bwat yo!");
+            const res = await fetch('/request-deposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, amount:amt, transactionId:tid}) });
+            const d = await res.json();
+            alert(d.message);
+        }
+
+        // ... (Lòt lojik yo menm jan, sèlman UI ki chanje)
         function genRoom() { document.getElementById('room-id').value = Math.random().toString(36).substring(2,8).toUpperCase(); document.getElementById('room-box').classList.remove('hidden'); }
         function joinMatch() {
             room = document.getElementById('room-id').value; if(!room) return alert("Mete kòd!");
@@ -134,11 +187,11 @@
             if(board[i]) return; board[i]=r;
             const el=document.getElementById("c-"+i); el.innerText=r; el.classList.add(r);
             if(win(i, r)) {
-                if(r === myRole) { fetch('/win-game', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) }).then(()=>alert("OU GENYEN 90G!")); }
-                else alert("OU PÈDI!"); location.reload(); return;
+                if(r === myRole) { fetch('/win-game', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass}) }).then(()=>alert("VIKTWA! +90G")); }
+                else alert("ROBO A GENYEN!"); location.reload(); return;
             }
             currentPl = (r==='X')?'O':'X';
-            document.getElementById('status').innerText = (currentPl===myRole)?"TOU PAW!":"TANN...";
+            document.getElementById('status').innerText = (currentPl===myRole)?"TOU PAW!":"TANN LÒT LA...";
             if(isAI && currentPl==="O") setTimeout(smartRobot, 600);
         }
 
@@ -174,7 +227,7 @@
         function sendMsg() { const i=document.getElementById('chat-input'); if(i.value) { socket.emit('chat-message', {room, phone:uPhone, message:i.value}); i.value=""; } }
         socket.on('chat-message', d => {
             const box=document.getElementById('chat-box'); const isMe=d.phone===uPhone;
-            box.innerHTML+=`<div class="${isMe?'text-right':'text-left'}"><span class="inline-block p-2 rounded-lg ${isMe?'bg-blue-600':'bg-gray-700'}">${d.message}</span></div>`;
+            box.innerHTML+=`<div class="${isMe?'text-right':'text-left'} animate__animated animate__fadeIn"><span class="inline-block p-3 rounded-2xl ${isMe?'blitz-gradient text-white':'bg-white/10 text-gray-300'} shadow-sm">${d.message}</span></div>`;
             box.scrollTop=box.scrollHeight;
         });
 
@@ -183,13 +236,9 @@
             const res = await fetch('/request-withdrawal', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, password:uPass, amount:amt, method:document.getElementById('w-meth').value}) });
             if(res.ok) alert("Demann voye!"); location.reload();
         }
-        async function doDepo() {
-            await fetch('/request-deposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone:uPhone, amount:document.getElementById('d-amt').value, transactionId:document.getElementById('d-id').value}) });
-            alert("Voye!");
-        }
 
         socket.on('player-role', r => myRole=r);
-        socket.on('start-game', r => { currentPl=r; document.getElementById('status').innerText=(myRole==='X'?"OU KÒMANSE!":"TANN LÒT LA..."); });
+        socket.on('start-game', r => { currentPl=r; document.getElementById('status').innerText="MATCH KÒMANSE!"; });
         socket.on('mouvman', d => move(d.index, d.role));
         socket.on('reset', () => setTimeout(()=>location.reload(), 3000));
     </script>
