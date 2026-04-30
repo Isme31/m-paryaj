@@ -7,35 +7,28 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Koneksyon MongoDB
 mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority");
 
 const User = mongoose.model('User', { phone: String, password: String, balance: { type: Number, default: 0 }, referredBy: String });
+const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, transactionId: String, status: { type: String, default: 'pending' } });
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// --- ROUTES ---
 app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     let user = await User.findOne({ phone });
     if (!user) { 
         user = new User({ phone, password, referredBy: ref }); await user.save();
-        if(ref) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5 } });
+        if(ref && ref !== phone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5 } });
     }
     if (user.password === password) res.json({ success: true, balance: user.balance, phone: user.phone });
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
-// --- SOCKET.IO ---
 io.on('connection', (socket) => {
-    // KREYE TAB PRIVE (WHATSAPP)
-    socket.on('createPrivate', (data) => {
-        socket.join(data.room);
-        socket.userData = data;
-    });
+    socket.on('createPrivate', (data) => { socket.join(data.room); socket.userData = data; });
 
-    // RANTRE NAN TAB PRIVE
     socket.on('joinPrivate', async (data) => {
         const room = io.sockets.adapter.rooms.get(data.room);
         const user = await User.findOne({ phone: data.phone });
