@@ -20,14 +20,11 @@ app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
     if (!user) {
-        user = { phone, password, balance: 100 }; // Kado 100G pou nouvo kont
+        user = { phone, password, balance: 100 };
         db.get('users').push(user).write();
     }
-    if (user.password === password) {
-        res.json({ success: true, balance: user.balance });
-    } else {
-        res.json({ success: false, message: "Modpas pa bon!" });
-    }
+    if (user.password === password) res.json({ success: true, balance: user.balance });
+    else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
 app.post('/bet', (req, res) => {
@@ -37,20 +34,32 @@ app.post('/bet', (req, res) => {
         const newBalance = user.balance - 50;
         db.get('users').find({ phone }).assign({ balance: newBalance }).write();
         res.json({ success: true, newBalance });
-    } else {
-        res.json({ success: false, message: "Ou pa gen ase kòb (50G)" });
-    }
+    } else res.json({ success: false, message: "Ou pa gen ase kòb (50G)" });
 });
 
-let lastWinner = Math.random() < 0.5 ? 'X' : 'O';
 io.on('connection', (socket) => {
-    socket.emit('start-player', lastWinner);
-    socket.on('mouvman', (data) => socket.broadcast.emit('mouvman', data));
-    socket.on('game-over', (winner) => {
-        lastWinner = winner;
-        io.emit('reset', lastWinner);
+    socket.on('join-room', (roomCode) => {
+        socket.join(roomCode);
+        const clients = io.sockets.adapter.rooms.get(roomCode);
+        const numClients = clients ? clients.size : 0;
+        
+        // Premye moun ki antre se X, dezyèm nan se O
+        const role = numClients === 1 ? 'X' : 'O';
+        socket.emit('player-role', role);
+        
+        if (numClients === 2) {
+            io.to(roomCode).emit('start-game', 'X');
+        }
+    });
+
+    socket.on('mouvman', (data) => {
+        socket.to(data.room).emit('mouvman', data);
+    });
+
+    socket.on('game-over', (data) => {
+        io.to(data.room).emit('reset', data.winner);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Live sou port ${PORT}`));
+server.listen(PORT, () => console.log(`Sèvè ap kouri sou ${PORT}`));
