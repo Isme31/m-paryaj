@@ -17,7 +17,7 @@ const ADMIN_KEY = "hugues";
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// LOGIN
+// LOGIN & AUTH
 app.post('/login', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone }).value();
@@ -26,7 +26,7 @@ app.post('/login', (req, res) => {
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
-// BET (KONT MOUN OSWA ROBO)
+// MIZE (BET)
 app.post('/bet', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone, password }).value();
@@ -37,7 +37,7 @@ app.post('/bet', (req, res) => {
     } else res.json({ success: false, message: "Kòb ensifizan (50G)!" });
 });
 
-// LÈ YON MOUN GENYEN (KONT MOUN OSWA ROBO)
+// VIKTWA
 app.post('/win-game', (req, res) => {
     const { phone, password } = req.body;
     let user = db.get('users').find({ phone, password }).value();
@@ -67,7 +67,7 @@ app.post('/request-deposit', (req, res) => {
     res.json({ success: true });
 });
 
-// ADMIN API (URL: admin.html?key=hugues)
+// ADMIN (key=hugues)
 app.get('/admin/data', (req, res) => {
     if (req.query.key !== ADMIN_KEY) return res.status(403).send();
     res.json({ deposits: db.get('deposits').filter({status:'pending'}).value(), withdrawals: db.get('withdrawals').filter({status:'pending'}).value() });
@@ -104,4 +104,4 @@ io.on('connection', (socket) => {
     socket.on('game-over', (d) => io.to(d.room).emit('reset'));
 });
 
-server.listen(3000, () => console.log('Sèvè prè sou pò 3000'));
+server.listen(3000, () => console.log('Sèvè Blitz prè!'));
