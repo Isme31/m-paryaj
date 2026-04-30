@@ -2,40 +2,40 @@
 <html lang="hat">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon 50G | Blitz</title>
+    <title>Blitz Mopyon</title>
     <script src="https://tailwindcss.com"></script>
     <style>
-        body { background: #0f172a; color: white; text-align: center; font-family: sans-serif; }
+        body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
-        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 2px; }
         .cell.X { color: #f87171; } .cell.O { color: #60a5fa; }
         .hidden { display: none; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
 
     <!-- LOGIN -->
     <div id="auth-screen" class="w-full max-w-md">
-        <h1 class="text-4xl font-bold mb-6 text-blue-400 italic">MOPYON 50G</h1>
+        <h1 class="text-4xl font-bold mb-6 text-blue-400 italic">BLITZ</h1>
         <div class="glass p-8 rounded-3xl">
-            <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 outline-none">
-            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 outline-none">
-            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold">ANTRE</button>
+            <input type="text" id="phone" placeholder="Telefòn" class="w-full bg-slate-800 p-3 rounded-xl mb-4 outline-none border border-transparent focus:border-blue-500">
+            <input type="password" id="password" placeholder="Modpas" class="w-full bg-slate-800 p-3 rounded-xl mb-6 outline-none border border-transparent focus:border-blue-500">
+            <button onclick="handleLogin()" class="w-full bg-blue-600 py-3 rounded-xl font-bold">KONEKTE</button>
             <p id="auth-error" class="text-red-400 text-xs mt-4"></p>
         </div>
     </div>
 
-    <!-- MENU CHWA JWÈT -->
+    <!-- MENU -->
     <div id="menu-screen" class="hidden w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-6 text-blue-400">CHWAZI YON JWÈT</h2>
+        <h2 class="text-2xl font-bold mb-6 text-blue-400">CHWAZI JWÈT</h2>
         <div class="grid gap-4">
-            <button onclick="goToLobby('mopyon')" class="glass p-6 rounded-2xl flex justify-between items-center hover:bg-blue-600/20 border-blue-500/50">
-                <div class="text-left"><span class="block text-xl font-bold">MOPYON 50G</span><span class="text-xs text-gray-400">Jwe ak yon zanmi</span></div>
+            <button onclick="openLobby()" class="glass p-6 rounded-2xl flex justify-between items-center hover:scale-105 transition border-l-4 border-blue-500">
+                <div class="text-left"><span class="block text-xl font-bold">MOPYON 50G</span><span class="text-xs text-green-400 font-bold">AKTIF</span></div>
                 <span class="text-3xl">🎮</span>
             </button>
-            <div class="glass p-6 rounded-2xl flex justify-between items-center opacity-50 border-gray-600">
-                <div class="text-left"><span class="block text-xl font-bold">LÒT JWÈT</span><span class="text-xs text-red-400">Disponib talè...</span></div>
+            <div class="glass p-6 rounded-2xl flex justify-between items-center opacity-40 grayscale">
+                <div class="text-left"><span class="block text-xl font-bold">LUDO</span><span class="text-xs text-red-400 italic">Talè...</span></div>
                 <span class="text-3xl">🔒</span>
             </div>
         </div>
@@ -43,140 +43,126 @@
 
     <!-- LOBBY -->
     <div id="lobby-screen" class="hidden glass p-8 rounded-3xl w-full max-w-md">
-        <h2 class="text-xl mb-4 font-bold">Balans: <span id="user-balance" class="text-green-400">0 G</span></h2>
-        <div class="grid grid-cols-2 gap-4 mb-4">
-            <button onclick="generateRoom()" class="bg-blue-600/30 border border-blue-500 py-3 rounded-xl">KREYE KÒD</button>
-            <button onclick="showJoin()" class="bg-purple-600/30 border border-purple-500 py-3 rounded-xl">ANTRE KÒD</button>
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-green-400"><span id="user-balance">0</span> G</h2>
+            <button onclick="location.reload()" class="text-xs text-gray-400 underline">MENU</button>
         </div>
-        <div id="room-controls" class="hidden mb-6">
-            <input type="text" id="room-id" placeholder="Kòd Chanm" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-center border border-blue-500 outline-none text-xl font-bold">
-            <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold">MIZE 50G & JWE</button>
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <button onclick="genRoom()" class="bg-blue-600/20 border border-blue-500 py-2 rounded-xl text-xs">KREYE KÒD</button>
+            <button onclick="document.getElementById('room-box').classList.remove('hidden')" class="bg-purple-600/20 border border-purple-500 py-2 rounded-xl text-xs">ANTRE KÒD</button>
         </div>
-        <div class="grid grid-cols-2 gap-4 border-t border-gray-700 pt-4 mt-4">
-            <div class="text-left">
-                <p class="text-[10px] text-gray-500 mb-1">DEPO</p>
-                <input id="depo-amount" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
-                <input id="depo-id" placeholder="ID MonCash" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
-                <button onclick="sendDeposit()" class="w-full bg-orange-600 py-1 rounded text-[10px] font-bold">VOYE PRÈV</button>
+        <div id="room-box" class="hidden mb-6">
+            <input type="text" id="room-id" placeholder="KÒD LA" class="w-full bg-slate-800 p-3 rounded-xl mb-3 text-center border border-blue-500 outline-none uppercase font-bold tracking-widest">
+            <button onclick="startBet()" class="w-full bg-green-600 py-3 rounded-xl font-bold">MIZE 50G & JWE</button>
+        </div>
+        <div class="border-t border-gray-700 pt-4 grid grid-cols-2 gap-4">
+            <div class="text-left"><p class="text-[10px] text-gray-500 mb-1">DEPO</p>
+                <input id="d-amt" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+                <input id="d-id" placeholder="ID" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+                <button onclick="doDepo()" class="w-full bg-orange-600 py-1 rounded text-[10px] font-bold">VOYE</button>
             </div>
-            <div class="text-left">
-                <p class="text-[10px] text-gray-500 mb-1">RETRÈ</p>
-                <input id="retrait-amount" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
-                <select id="retrait-method" class="w-full bg-slate-800 p-1 rounded text-[10px] mb-1 text-white outline-none">
+            <div class="text-left"><p class="text-[10px] text-gray-500 mb-1">RETRÈ</p>
+                <input id="w-amt" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+                <select id="w-meth" class="w-full bg-slate-800 p-1 rounded text-[10px] mb-1 text-white outline-none">
                     <option value="31594645">MonCash (31594645)</option>
                     <option value="55110103">Natcash (55110103)</option>
                 </select>
-                <button onclick="sendWithdrawal()" class="w-full bg-blue-600 py-1 rounded text-[10px] font-bold">MANDE RETRÈ</button>
+                <button onclick="doWithdraw()" class="w-full bg-blue-600 py-1 rounded text-[10px] font-bold">RETIRE</button>
             </div>
         </div>
     </div>
 
-    <!-- JWÈT -->
+    <!-- GAME -->
     <div id="game-screen" class="hidden w-full">
-        <div id="status" class="mb-4 font-bold text-blue-400">ATANN LÒT LA...</div>
+        <div id="status" class="mb-4 font-bold text-blue-400 uppercase tracking-widest">TANN LÒT JWÈT LA...</div>
         <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let userPhone = "", myRole = "", currentPlayer = "", currentRoom = "", board = Array(225).fill(null);
+        let uPhone = "", uPass = "", myRole = "", currentPl = "", room = "", board = Array(225).fill(null);
 
         async function handleLogin() {
-            userPhone = document.getElementById('phone').value;
-            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, password: document.getElementById('password').value}) });
-            const data = await res.json();
-            if(data.success) {
-                document.getElementById('user-balance').innerText = data.balance + " G";
+            uPhone = document.getElementById('phone').value;
+            uPass = document.getElementById('password').value;
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: uPhone, password: uPass}) });
+            const d = await res.json();
+            if(d.success) {
+                document.getElementById('user-balance').innerText = d.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('menu-screen').classList.remove('hidden');
-            } else { document.getElementById('auth-error').innerText = data.message; }
+            } else alert("Telefòn oswa Modpas erè!");
         }
 
-        function goToLobby(game) {
-            document.getElementById('menu-screen').classList.add('hidden');
-            document.getElementById('lobby-screen').classList.remove('hidden');
-        }
+        function openLobby() { document.getElementById('menu-screen').classList.add('hidden'); document.getElementById('lobby-screen').classList.remove('hidden'); }
+        function genRoom() { document.getElementById('room-id').value = Math.random().toString(36).substring(2,8).toUpperCase(); document.getElementById('room-box').classList.remove('hidden'); }
 
-        function generateRoom() {
-            document.getElementById('room-id').value = Math.random().toString(36).substring(2, 8).toUpperCase();
-            document.getElementById('room-controls').classList.remove('hidden');
-        }
-        function showJoin() { document.getElementById('room-controls').classList.remove('hidden'); }
-
-        async function placeBet() {
-            currentRoom = document.getElementById('room-id').value;
-            const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone}) });
-            const data = await res.json();
-            if(data.success) {
-                socket.emit('join-room', { roomCode: currentRoom, phone: userPhone });
+        async function startBet() {
+            room = document.getElementById('room-id').value;
+            const res = await fetch('/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: uPhone, password: uPass}) });
+            const d = await res.json();
+            if(d.success) {
+                socket.emit('join-room', { roomCode: room, phone: uPhone });
                 document.getElementById('lobby-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-                createBoard();
-            } else alert(data.message);
+                makeGrid();
+            } else alert(d.message);
         }
 
-        async function sendDeposit() {
-            const amount = document.getElementById('depo-amount').value;
-            const tid = document.getElementById('depo-id').value;
-            await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, transactionId: tid}) });
-            alert("Demand voye bay admin!");
+        async function doWithdraw() {
+            const amt = document.getElementById('w-amt').value;
+            const meth = document.getElementById('w-meth').value;
+            const res = await fetch('/request-withdrawal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: uPhone, password: uPass, amount: amt, method: meth}) });
+            const d = await res.json();
+            if(d.success) { document.getElementById('user-balance').innerText = d.newBalance; alert(d.message); } else alert(d.message);
         }
 
-        async function sendWithdrawal() {
-            const amount = document.getElementById('retrait-amount').value;
-            const method = document.getElementById('retrait-method').value;
-            const res = await fetch('/request-withdrawal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, method}) });
-            const data = await res.json();
-            if(data.success) { document.getElementById('user-balance').innerText = data.newBalance + " G"; alert(data.message); }
-            else alert(data.message);
+        async function doDepo() {
+            const amt = document.getElementById('d-amt').value;
+            const tid = document.getElementById('d-id').value;
+            await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: uPhone, amount: amt, transactionId: tid}) });
+            alert("Voye!");
         }
 
-        function createBoard() {
+        function makeGrid() {
             const b = document.getElementById('board'); b.innerHTML = '';
             for(let i=0; i<225; i++) {
                 const c = document.createElement('div'); c.className = 'cell'; c.id = "c-"+i;
-                c.onclick = () => { if(!board[i] && currentPlayer === myRole) {
-                    makeMove(i, myRole);
-                    socket.emit('mouvman', { room: currentRoom, index: i, role: myRole });
-                }};
+                c.onclick = () => { if(!board[i] && currentPl === myRole) { move(i, myRole); socket.emit('mouvman', { room, index: i, role: myRole }); }};
                 b.appendChild(c);
             }
         }
 
-        function makeMove(i, role) {
-            board[i] = role;
-            const el = document.getElementById("c-"+i); el.innerText = role; el.classList.add(role);
-            if(checkWin(i, role)) {
-                socket.emit('game-over', { room: currentRoom, winnerPhone: (role === myRole ? userPhone : null) });
-                alert(role === myRole ? "OU GENYEN 90G!" : "OU PÈDI!");
-            }
-            currentPlayer = (role === 'X') ? 'O' : 'X';
-            document.getElementById('status').innerText = (currentPlayer === myRole) ? "TOU PAW!" : "TOU LÒT LA...";
+        function move(i, r) {
+            board[i] = r; const el = document.getElementById("c-"+i); el.innerText = r; el.classList.add(r);
+            if(win(i, r)) { socket.emit('game-over', { room, winnerPhone: (r === myRole ? uPhone : null) }); alert(r === myRole ? "GENYEN!" : "PÈDI!"); }
+            currentPl = (r === 'X') ? 'O' : 'X';
+            document.getElementById('status').innerText = (currentPl === myRole) ? "TOU PAW!" : "TANN LÒT LA...";
         }
 
-        function checkWin(idx, role) {
-            const size = 15; const r = Math.floor(idx/size), c = idx%size;
+        function win(idx, r) {
+            const s = 15; const row = Math.floor(idx/s), col = idx%s;
             const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for(let [dr, dc] of dirs) {
-                let count = 1;
+                let cnt = 1;
                 for(let i=1; i<5; i++) {
-                    let nr=r+dr*i, nc=c+dc*i;
-                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*size+nc] === role) count++; else break;
+                    let nr=row+dr*i, nc=col+dc*i;
+                    if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc] === r) cnt++; else break;
                 }
                 for(let i=1; i<5; i++) {
-                    let nr=r-dr*i, nc=c-dc*i;
-                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*size+nc] === role) count++; else break;
+                    let nr=row-dr*i, nc=col-dc*i;
+                    if(nr>=0 && nr<s && nc>=0 && nc<s && board[nr*s+nc] === r) cnt++; else break;
                 }
-                if(count >= 5) return true;
+                if(cnt >= 5) return true;
             }
             return false;
         }
 
         socket.on('player-role', r => myRole = r);
-        socket.on('start-game', r => { currentPlayer = r; document.getElementById('status').innerText = (myRole==='X'?"OU KÒMANSE":"TANN LÒT LA"); });
-        socket.on('mouvman', d => makeMove(d.index, d.role));
-        socket.on('update-balance', d => { if(d.phone === userPhone) document.getElementById('user-balance').innerText = d.balance + " G"; });
+        socket.on('start-game', r => { currentPl = r; document.getElementById('status').innerText = (myRole==='X'?"KÒMANSE!":"TANN..."); });
+        socket.on('mouvman', d => move(d.index, d.role));
+        socket.on('update-balance', d => { if(d.phone === uPhone) document.getElementById('user-balance').innerText = d.balance; });
         socket.on('reset', () => setTimeout(() => location.reload(), 3000));
     </script>
 </body>
