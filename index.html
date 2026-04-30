@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="hat">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon 50G</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon 50G | Blitz</title>
     <script src="https://tailwindcss.com"></script>
     <style>
-        body { background: #0f172a; color: white; text-align: center; }
+        body { background: #0f172a; color: white; text-align: center; font-family: sans-serif; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .board { display: grid; grid-template-columns: repeat(15, 25px); gap: 2px; background: #1e293b; padding: 5px; border-radius: 8px; width: fit-content; margin: 0 auto; }
         .cell { width: 25px; height: 25px; background: #334155; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
@@ -27,6 +26,21 @@
         </div>
     </div>
 
+    <!-- MENU CHWA JWÈT -->
+    <div id="menu-screen" class="hidden w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-blue-400">CHWAZI YON JWÈT</h2>
+        <div class="grid gap-4">
+            <button onclick="goToLobby('mopyon')" class="glass p-6 rounded-2xl flex justify-between items-center hover:bg-blue-600/20 border-blue-500/50">
+                <div class="text-left"><span class="block text-xl font-bold">MOPYON 50G</span><span class="text-xs text-gray-400">Jwe ak yon zanmi</span></div>
+                <span class="text-3xl">🎮</span>
+            </button>
+            <div class="glass p-6 rounded-2xl flex justify-between items-center opacity-50 border-gray-600">
+                <div class="text-left"><span class="block text-xl font-bold">LÒT JWÈT</span><span class="text-xs text-red-400">Disponib talè...</span></div>
+                <span class="text-3xl">🔒</span>
+            </div>
+        </div>
+    </div>
+
     <!-- LOBBY -->
     <div id="lobby-screen" class="hidden glass p-8 rounded-3xl w-full max-w-md">
         <h2 class="text-xl mb-4 font-bold">Balans: <span id="user-balance" class="text-green-400">0 G</span></h2>
@@ -35,26 +49,24 @@
             <button onclick="showJoin()" class="bg-purple-600/30 border border-purple-500 py-3 rounded-xl">ANTRE KÒD</button>
         </div>
         <div id="room-controls" class="hidden mb-6">
-            <input type="text" id="room-id" placeholder="Kòd Chanm" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-center border border-blue-500">
+            <input type="text" id="room-id" placeholder="Kòd Chanm" class="w-full bg-slate-800 p-3 rounded-xl mb-4 text-center border border-blue-500 outline-none text-xl font-bold">
             <button onclick="placeBet()" class="w-full bg-green-600 py-4 rounded-xl font-bold">MIZE 50G & JWE</button>
         </div>
-        
-        <!-- DEPO & RETRÈ -->
-        <div class="grid grid-cols-2 gap-4 border-t border-gray-700 pt-4">
-            <div>
+        <div class="grid grid-cols-2 gap-4 border-t border-gray-700 pt-4 mt-4">
+            <div class="text-left">
                 <p class="text-[10px] text-gray-500 mb-1">DEPO</p>
-                <input id="depo-amount" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1">
-                <input id="depo-id" placeholder="ID" class="w-full bg-slate-800 p-1 rounded text-xs mb-1">
-                <button onclick="sendDeposit()" class="w-full bg-orange-600 py-1 rounded text-[10px]">VOYE</button>
+                <input id="depo-amount" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+                <input id="depo-id" placeholder="ID MonCash" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+                <button onclick="sendDeposit()" class="w-full bg-orange-600 py-1 rounded text-[10px] font-bold">VOYE PRÈV</button>
             </div>
-            <div>
+            <div class="text-left">
                 <p class="text-[10px] text-gray-500 mb-1">RETRÈ</p>
-                <input id="retrait-amount" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1">
-                <select id="retrait-method" class="w-full bg-slate-800 p-1 rounded text-[10px] mb-1 text-white">
-                    <option value="31594645">31594645 (MC)</option>
-                    <option value="55110103">55110103 (NC)</option>
+                <input id="retrait-amount" placeholder="Goud" class="w-full bg-slate-800 p-1 rounded text-xs mb-1 outline-none">
+                <select id="retrait-method" class="w-full bg-slate-800 p-1 rounded text-[10px] mb-1 text-white outline-none">
+                    <option value="31594645">MonCash (31594645)</option>
+                    <option value="55110103">Natcash (55110103)</option>
                 </select>
-                <button onclick="sendWithdrawal()" class="w-full bg-blue-600 py-1 rounded text-[10px]">MANDE</button>
+                <button onclick="sendWithdrawal()" class="w-full bg-blue-600 py-1 rounded text-[10px] font-bold">MANDE RETRÈ</button>
             </div>
         </div>
     </div>
@@ -62,7 +74,7 @@
     <!-- JWÈT -->
     <div id="game-screen" class="hidden w-full">
         <div id="status" class="mb-4 font-bold text-blue-400">ATANN LÒT LA...</div>
-        <div class="flex justify-center"><div class="board" id="board"></div></div>
+        <div class="flex justify-center overflow-auto"><div class="board" id="board"></div></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -77,15 +89,19 @@
             if(data.success) {
                 document.getElementById('user-balance').innerText = data.balance + " G";
                 document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('lobby-screen').classList.remove('hidden');
-            }
+                document.getElementById('menu-screen').classList.remove('hidden');
+            } else { document.getElementById('auth-error').innerText = data.message; }
+        }
+
+        function goToLobby(game) {
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.remove('hidden');
         }
 
         function generateRoom() {
             document.getElementById('room-id').value = Math.random().toString(36).substring(2, 8).toUpperCase();
             document.getElementById('room-controls').classList.remove('hidden');
         }
-
         function showJoin() { document.getElementById('room-controls').classList.remove('hidden'); }
 
         async function placeBet() {
@@ -102,9 +118,9 @@
 
         async function sendDeposit() {
             const amount = document.getElementById('depo-amount').value;
-            const transactionId = document.getElementById('depo-id').value;
-            await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, transactionId}) });
-            alert("Voye!");
+            const tid = document.getElementById('depo-id').value;
+            await fetch('/request-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: userPhone, amount, transactionId: tid}) });
+            alert("Demand voye bay admin!");
         }
 
         async function sendWithdrawal() {
@@ -120,41 +136,37 @@
             const b = document.getElementById('board'); b.innerHTML = '';
             for(let i=0; i<225; i++) {
                 const c = document.createElement('div'); c.className = 'cell'; c.id = "c-"+i;
-                c.onclick = () => {
-                    if(!board[i] && currentPlayer === myRole) {
-                        makeMove(i, myRole);
-                        socket.emit('mouvman', { room: currentRoom, index: i, role: myRole });
-                    }
-                };
+                c.onclick = () => { if(!board[i] && currentPlayer === myRole) {
+                    makeMove(i, myRole);
+                    socket.emit('mouvman', { room: currentRoom, index: i, role: myRole });
+                }};
                 b.appendChild(c);
             }
         }
 
         function makeMove(i, role) {
             board[i] = role;
-            const cell = document.getElementById("c-"+i);
-            cell.innerText = role; cell.classList.add(role);
+            const el = document.getElementById("c-"+i); el.innerText = role; el.classList.add(role);
             if(checkWin(i, role)) {
-                socket.emit('game-over', { room: currentRoom, winnerPhone: userPhone });
-                alert("OU GENYEN!");
+                socket.emit('game-over', { room: currentRoom, winnerPhone: (role === myRole ? userPhone : null) });
+                alert(role === myRole ? "OU GENYEN 90G!" : "OU PÈDI!");
             }
             currentPlayer = (role === 'X') ? 'O' : 'X';
             document.getElementById('status').innerText = (currentPlayer === myRole) ? "TOU PAW!" : "TOU LÒT LA...";
         }
 
-        function checkWin(index, role) {
-            const size = 15;
-            const r = Math.floor(index / size), c = index % size;
-            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+        function checkWin(idx, role) {
+            const size = 15; const r = Math.floor(idx/size), c = idx%size;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for(let [dr, dc] of dirs) {
                 let count = 1;
                 for(let i=1; i<5; i++) {
-                    let nr = r+dr*i, nc = c+dc*i;
-                    if(nr>=0 && nr<size && nc>=0 && nc<size && board[nr*size+nc] === role) count++; else break;
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*size+nc] === role) count++; else break;
                 }
                 for(let i=1; i<5; i++) {
-                    let nr = r-dr*i, nc = c-dc*i;
-                    if(nr>=0 && nr<size && nc>=0 && nc<size && board[nr*size+nc] === role) count++; else break;
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*size+nc] === role) count++; else break;
                 }
                 if(count >= 5) return true;
             }
@@ -162,10 +174,10 @@
         }
 
         socket.on('player-role', r => myRole = r);
-        socket.on('start-game', startRole => { currentPlayer = startRole; document.getElementById('status').innerText = (myRole === 'X') ? "OU SE X (KÒMANSE!)" : "OU SE O (TANN...)"; });
-        socket.on('mouvman', data => makeMove(data.index, data.role));
-        socket.on('update-balance', data => { if(data.phone === userPhone) document.getElementById('user-balance').innerText = data.balance + " G"; });
-        socket.on('reset', () => { setTimeout(() => location.reload(), 3000); });
+        socket.on('start-game', r => { currentPlayer = r; document.getElementById('status').innerText = (myRole==='X'?"OU KÒMANSE":"TANN LÒT LA"); });
+        socket.on('mouvman', d => makeMove(d.index, d.role));
+        socket.on('update-balance', d => { if(d.phone === userPhone) document.getElementById('user-balance').innerText = d.balance + " G"; });
+        socket.on('reset', () => setTimeout(() => location.reload(), 3000));
     </script>
 </body>
 </html>
