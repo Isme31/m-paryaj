@@ -12,9 +12,9 @@
         input, button, select { padding: 18px; margin: 8px 0; border-radius: 12px; width: 100%; border: none; font-size: 16px; box-sizing: border-box; }
         button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 100%; aspect-ratio: 1/1; margin: 15px auto; background: #333; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; cursor: pointer; }
-        #timer-box { background: #ff4757; color: white; padding: 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
         .online-tag { color: #00ff00; font-size: 14px; font-weight: bold; }
+        #timer-box { background: #ff4757; color: white; padding: 10px; border-radius: 20px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -31,19 +31,14 @@
             <div class="online-tag">🟢 <span id="online-count">0</span> moun online</div>
             <div id="status">Pare pou jwe!</div>
         </div>
-
         <div id="timer-box" class="hidden">⏱️ <span id="timer-val">30</span>s</div>
-        
         <div id="main-menu">
-            <p>Mize (Min 50G):</p>
             <input type="number" id="bet-amount" value="50" min="50" style="text-align:center;">
-            <button onclick="findMatch()" style="background:#ff4757; height:80px; font-size:22px;">⚡ JWENN MATCH</button>
+            <button onclick="findMatch()" style="background:#ff4757; height:70px; font-size:22px;">⚡ JWENN MATCH</button>
         </div>
-
         <div id="board" class="grid hidden"></div>
-
         <div style="background:#1a1a1a; padding:15px; border-radius:15px; margin-top:20px;">
-            <p style="font-size:12px;">MonCash: 31594645 | Natcash: 55110103</p>
+            <p style="font-size:12px; color: #888;">MonCash: 31594645 | Natcash: 55110103</p>
             <select id="dep-method"><option value="MonCash">MonCash</option><option value="Natcash">Natcash</option></select>
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
             <button onclick="voyeDepo()" style="background:#28a745;">Voye Depo ✅</button>
@@ -52,7 +47,7 @@
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), timerInt, currentPrize = 0;
+        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), currentPrize = 0;
 
         socket.on('updateOnlineCount', (count) => { document.getElementById('online-count').innerText = count; });
 
@@ -71,7 +66,7 @@
         function findMatch() {
             const bet = parseFloat(document.getElementById('bet-amount').value);
             const bal = parseFloat(document.getElementById('bal').innerText);
-            if(bet < 50 || bal < bet) return alert("Balans ou twò ba!");
+            if(bet < 50 || bal < bet) return alert("Miz envalid!");
             socket.emit('findMatch', { phone: myPhone, bet });
         }
 
@@ -90,10 +85,9 @@
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
             boardData[i] = mySymbol; myTurn = false; renderBoard();
-            const players = currentRoom.replace('room_', '').split('_');
-            const opp = players.find(p => p !== myPhone);
+            const opp = currentRoom.replace('room_', '').split('_').find(p => p !== myPhone);
             socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, nextPlayer: opp, prize: currentPrize });
-            if(checkWin(i, mySymbol)) { socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize }); alert("OU GANYEN!"); location.reload(); }
+            if(checkWin(i, mySymbol)) { socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize }); alert("GANYEN!"); location.reload(); }
         }
 
         function renderBoard() {
@@ -121,9 +115,10 @@
 
         async function voyeDepo() {
             await fetch('/submit-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, tid: document.getElementById('tid').value, amount: 50, method: document.getElementById('dep-method').value }) });
-            alert("Voye!");
+            alert("Voye! Tann konfimasyon.");
         }
         socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
+        socket.on('status_update', (msg) => document.getElementById('status').innerText = msg);
     </script>
 </body>
 </html>
