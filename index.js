@@ -8,25 +8,37 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Koneksyon MongoDB
-mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority");
+// Koneksyon MongoDB (Atansyon: Pa pataje modpas sa a an piblik)
+mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority")
+.then(() => console.log("✅ MongoDB konekte!"))
+.catch(err => console.log("❌ Erè MongoDB:", err));
 
 // Modèl Done
 const User = mongoose.model('User', { phone: String, password: String, balance: { type: Number, default: 0 } });
 const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, tid: String, method: String, status: { type: String, default: 'pending' } });
 
 app.use(express.json());
-app.use(express.static(__dirname));
+
+// Konfigirasyon fichye static pou Render ka jwenn yo fasil
+app.use(express.static(path.join(__dirname)));
 
 let waitingPlayers = []; 
 let gameTimers = {};
 let onlineUsers = 0;
 
-// WOUT POU PAJ YO
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+// --- WOUT POU PAJ YO ---
 
-// LOGIK TIMER
+// Paj Prensipal
+app.get('/', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'index.html'));
+});
+
+// Paj Admin (Koreksyon 404 la)
+app.get('/admin', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'admin.html'));
+});
+
+// --- LOGIK TIMER ---
 function startTurnTimer(room, activePhone, prize) {
     if (gameTimers[room]) clearTimeout(gameTimers[room]);
     gameTimers[room] = setTimeout(async () => {
@@ -38,13 +50,17 @@ function startTurnTimer(room, activePhone, prize) {
     }, 32000);
 }
 
+// --- API ROUTES ---
+
 // LOGIN / SIGNUP
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
-    let user = await User.findOne({ phone });
-    if (!user) { user = new User({ phone, password }); await user.save(); }
-    if (user.password === password) res.json({ success: true, balance: user.balance, phone: user.phone });
-    else res.json({ success: false, message: "Modpas pa bon!" });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user) { user = new User({ phone, password }); await user.save(); }
+        if (user.password === password) res.json({ success: true, balance: user.balance, phone: user.phone });
+        else res.json({ success: false, message: "Modpas pa bon!" });
+    } catch (e) { res.json({ success: false, message: "Erè sèvè" }); }
 });
 
 // SUBMIT DEPOSIT
@@ -55,28 +71,32 @@ app.post('/submit-deposit', async (req, res) => {
     } catch (e) { res.json({ success: false }); }
 });
 
-// ADMIN DATA
+// ADMIN DATA (Key: hugues)
 app.get('/admin/all-data', async (req, res) => {
     const { key } = req.query;
     if (key !== "hugues") return res.status(403).send("Aksè Refize");
-    const deposits = await Deposit.find({ status: 'pending' });
-    res.json({ deposits });
+    try {
+        const deposits = await Deposit.find({ status: 'pending' });
+        res.json({ deposits });
+    } catch (e) { res.status(500).json({ error: "Erè baz done" }); }
 });
 
 // CONFIRM DEPOSIT
 app.post('/admin/confirm-deposit', async (req, res) => {
     const { key, id } = req.body;
     if (key !== "hugues") return res.status(403).json({ success: false });
-    const dep = await Deposit.findById(id);
-    if (dep && dep.status === 'pending') {
-        const user = await User.findOneAndUpdate({ phone: dep.phone }, { $inc: { balance: dep.amount } }, { new: true });
-        dep.status = 'confirmed'; await dep.save();
-        io.emit('balanceUpdate', { phone: dep.phone, newBalance: user.balance });
-        res.json({ success: true });
-    }
+    try {
+        const dep = await Deposit.findById(id);
+        if (dep && dep.status === 'pending') {
+            const user = await User.findOneAndUpdate({ phone: dep.phone }, { $inc: { balance: dep.amount } }, { new: true });
+            dep.status = 'confirmed'; await dep.save();
+            io.emit('balanceUpdate', { phone: dep.phone, newBalance: user.balance });
+            res.json({ success: true });
+        }
+    } catch (e) { res.json({ success: false }); }
 });
 
-// SOCKET.IO
+// --- SOCKET.IO ---
 io.on('connection', (socket) => {
     onlineUsers++;
     io.emit('updateOnlineCount', onlineUsers);
@@ -121,4 +141,8 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(process.env.PORT || 10000);
+// Port la konfigirasyon pou Render
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`🚀 Sèvè a ap kouri sou pò ${PORT}`);
+});
