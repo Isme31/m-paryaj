@@ -10,13 +10,14 @@ const io = new Server(server);
 mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority");
 
 const User = mongoose.model('User', { phone: String, password: String, balance: { type: Number, default: 0 } });
-const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, transactionId: String, method: String, status: { type: String, default: 'pending' } });
+const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, tid: String, method: String, status: { type: String, default: 'pending' } });
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
 let waitingPlayers = []; 
 let gameTimers = {};
+let onlineUsers = 0; // Pou konte moun online
 
 function startTurnTimer(room, activePhone, prize) {
     if (gameTimers[room]) clearTimeout(gameTimers[room]);
@@ -42,6 +43,14 @@ app.post('/submit-deposit', async (req, res) => {
     res.json({ success: true });
 });
 
+// Wout pou admin wè depo yo
+app.get('/admin/all-data', async (req, res) => {
+    const { key } = req.query;
+    if (key !== "hugues") return res.status(403).json({ success: false });
+    const deposits = await Deposit.find({ status: 'pending' });
+    res.json({ deposits });
+});
+
 app.post('/admin/confirm-deposit', async (req, res) => {
     const { key, id } = req.body;
     if (key !== "hugues") return res.status(403).json({ success: false });
@@ -55,22 +64,22 @@ app.post('/admin/confirm-deposit', async (req, res) => {
 });
 
 io.on('connection', (socket) => {
+    onlineUsers++;
+    io.emit('updateOnlineCount', onlineUsers);
+
     socket.on('findMatch', async (data) => {
         const { phone, bet } = data;
         const user = await User.findOne({ phone });
-        if (!user || user.balance < bet) return socket.emit('error_msg', "Balans ou twò ba pou miz sa!");
+        if (!user || user.balance < bet) return socket.emit('error_msg', "Balans ou twò ba!");
 
         const opponentIndex = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== phone);
-
         if (opponentIndex !== -1) {
             const opponent = waitingPlayers[opponentIndex];
             waitingPlayers.splice(opponentIndex, 1);
             const room = `room_${opponent.phone}_${phone}`;
             const prize = bet * 1.8; 
-
             socket.join(room); opponent.socket.join(room);
             await User.updateMany({ phone: { $in: [phone, opponent.phone] } }, { $inc: { balance: -bet } });
-            
             io.to(room).emit('gameStart', { room, players: [opponent.phone, phone], firstTurn: opponent.phone, prize });
             startTurnTimer(room, opponent.phone, prize);
         } else {
@@ -92,6 +101,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        onlineUsers--;
+        io.emit('updateOnlineCount', onlineUsers);
         waitingPlayers = waitingPlayers.filter(p => p.socket.id !== socket.id);
     });
 });
