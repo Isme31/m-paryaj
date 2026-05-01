@@ -8,10 +8,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Koneksyon ak MongoDB
+// Koneksyon MongoDB
 mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority");
 
-// Modèl Done yo
+// Modèl Done
 const User = mongoose.model('User', { phone: String, password: String, balance: { type: Number, default: 0 } });
 const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, tid: String, method: String, status: { type: String, default: 'pending' } });
 
@@ -22,10 +22,11 @@ let waitingPlayers = [];
 let gameTimers = {};
 let onlineUsers = 0;
 
-// Wout pou paj yo louvri byen
+// WOUT POU PAJ YO
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
+// LOGIK TIMER
 function startTurnTimer(room, activePhone, prize) {
     if (gameTimers[room]) clearTimeout(gameTimers[room]);
     gameTimers[room] = setTimeout(async () => {
@@ -37,7 +38,7 @@ function startTurnTimer(room, activePhone, prize) {
     }, 32000);
 }
 
-// LOGIN & SIGNUP
+// LOGIN / SIGNUP
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     let user = await User.findOne({ phone });
@@ -46,21 +47,23 @@ app.post('/login', async (req, res) => {
     else res.json({ success: false, message: "Modpas pa bon!" });
 });
 
-// DEPO
+// SUBMIT DEPOSIT
 app.post('/submit-deposit', async (req, res) => {
-    await new Deposit(req.body).save();
-    res.json({ success: true });
+    try {
+        await new Deposit(req.body).save();
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false }); }
 });
 
-// ADMIN: Jwenn tout depo ki "pending"
+// ADMIN DATA
 app.get('/admin/all-data', async (req, res) => {
     const { key } = req.query;
-    if (key !== "hugues") return res.status(403).json({ success: false });
+    if (key !== "hugues") return res.status(403).send("Aksè Refize");
     const deposits = await Deposit.find({ status: 'pending' });
     res.json({ deposits });
 });
 
-// ADMIN: Konfime Depo
+// CONFIRM DEPOSIT
 app.post('/admin/confirm-deposit', async (req, res) => {
     const { key, id } = req.body;
     if (key !== "hugues") return res.status(403).json({ success: false });
@@ -73,7 +76,7 @@ app.post('/admin/confirm-deposit', async (req, res) => {
     }
 });
 
-// SOCKET.IO (Jwèt ak Moun Online)
+// SOCKET.IO
 io.on('connection', (socket) => {
     onlineUsers++;
     io.emit('updateOnlineCount', onlineUsers);
