@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ht">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡ - Robo Mèt</title>
+    <title>Mopyon Blitz ⚡ Online</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
@@ -26,16 +27,16 @@
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div style="background:#222; padding:10px; border-radius:10px; border:1px solid #333;">
+        <div style="background:#222; padding:10px; border-radius:10px;">
             <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status" style="font-weight:bold; color:#ffc107;">Chwazi yon mòd 👇</div>
+            <div id="status" style="color:#ffc107;">Pare pou Defi a! ⚔️</div>
         </div>
         
-        <div id="main-menu" style="margin-top:15px;">
-            <button onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo Mèt 🤖 (DIFISIL)</button>
-            <button onclick="createPrivate()" style="background:#25D366">Defi yon Zanmi (50G)</button>
-            <input type="text" id="join-code" placeholder="Antre kòd zanmi">
-            <button onclick="joinPrivate()" style="background:#444">Antre nan Tab</button>
+        <div id="main-menu" style="margin-top:20px;">
+            <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (Miz 50G)</button>
+            <div style="margin:10px;">-- OSWA --</div>
+            <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
+            <button onclick="joinPrivate()" style="background:#ffc107; color:black;">Antre nan Tab</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
@@ -45,146 +46,114 @@
                 <div style="color:#ff4757;"><b>MonCash</b><br>31594645</div>
                 <div style="color:#00ff00;"><b>Natcash</b><br>55110103</div>
             </div>
-            <select id="dep-method" style="background:#333; color:white; width:95%;">
+            <select id="dep-method" style="background:#333; color:white;">
                 <option value="MonCash">Mwen voye sou MonCash</option>
                 <option value="Natcash">Mwen voye sou Natcash</option>
             </select>
-            <input type="text" id="tid" placeholder="Kole ID Tranzaksyon an">
-            <button onclick="voyeDepo()" style="background:#28a745; width:95%;">Voye Depo ✅</button>
+            <input type="text" id="tid" placeholder="ID Tranzaksyon">
+            <button onclick="voyeDepo()" style="background:#28a745;">Mande Konfimasyon ✅</button>
         </div>
-        <button onclick="location.reload()" style="background:#333; font-size:12px;">Dekonekte</button>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
-
-        function id(n) { return document.getElementById(n); }
+        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill("");
 
         async function login() {
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('pass').value;
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value })
+                body: JSON.stringify({ phone, password })
             });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.phone; id('bal').innerText = data.balance;
-                id('auth-screen').classList.add('hidden');
-                id('game-screen').classList.remove('hidden');
-            }
+                myPhone = data.phone;
+                document.getElementById('bal').innerText = data.balance;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+            } else alert(data.message);
         }
 
         async function voyeDepo() {
-            const tid = id('tid').value;
-            const method = id('dep-method').value;
-            if(!tid) return alert("ID manke!");
+            const tid = document.getElementById('tid').value;
+            const method = document.getElementById('dep-method').value;
+            if(!tid) return alert("Antre ID a!");
             await fetch('/submit-deposit', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ phone: myPhone, tid, amount: 50, method })
             });
-            alert("Depo " + method + " voye bay admin!");
+            alert("Depo voye! Tann admin.");
         }
 
-        // --- LOJIK ROBO MÈT (DIFISIL) ---
-        function startRobot() {
-            isRobot = true; mySymbol = "X"; myTurn = true;
-            boardData.fill("");
-            id('main-menu').classList.add('hidden');
-            id('board').classList.remove('hidden');
-            id('status').innerText = "Mòd Mèt: Ou se X";
+        socket.on('balanceUpdate', (data) => {
+            if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance;
+        });
+
+        function createPrivate() {
+            const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+            socket.emit('createPrivate', { room: code, phone: myPhone });
+            window.open(`https://wa.me m!+Antre+kòd+la:+*${code}*`, '_blank');
+            document.getElementById('status').innerText = "Tann zanmi an ak kòd: " + code;
+            document.getElementById('main-menu').classList.add('hidden');
+        }
+
+        function joinPrivate() {
+            const code = document.getElementById('join-code').value.toUpperCase();
+            if(!code) return alert("Antre kòd la!");
+            socket.emit('joinPrivate', { room: code, phone: myPhone });
+        }
+
+        socket.on('gameStart', (data) => {
+            currentRoom = data.room;
+            mySymbol = data.players[0] === myPhone ? 'X' : 'O';
+            myTurn = (mySymbol === 'X');
+            document.getElementById('board').classList.remove('hidden');
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('status').innerText = "JOU: Ou se " + mySymbol;
             renderBoard();
-        }
+        });
 
-        function robotLogic() {
-            const robotSym = "O";
-            const playerSym = "X";
-            let bestScore = -Infinity;
-            let move = -1;
-
-            // Analize chak kaz vid pou jwenn pi gwo danje/chans
-            for (let i = 0; i < 100; i++) {
-                if (boardData[i] === "") {
-                    let score = 0;
-                    
-                    // 1. Priyorite: Bloke jwè a (Defans)
-                    let defense = evaluate(i, playerSym);
-                    if (defense >= 1000) score += 5000; // Bloke 4 pwen ijan
-                    else score += defense * 2;
-
-                    // 2. Priyorite: Robo a pou l genyen (Atak)
-                    let attack = evaluate(i, robotSym);
-                    if (attack >= 1000) score += 10000; // Genyen jwèt la
-                    else score += attack;
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        move = i;
-                    }
-                }
+        socket.on('opponentMove', (data) => {
+            boardData[data.index] = data.symbol;
+            myTurn = true;
+            document.getElementById('status').innerText = "Tou pa w!";
+            renderBoard();
+            if(checkWin5(data.index, data.symbol)) {
+                document.getElementById('status').innerText = "OU PÈDI! ❌";
+                myTurn = false;
             }
-
-            if (move !== -1) {
-                boardData[move] = robotSym;
-                renderBoard();
-                if (checkWin5(move, robotSym)) {
-                    id('status').innerText = "ROBO A BARE W, OU PÈDI! 🤖🔥";
-                    myTurn = false;
-                } else {
-                    myTurn = true;
-                    id('status').innerText = "Tou pa w!";
-                }
-            }
-        }
-
-        function evaluate(idx, s) {
-            const r = Math.floor(idx/10), c = idx%10;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
-            let total = 0;
-            dirs.forEach(([dr, dc]) => {
-                let count = 1;
-                [1, -1].forEach(d => {
-                    for(let i=1; i<5; i++) {
-                        let nr=r+dr*i*d, nc=c+dc*i*d;
-                        if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++;
-                        else break;
-                    }
-                });
-                if(count >= 5) total += 1000;
-                else if(count === 4) total += 500;
-                else if(count === 3) total += 50;
-                else if(count === 2) total += 5;
-            });
-            return total;
-        }
+        });
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; 
+            boardData[i] = mySymbol;
             myTurn = false;
             renderBoard();
+            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+            document.getElementById('status').innerText = "Tann advèsè a...";
+
             if(checkWin5(i, mySymbol)) {
-                id('status').innerText = "OU BAT MÈT LA! 🎉";
-                return;
+                document.getElementById('status').innerText = "OU GANYEN! 🎉 (+90G)";
+                socket.emit('win', { room: currentRoom, phone: myPhone });
             }
-            id('status').innerText = "Robo ap bare w...";
-            setTimeout(robotLogic, 600);
         }
 
         function renderBoard() {
-            const b = id('board'); b.innerHTML = "";
+            const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const cell = document.createElement('div');
-                cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
+                cell.className = `cell ${val.toLowerCase()}`;
+                cell.innerText = val;
                 cell.onclick = () => makeMove(i);
                 b.appendChild(cell);
             });
         }
 
         function checkWin5(idx, s) {
-            const r = Math.floor(idx/10), c = idx%10;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const r=Math.floor(idx/10), c=idx%10, dirs=[[0,1],[1,0],[1,1],[1,-1]];
             return dirs.some(([dr, dc]) => {
                 let count = 1;
                 [1, -1].forEach(d => {
