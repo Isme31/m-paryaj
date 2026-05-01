@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon Blitz ⚡ No Limit</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
@@ -12,8 +11,7 @@
         button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 10px auto; background: #444; border: 2px solid #444; }
         .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; }
-        .x { color: #007bff; } .o { color: #ff4757; }
-        #timer-box { background: #ff4757; color: white; padding: 10px; width: 120px; margin: 10px auto; border-radius: 20px; font-weight: bold; }
+        #timer-box { background: #ff4757; color: white; padding: 10px; width: 100px; margin: 10px auto; border-radius: 20px; font-weight: bold; }
         .finance-box { background: #222; padding: 15px; border-radius: 15px; margin-top: 20px; border: 1px solid #444; }
     </style>
 </head>
@@ -23,88 +21,57 @@
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <button onclick="login()">Konekte pou Jwe</button>
+        <button onclick="login()">Konekte</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div style="background:#222; padding:10px; border-radius:10px; border:1px solid #333;">
+        <div style="background:#222; padding:10px; border-radius:10px;">
             <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status" style="color:#ffc107;">Pare pou Match!</div>
+            <div id="status">Pare pou jwe!</div>
         </div>
 
         <div id="timer-box" class="hidden">⏱️ <span id="timer-val">30</span>s</div>
         
         <div id="main-menu" style="margin-top:20px;">
-            <button id="matchBtn" onclick="findMatch()" style="height:100px; font-size:22px; background:#ff4757;">⚡ MATCHMAKING (50G)</button>
+            <p style="font-size:14px; color:#888;">Mize sa w vle (Min 50G):</p>
+            <input type="number" id="bet-amount" value="50" min="50" style="width:100px; text-align:center;">
+            <button id="matchBtn" onclick="findMatch()" style="background:#ff4757; height:80px; font-size:20px;">⚡ JWENN MATCH</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
 
-        <!-- SEKSYON MONCASH / NATCASH -->
         <div class="finance-box">
-            <h3 style="margin:0 0 10px 0; font-size:16px;">Rechaje Kont ou 💰</h3>
-            <div style="display:flex; justify-content:space-around; margin-bottom:15px; font-size:12px;">
-                <div style="color:#ff4757; border:1px solid #ff4757; padding:5px; border-radius:5px;">
-                    <b>MonCash</b><br>31594645
-                </div>
-                <div style="color:#00ff00; border:1px solid #00ff00; padding:5px; border-radius:5px;">
-                    <b>Natcash</b><br>55110103
-                </div>
+            <div style="display:flex; justify-content:space-around; margin-bottom:10px; font-size:12px;">
+                <div style="color:#ff4757;"><b>MonCash</b><br>31594645</div>
+                <div style="color:#00ff00;"><b>Natcash</b><br>55110103</div>
             </div>
-
             <select id="dep-method" style="background:#333; color:white; width:95%;">
-                <option value="MonCash">Mwen voye sou MonCash</option>
-                <option value="Natcash">Mwen voye sou Natcash</option>
+                <option value="MonCash">Sou MonCash</option>
+                <option value="Natcash">Sou Natcash</option>
             </select>
-            
-            <input type="text" id="tid" placeholder="Kole ID Tranzaksyon an">
+            <input type="text" id="tid" placeholder="ID Tranzaksyon">
             <button onclick="voyeDepo()" style="background:#28a745; width:95%;">Voye Depo ✅</button>
         </div>
-        <button onclick="location.reload()" style="background:#333; font-size:12px; margin-top:10px;">Dekonekte</button>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), timerInt;
+        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), timerInt, currentPrize = 0;
 
         async function login() {
-            const phone = document.getElementById('phone').value;
-            const pass = document.getElementById('pass').value;
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone, password: pass })
+                body: JSON.stringify({ phone: document.getElementById('phone').value, password: document.getElementById('pass').value })
             });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.phone;
-                document.getElementById('bal').innerText = data.balance;
+                myPhone = data.phone; document.getElementById('bal').innerText = data.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-            } else alert(data.message);
+            }
         }
 
-        // FONKSYON DEPO KI SEPARE YO
-        async function voyeDepo() {
-            const tid = document.getElementById('tid').value;
-            const method = document.getElementById('dep-method').value;
-            if(!tid) return alert("Tanpri antre ID tranzaksyon an!");
-
-            await fetch('/submit-deposit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    phone: myPhone, 
-                    tid: tid, 
-                    amount: 50, 
-                    method: method 
-                })
-            });
-            alert("Depo " + method + " ou a voye! Tann admin konfime li.");
-            document.getElementById('tid').value = "";
-        }
-
-        // LOJIK TIMER
         function startTimer() {
             clearInterval(timerInt);
             let timeLeft = 30;
@@ -118,14 +85,15 @@
         }
 
         function findMatch() {
+            const bet = parseFloat(document.getElementById('bet-amount').value);
             const bal = parseFloat(document.getElementById('bal').innerText);
-            if(bal < 50) return alert("Balans ou twò ba! Rechaje kont ou.");
-            socket.emit('findMatch', { phone: myPhone });
-            document.getElementById('status').innerText = "🔍 Ap chache advèsè...";
+            if(bet < 50 || bal < bet) return alert("Miz envalid oswa balans ba!");
+            socket.emit('findMatch', { phone: myPhone, bet });
         }
 
         socket.on('gameStart', (data) => {
             currentRoom = data.room;
+            currentPrize = data.prize;
             mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
             myTurn = (data.firstTurn === myPhone);
             document.getElementById('main-menu').classList.add('hidden');
@@ -143,8 +111,7 @@
         });
 
         socket.on('timeout', (data) => {
-            clearInterval(timerInt);
-            alert(data.loser === myPhone ? "⏰ Tan fini! Ou pèdi match la." : "🎉 Advèsè a pèdi tan! Ou ganyen.");
+            alert(data.loser === myPhone ? "⏰ Tan fini! Ou pèdi." : "🎉 Advèsè a pèdi tan! Ou ganyen.");
             location.reload();
         });
 
@@ -157,16 +124,12 @@
             const players = currentRoom.replace('room_', '').split('_');
             const opponentPhone = players.find(p => p !== myPhone);
 
-            socket.emit('move', { 
-                room: currentRoom, 
-                index: i, 
-                symbol: mySymbol, 
-                nextPlayer: opponentPhone 
-            });
+            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, nextPlayer: opponentPhone, prize: currentPrize });
             
             if(checkWin5(i, mySymbol)) {
-                socket.emit('win', { room: currentRoom, phone: myPhone });
-                alert("🎉 OU GANYEN!"); location.reload();
+                socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
+                alert("🎉 OU GANYEN " + currentPrize + "G!");
+                location.reload();
             }
         }
 
@@ -174,15 +137,14 @@
             const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const cell = document.createElement('div');
-                cell.className = `cell ${val.toLowerCase()}`;
-                cell.innerText = val;
+                cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
                 cell.onclick = () => makeMove(i);
                 b.appendChild(cell);
             });
         }
 
         function checkWin5(idx, s) {
-            const r=Math.floor(idx/10), c=idx%10, dirs=[[0,1],[1,0],[1,1],[1,-1]];
+            const r=Math.floor(idx/10), c=idx%10, dirs=[,,,[1,-1]];
             return dirs.some(([dr, dc]) => {
                 let count = 1;
                 [1, -1].forEach(d => {
@@ -195,7 +157,16 @@
             });
         }
 
+        async function voyeDepo() {
+            await fetch('/submit-deposit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: myPhone, tid: document.getElementById('tid').value, amount: 50, method: document.getElementById('dep-method').value })
+            });
+            alert("Depo voye!");
+        }
         socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
+        socket.on('status_update', (msg) => document.getElementById('status').innerText = msg);
         socket.on('error_msg', (msg) => alert(msg));
     </script>
 </body>
