@@ -1,39 +1,121 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8"><title>Admin ⚡</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Blitz - Gestion des Fonds ⚡</title>
     <style>
         body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
-        .card { background:#222; border:1px solid #444; padding:15px; margin:10px auto; max-width:400px; border-radius:10px; text-align:left; }
-        button { background:#28a745; color:white; border:none; padding:10px; cursor:pointer; width:100%; border-radius:5px; }
+        .container { max-width: 600px; margin: auto; }
+        
+        .card { 
+            background:#222; 
+            border-left: 8px solid #444; /* Bordure par défaut */
+            padding:15px; 
+            margin:15px 0; 
+            border-radius:10px; 
+            text-align: left;
+            position: relative;
+        }
+
+        /* Couleurs par méthode */
+        .card.moncash { border-left-color: #ff4757; } /* Rouge MonCash */
+        .card.natcash { border-left-color: #00ff00; } /* Vert Natcash */
+
+        .method-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .moncash .method-badge { background: #ff4757; color: white; }
+        .natcash .method-badge { background: #00ff00; color: black; }
+
+        .phone { font-size: 1.2em; font-weight: bold; color: #fff; }
+        .amount { color: #ffc107; font-size: 1.1em; display: block; margin: 5px 0; }
+        .tid { background: #000; padding: 8px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace; color: #007bff; }
+        
+        button { 
+            background:#28a745; 
+            color:white; 
+            border:none; 
+            padding:12px; 
+            cursor:pointer; 
+            width:100%; 
+            border-radius:8px; 
+            font-weight: bold;
+            font-size: 16px;
+        }
+        button:hover { opacity: 0.8; }
+        .empty { color: #666; margin-top: 50px; }
     </style>
 </head>
 <body>
-    <h1>Depo an tann ⚡</h1>
-    <div id="list">Ap chaje...</div>
+
+    <div class="container">
+        <h1>Panèl Kontwòl ⚡</h1>
+        <p style="color: #888;">Depo an tann pou konfimasyon</p>
+        
+        <div id="list">
+            <p class="empty">Ap chaje depo yo...</p>
+        </div>
+    </div>
+
     <script>
-        const KEY = "hugues";
+        const KEY = "hugues"; // Clé de sécurité
+
         async function load() {
-            const res = await fetch('/admin/all-data?key='+KEY);
-            const data = await res.json();
-            document.getElementById('list').innerHTML = data.deposits.map(d => `
-                <div class="card">
-                    <p><b>Tel:</b> ${d.phone} | <b>${d.amount}G</b></p>
-                    <p><b>ID:</b> ${d.transactionId}</p>
-                    <button onclick="ok('${d._id}')">Konfime ✅</button>
-                </div>
-            `).join('') || "Pa gen depo.";
+            try {
+                const res = await fetch('/admin/all-data?key=' + KEY);
+                const data = await res.json();
+                const listDiv = document.getElementById('list');
+
+                if (!data.deposits || data.deposits.length === 0) {
+                    listDiv.innerHTML = '<p class="empty">Pa gen okenn depo pou kounye a.</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = data.deposits.map(d => `
+                    <div class="card ${d.method ? d.method.toLowerCase() : ''}">
+                        <div class="method-badge">${d.method || 'Enkonni'}</div>
+                        <span class="phone">📞 ${d.phone}</span>
+                        <span class="amount">Montan: <b>${d.amount} G</b></span>
+                        <small style="color:#888;">Transaction ID:</small>
+                        <span class="tid">${d.transactionId}</span>
+                        <button onclick="confirmDeposit('${d._id}', '${d.phone}', ${d.amount})">Konfime Transaksyon sa ✅</button>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                document.getElementById('list').innerHTML = '<p style="color:red;">Erè koneksyon sèvè.</p>';
+            }
         }
-        async function ok(id) {
-            await fetch('/admin/confirm-deposit', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({key:KEY, id:id})
+
+        async function confirmDeposit(id, phone, amount) {
+            if (!confirm(`Èske ou vle ajoute ${amount}G sou kont ${phone}?`)) return;
+
+            const res = await fetch('/admin/confirm-deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: KEY, id: id })
             });
-            load();
+
+            const result = await res.json();
+            if (result.success) {
+                alert("Kòb la ajoute ak siksè!");
+                load(); // Rafraîchir la liste
+            } else {
+                alert("Erè: " + result.message);
+            }
         }
+
+        // Charger au démarrage et rafraîchir toutes le 15 secondes
         load();
-        setInterval(load, 10000);
+        setInterval(load, 15000);
     </script>
 </body>
 </html>
