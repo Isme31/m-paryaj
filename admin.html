@@ -1,121 +1,42 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Blitz - Gestion des Fonds ⚡</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Mopyon Blitz</title>
     <style>
         body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
-        .container { max-width: 600px; margin: auto; }
-        
-        .card { 
-            background:#222; 
-            border-left: 8px solid #444; /* Bordure par défaut */
-            padding:15px; 
-            margin:15px 0; 
-            border-radius:10px; 
-            text-align: left;
-            position: relative;
-        }
-
-        /* Couleurs par méthode */
-        .card.moncash { border-left-color: #ff4757; } /* Rouge MonCash */
-        .card.natcash { border-left-color: #00ff00; } /* Vert Natcash */
-
-        .method-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .moncash .method-badge { background: #ff4757; color: white; }
-        .natcash .method-badge { background: #00ff00; color: black; }
-
-        .phone { font-size: 1.2em; font-weight: bold; color: #fff; }
-        .amount { color: #ffc107; font-size: 1.1em; display: block; margin: 5px 0; }
-        .tid { background: #000; padding: 8px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace; color: #007bff; }
-        
-        button { 
-            background:#28a745; 
-            color:white; 
-            border:none; 
-            padding:12px; 
-            cursor:pointer; 
-            width:100%; 
-            border-radius:8px; 
-            font-weight: bold;
-            font-size: 16px;
-        }
-        button:hover { opacity: 0.8; }
-        .empty { color: #666; margin-top: 50px; }
+        .card { background:#222; border-left: 8px solid #ff4757; padding:15px; margin:15px auto; border-radius:10px; text-align: left; max-width: 500px; }
+        .tid { background: #000; padding: 10px; border-radius: 5px; display: block; color: #007bff; margin: 10px 0; }
+        button { background:#28a745; color:white; border:none; padding:12px; width:100%; border-radius:8px; font-weight: bold; cursor:pointer; }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <h1>Panèl Kontwòl ⚡</h1>
-        <p style="color: #888;">Depo an tann pou konfimasyon</p>
-        
-        <div id="list">
-            <p class="empty">Ap chaje depo yo...</p>
-        </div>
-    </div>
+    <h1>Panèl Kontwòl ⚡</h1>
+    <div id="list"><p>Ap chaje...</p></div>
 
     <script>
-        const KEY = "hugues"; // Clé de sécurité
-
+        const KEY = "hugues";
         async function load() {
-            try {
-                const res = await fetch('/admin/all-data?key=' + KEY);
-                const data = await res.json();
-                const listDiv = document.getElementById('list');
-
-                if (!data.deposits || data.deposits.length === 0) {
-                    listDiv.innerHTML = '<p class="empty">Pa gen okenn depo pou kounye a.</p>';
-                    return;
-                }
-
-                listDiv.innerHTML = data.deposits.map(d => `
-                    <div class="card ${d.method ? d.method.toLowerCase() : ''}">
-                        <div class="method-badge">${d.method || 'Enkonni'}</div>
-                        <span class="phone">📞 ${d.phone}</span>
-                        <span class="amount">Montan: <b>${d.amount} G</b></span>
-                        <small style="color:#888;">Transaction ID:</small>
-                        <span class="tid">${d.transactionId}</span>
-                        <button onclick="confirmDeposit('${d._id}', '${d.phone}', ${d.amount})">Konfime Transaksyon sa ✅</button>
-                    </div>
-                `).join('');
-
-            } catch (err) {
-                document.getElementById('list').innerHTML = '<p style="color:red;">Erè koneksyon sèvè.</p>';
-            }
+            const res = await fetch('/admin/all-data?key=' + KEY);
+            const data = await res.json();
+            const listDiv = document.getElementById('list');
+            if (!data.deposits || data.deposits.length === 0) { listDiv.innerHTML = '<p>Pa gen depo.</p>'; return; }
+            listDiv.innerHTML = data.deposits.map(d => `
+                <div class="card">
+                    <b>📞 ${d.phone}</b><br>
+                    <span>Montan: ${d.amount} G (${d.method})</span>
+                    <span class="tid">${d.tid}</span>
+                    <button onclick="confirm('${d._id}', '${d.phone}', ${d.amount})">Konfime ✅</button>
+                </div>
+            `).join('');
         }
 
-        async function confirmDeposit(id, phone, amount) {
-            if (!confirm(`Èske ou vle ajoute ${amount}G sou kont ${phone}?`)) return;
-
-            const res = await fetch('/admin/confirm-deposit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: KEY, id: id })
-            });
-
+        async function confirm(id, phone, amount) {
+            const res = await fetch('/admin/confirm-deposit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: KEY, id }) });
             const result = await res.json();
-            if (result.success) {
-                alert("Kòb la ajoute ak siksè!");
-                load(); // Rafraîchir la liste
-            } else {
-                alert("Erè: " + result.message);
-            }
+            if (result.success) { alert("OK!"); load(); }
         }
-
-        // Charger au démarrage et rafraîchir toutes le 15 secondes
-        load();
-        setInterval(load, 15000);
+        load(); setInterval(load, 10000);
     </script>
 </body>
 </html>
