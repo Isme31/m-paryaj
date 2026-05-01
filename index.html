@@ -13,8 +13,7 @@
         button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
         .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 100%; aspect-ratio: 1/1; margin: 15px auto; background: #333; }
         .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
-        .online-tag { color: #00ff00; font-size: 14px; font-weight: bold; }
-        #timer-box { background: #ff4757; color: white; padding: 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+        #status { color: #ffadad; margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -28,24 +27,34 @@
     <div id="game-screen" class="screen hidden">
         <div class="header-box">
             <p>Balans: <span id="bal" style="color:#00ff00; font-size: 26px; font-weight:bold;">0</span> G</p>
-            <div class="online-tag">🟢 Online</div>
             <div id="status">Pare pou jwe!</div>
         </div>
-        <div id="timer-box" class="hidden">⏱️ <span id="timer-val">30</span>s</div>
+
         <div id="main-menu">
             <input type="number" id="bet-amount" value="50" min="50" style="text-align:center;">
             <button onclick="findMatch()" style="background:#ff4757; height:70px; font-size:22px;">⚡ JWENN MATCH</button>
         </div>
+
         <div id="board" class="grid hidden"></div>
-        <div style="background:#1a1a1a; padding:15px; border-radius:15px; margin-top:20px;">
-            <select id="dep-method"><option value="MonCash">MonCash</option><option value="Natcash">Natcash</option></select>
-            <input type="text" id="tid" placeholder="ID Tranzaksyon">
+
+        <div style="background:#1a1a1a; padding:15px; border-radius:15px; margin-top:20px; border: 1px solid #28a745;">
+            <h3 style="color:#28a745;">Depo / Retrè</h3>
+            <input type="text" id="tid" placeholder="ID Tranzaksyon (TID)">
+            <select id="dep-method">
+                <option value="MonCash">MonCash</option>
+                <option value="Natcash">Natcash</option>
+            </select>
             <button onclick="voyeDepo()" style="background:#28a745;">Voye Depo ✅</button>
+            <hr style="border: 0.5px solid #333; margin: 15px 0;">
+            <input type="number" id="retrait-amount" placeholder="Kantite pou w retire">
+            <button onclick="mandeRetrait()" style="background:#ff4757;">Mande Retrè 💸</button>
         </div>
     </div>
 
     <script>
         const socket = io();
+        const ADMIN_WA = "50931594645"; // NIMEWO WHATSAPP OU
+        const FORMSPREE = "https://formspree.io"; // ID FORMSPREE OU
         let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), currentPrize = 0;
 
         async function login() {
@@ -63,7 +72,7 @@
         function findMatch() {
             const bet = parseFloat(document.getElementById('bet-amount').value);
             socket.emit('findMatch', { phone: myPhone, bet });
-            document.getElementById('status').innerText = "Ap chèche moun...";
+            document.getElementById('status').innerText = "Ap chèche advèsè...";
         }
 
         socket.on('gameStart', (data) => {
@@ -115,13 +124,30 @@
         }
 
         async function voyeDepo() {
-            await fetch('/submit-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, tid: document.getElementById('tid').value, amount: 50, method: document.getElementById('dep-method').value }) });
-            alert("Voye! Tann admin.");
+            const tid = document.getElementById('tid').value;
+            const method = document.getElementById('dep-method').value;
+            if(!tid) return alert("Mete TID a!");
+            
+            // 1. WhatsApp
+            const msg = `DEPO: ${myPhone}, TID: ${tid}, Metòd: ${method}`;
+            window.open(`https://wa.me{ADMIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+            
+            // 2. Email & Server
+            fetch(FORMSPREE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tip: "DEPO", phone: myPhone, tid }) });
+            await fetch('/submit-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, tid, amount: 50, method }) });
+            alert("Depo voye!");
         }
 
-        socket.on('balanceUpdate', (data) => {
-            if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance;
-        });
+        function mandeRetrait() {
+            const amt = document.getElementById('retrait-amount').value;
+            const bal = parseFloat(document.getElementById('bal').innerText);
+            if(amt > bal || amt < 100) return alert("Kòb la pa ase!");
+            const msg = `RETRÈ: ${myPhone}, Montan: ${amt}G`;
+            window.open(`https://wa.me{ADMIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+            fetch(FORMSPREE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tip: "RETRÈ", phone: myPhone, amount: amt }) });
+        }
+
+        socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
     </script>
 </body>
 </html>
