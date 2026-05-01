@@ -1,31 +1,25 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Blitz</title>
+    <meta charset="UTF-8"><title>Admin Blitz</title>
     <style>
         body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
         .card { background:#222; border-left: 8px solid #ff4757; padding:15px; margin:15px auto; border-radius:10px; text-align: left; max-width: 500px; }
-        button { background:#28a745; color:white; border:none; padding:12px; width:100%; border-radius:8px; font-weight: bold; cursor:pointer; }
+        button { background:#28a745; color:white; border:none; padding:10px; width:100%; border-radius:5px; cursor:pointer; }
     </style>
 </head>
 <body>
     <h1>Panèl Kontwòl ⚡</h1>
     <div id="list">Ap chaje...</div>
-
     <script>
         const KEY = "hugues";
         async function load() {
             const res = await fetch('/admin/all-data?key=' + KEY);
             const data = await res.json();
-            const listDiv = document.getElementById('list');
-            if (!data.deposits || data.deposits.length === 0) { listDiv.innerHTML = '<p>Pa gen okenn depo.</p>'; return; }
-            listDiv.innerHTML = data.deposits.map(d => `
+            document.getElementById('list').innerHTML = data.deposits.map(d => `
                 <div class="card">
-                    <b>📞 ${d.phone}</b><br>
-                    <span>Montan: ${d.amount} G</span><br>
+                    <b>📞 ${d.phone}</b> | 💰 ${d.amount}G<br>
                     <small>ID: ${d.tid}</small>
-                    <button onclick="confirmDep('${d._id}')">Konfime ✅</button>
                 </div>
             `).join('');
         }
