@@ -5,16 +5,15 @@
     <style>
         body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
         .card { background:#222; border-left: 8px solid #ff4757; padding:15px; margin:15px auto; border-radius:10px; text-align: left; max-width: 500px; }
-        button { background:#28a745; color:white; border:none; padding:10px; width:100%; border-radius:5px; cursor:pointer; }
+        button { background:#28a745; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; }
     </style>
 </head>
 <body>
     <h1>Panèl Kontwòl ⚡</h1>
     <div id="list">Ap chaje...</div>
     <script>
-        const KEY = "hugues";
         async function load() {
-            const res = await fetch('/admin/all-data?key=' + KEY);
+            const res = await fetch('/admin/all-data?key=hugues');
             const data = await res.json();
             document.getElementById('list').innerHTML = data.deposits.map(d => `
                 <div class="card">
