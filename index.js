@@ -11,7 +11,7 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Koneksyon MongoDB (Ranplase sa ak lyen pa ou a)
+// Koneksyon MongoDB (Ranplase ak lyen pa w la si w gen youn)
 mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://admin:admin@cluster.mongodb.net/mopyon');
 
 const User = mongoose.model('User', { phone: String, pass: String, balance: { type: Number, default: 0 } });
@@ -30,10 +30,9 @@ app.post('/submit-deposit', async (req, res) => {
     res.json({ success: true });
 });
 
-// Route Admin Sekrè
-const ADMIN_KEY = "hugues";
+// Route Admin (Kle: hugues)
 app.get('/admin/all-data', async (req, res) => {
-    if (req.query.key !== ADMIN_KEY) return res.status(401).send("Aksè refize");
+    if (req.query.key !== "hugues") return res.status(401).send("Aksè refize");
     const deposits = await Deposit.find({ status: 'pending' });
     res.json({ deposits });
 });
@@ -55,8 +54,7 @@ io.on('connection', (socket) => {
     socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
     
     socket.on('win', async ({ phone, prize }) => {
-        await User.findOneAndUpdate({ phone }, { $inc: { balance: prize } });
-        const user = await User.findOne({ phone });
+        const user = await User.findOneAndUpdate({ phone }, { $inc: { balance: prize } }, { new: true });
         io.emit('balanceUpdate', { phone, newBalance: user.balance });
     });
 });
