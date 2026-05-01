@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ht">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡ Online</title>
+    <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
@@ -23,19 +22,18 @@
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <button onclick="login()">Konekte pou Jwe</button>
+        <button onclick="login()">Konekte</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div style="background:#222; padding:10px; border-radius:10px;">
+        <div style="background:#222; padding:10px; border-radius:10px; border:1px solid #333;">
             <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status" style="color:#ffc107;">Pare pou Defi a! ⚔️</div>
+            <div id="status" style="font-weight:bold;">Pare pou jwe!</div>
         </div>
         
         <div id="main-menu" style="margin-top:20px;">
-            <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (Miz 50G)</button>
-            <div style="margin:10px;">-- OSWA --</div>
-            <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
+            <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
+            <input type="text" id="join-code" placeholder="Antre kòd zanmi">
             <button onclick="joinPrivate()" style="background:#ffc107; color:black;">Antre nan Tab</button>
         </div>
 
@@ -51,7 +49,7 @@
                 <option value="Natcash">Mwen voye sou Natcash</option>
             </select>
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
-            <button onclick="voyeDepo()" style="background:#28a745;">Mande Konfimasyon ✅</button>
+            <button onclick="voyeDepo()" style="background:#28a745;">Mande Depo ✅</button>
         </div>
     </div>
 
@@ -79,64 +77,63 @@
         async function voyeDepo() {
             const tid = document.getElementById('tid').value;
             const method = document.getElementById('dep-method').value;
-            if(!tid) return alert("Antre ID a!");
+            if(!tid) return alert("ID manke!");
             await fetch('/submit-deposit', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ phone: myPhone, tid, amount: 50, method })
             });
-            alert("Depo voye! Tann admin.");
+            alert("Depo voye bay admin!");
         }
 
         socket.on('balanceUpdate', (data) => {
             if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance;
         });
 
+        socket.on('error_msg', (msg) => {
+            alert("⚠️ " + msg);
+            document.getElementById('status').innerText = "Rechaje kont ou!";
+            document.getElementById('status').style.color = "#ff4757";
+        });
+
         function createPrivate() {
+            const bal = parseFloat(document.getElementById('bal').innerText);
+            if(bal < 50) return alert("Rechaje kont ou pou w ka jwe!");
+            
             const code = Math.random().toString(36).substring(2, 7).toUpperCase();
             socket.emit('createPrivate', { room: code, phone: myPhone });
-            window.open(`https://wa.me m!+Antre+kòd+la:+*${code}*`, '_blank');
-            document.getElementById('status').innerText = "Tann zanmi an ak kòd: " + code;
-            document.getElementById('main-menu').classList.add('hidden');
+            window.open(`https://wa.me{code}*`, '_blank');
+            document.getElementById('status').innerText = "Kòd: " + code;
         }
 
         function joinPrivate() {
             const code = document.getElementById('join-code').value.toUpperCase();
-            if(!code) return alert("Antre kòd la!");
+            if(!code) return alert("Kòd manke!");
             socket.emit('joinPrivate', { room: code, phone: myPhone });
         }
 
         socket.on('gameStart', (data) => {
             currentRoom = data.room;
-            mySymbol = data.players[0] === myPhone ? 'X' : 'O';
+            mySymbol = data.players === myPhone ? 'X' : 'O';
             myTurn = (mySymbol === 'X');
             document.getElementById('board').classList.remove('hidden');
             document.getElementById('main-menu').classList.add('hidden');
-            document.getElementById('status').innerText = "JOU: Ou se " + mySymbol;
+            document.getElementById('status').innerText = "Ou se " + mySymbol;
             renderBoard();
         });
 
         socket.on('opponentMove', (data) => {
             boardData[data.index] = data.symbol;
-            myTurn = true;
-            document.getElementById('status').innerText = "Tou pa w!";
-            renderBoard();
-            if(checkWin5(data.index, data.symbol)) {
-                document.getElementById('status').innerText = "OU PÈDI! ❌";
-                myTurn = false;
-            }
+            myTurn = true; renderBoard();
+            if(checkWin5(data.index, data.symbol)) document.getElementById('status').innerText = "OU PÈDI! ❌";
         });
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol;
-            myTurn = false;
-            renderBoard();
+            boardData[i] = mySymbol; myTurn = false; renderBoard();
             socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            document.getElementById('status').innerText = "Tann advèsè a...";
-
             if(checkWin5(i, mySymbol)) {
-                document.getElementById('status').innerText = "OU GANYEN! 🎉 (+90G)";
+                document.getElementById('status').innerText = "OU GANYEN! 🎉";
                 socket.emit('win', { room: currentRoom, phone: myPhone });
             }
         }
@@ -153,7 +150,7 @@
         }
 
         function checkWin5(idx, s) {
-            const r=Math.floor(idx/10), c=idx%10, dirs=[[0,1],[1,0],[1,1],[1,-1]];
+            const r=Math.floor(idx/10), c=idx%10, dirs=[,,,[1,-1]];
             return dirs.some(([dr, dc]) => {
                 let count = 1;
                 [1, -1].forEach(d => {
