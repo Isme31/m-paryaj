@@ -8,27 +8,47 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Koneksyon MongoDB
+// Connexion à MongoDB
 mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority")
-.then(() => console.log("✅ MongoDB konekte!"))
-.catch(err => console.log("❌ Erè MongoDB:", err));
+.then(() => console.log("✅ MongoDB connecté !"))
+.catch(err => console.log("❌ Erreur MongoDB :", err));
 
-// Modèl Done
-const User = mongoose.model('User', { phone: String, password: String, balance: { type: Number, default: 0 } });
-const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, tid: String, method: String, status: { type: String, default: 'pending' } });
+// Modèles de données
+const User = mongoose.model('User', { 
+    phone: String, 
+    password: String, 
+    balance: { type: Number, default: 0 } 
+});
+
+const Deposit = mongoose.model('Deposit', { 
+    phone: String, 
+    amount: Number, 
+    tid: String, 
+    method: String, 
+    status: { type: String, default: 'pending' } 
+});
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// Servir les fichiers statiques du dossier racine
+app.use(express.static(__dirname));
 
 let waitingPlayers = []; 
 let gameTimers = {};
 let onlineUsers = 0;
 
-// --- WOUT POU PAJ YO ---
-app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, 'index.html')));
-app.get('/admin', (req, res) => res.sendFile(path.resolve(__dirname, 'admin.html')));
+// --- ROUTES POUR LES PAGES ---
 
-// --- LOGIK TIMER ---
+// Page d'accueil (Le jeu)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Page Admin - On utilise /admin-panel pour être sûr que ça charge admin.html
+app.get('/admin-panel', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+// --- LOGIQUE DU TIMER ---
 function startTurnTimer(room, activePhone, prize) {
     if (gameTimers[room]) clearTimeout(gameTimers[room]);
     gameTimers[room] = setTimeout(async () => {
@@ -40,50 +60,70 @@ function startTurnTimer(room, activePhone, prize) {
     }, 32000);
 }
 
-// --- LOGIN / SIGNUP ---
+// --- API ROUTES ---
+
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     try {
         let user = await User.findOne({ phone });
-        if (!user) { user = new User({ phone, password }); await user.save(); }
-        if (user.password === password) res.json({ success: true, balance: user.balance, phone: user.phone });
-        else res.json({ success: false, message: "Modpas pa bon!" });
-    } catch (e) { res.json({ success: false }); }
+        if (!user) { 
+            user = new User({ phone, password }); 
+            await user.save(); 
+        }
+        if (user.password === password) {
+            res.json({ success: true, balance: user.balance, phone: user.phone });
+        } else {
+            res.json({ success: false, message: "Mot de passe incorrect !" });
+        }
+    } catch (e) {
+        res.json({ success: false });
+    }
 });
 
-// --- SUBMIT DEPOSIT ---
 app.post('/submit-deposit', async (req, res) => {
     try {
         await new Deposit(req.body).save();
         res.json({ success: true });
-    } catch (e) { res.json({ success: false }); }
+    } catch (e) {
+        res.json({ success: false });
+    }
 });
 
-// --- ADMIN DATA ---
+// Récupérer les dépôts pour l'admin
 app.get('/admin/all-data', async (req, res) => {
     const { key } = req.query;
-    if (key !== "hugues") return res.status(403).send("Aksè Refize");
+    if (key !== "hugues") return res.status(403).send("Accès refusé");
     try {
         const deposits = await Deposit.find({ status: 'pending' });
         res.json({ deposits });
-    } catch (e) { res.status(500).json({ error: "Erè baz done" }); }
+    } catch (e) {
+        res.status(500).json({ error: "Erreur DB" });
+    }
 });
 
+// Confirmer un dépôt
 app.post('/admin/confirm-deposit', async (req, res) => {
     const { key, id } = req.body;
     if (key !== "hugues") return res.status(403).json({ success: false });
     try {
         const dep = await Deposit.findById(id);
         if (dep && dep.status === 'pending') {
-            const user = await User.findOneAndUpdate({ phone: dep.phone }, { $inc: { balance: dep.amount } }, { new: true });
-            dep.status = 'confirmed'; await dep.save();
+            const user = await User.findOneAndUpdate(
+                { phone: dep.phone }, 
+                { $inc: { balance: dep.amount } }, 
+                { new: true }
+            );
+            dep.status = 'confirmed'; 
+            await dep.save();
             io.emit('balanceUpdate', { phone: dep.phone, newBalance: user.balance });
             res.json({ success: true });
         }
-    } catch (e) { res.json({ success: false }); }
+    } catch (e) {
+        res.json({ success: false });
+    }
 });
 
-// --- SOCKET.IO (Jere jwèt la) ---
+// --- SOCKET.IO ---
 io.on('connection', (socket) => {
     onlineUsers++;
     io.emit('updateOnlineCount', onlineUsers);
@@ -91,7 +131,7 @@ io.on('connection', (socket) => {
     socket.on('findMatch', async (data) => {
         const { phone, bet } = data;
         const user = await User.findOne({ phone });
-        if (!user || user.balance < bet) return socket.emit('error_msg', "Balans ou twò ba!");
+        if (!user || user.balance < bet) return socket.emit('error_msg', "Balance trop basse !");
 
         const opponentIndex = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== phone);
         if (opponentIndex !== -1) {
@@ -99,13 +139,14 @@ io.on('connection', (socket) => {
             waitingPlayers.splice(opponentIndex, 1);
             const room = `room_${opponent.phone}_${phone}`;
             const prize = bet * 1.8; 
-            socket.join(room); opponent.socket.join(room);
+            socket.join(room); 
+            opponent.socket.join(room);
             await User.updateMany({ phone: { $in: [phone, opponent.phone] } }, { $inc: { balance: -bet } });
             io.to(room).emit('gameStart', { room, players: [opponent.phone, phone], firstTurn: opponent.phone, prize });
             startTurnTimer(room, opponent.phone, prize);
         } else {
             waitingPlayers.push({ phone, bet, socket });
-            socket.emit('status_update', `🔍 Chèche match (${bet}G)...`);
+            socket.emit('status_update', `🔍 Recherche de match (${bet}G)...`);
         }
     });
 
@@ -129,4 +170,6 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`🚀 Sèvè konplè sou pò ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`🚀 Serveur lancé sur le port ${PORT}`);
+});
