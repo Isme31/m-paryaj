@@ -1,61 +1,35 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Direk ⚡</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Blitz</title>
     <style>
-        body { background:#111; color:white; font-family:sans-serif; text-align:center; }
-        .card { background:#222; padding:15px; margin:10px auto; border-radius:10px; max-width:400px; border-left: 5px solid #007bff; }
-        button { background:#28a745; color:white; border:none; padding:10px; cursor:pointer; width:100%; border-radius:5px; }
+        body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
+        .card { background:#222; border-left: 8px solid #ff4757; padding:15px; margin:15px auto; border-radius:10px; text-align: left; max-width: 500px; }
+        button { background:#28a745; color:white; border:none; padding:12px; width:100%; border-radius:8px; font-weight: bold; cursor:pointer; }
     </style>
 </head>
 <body>
-    <h1>Kontwòl San Render ⚡</h1>
-    <div id="list">Ap chaje done yo depi MongoDB...</div>
+    <h1>Panèl Kontwòl ⚡</h1>
+    <div id="list">Ap chaje...</div>
 
     <script>
-        // KONFIGIRASYON MONGODB (Ou jwenn sa nan Atlas)
-        const API_KEY = "METE_API_KEY_OU_LA"; 
-        const APP_ID = "METE_APP_ID_OU_LA";
-        const BASE_URL = `https://mongodb-api.com{APP_ID}/endpoint/data/v1/action/`;
-
-        async function loadDeposits() {
-            const res = await fetch(BASE_URL + "find", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "api-key": API_KEY },
-                body: JSON.stringify({
-                    dataSource: "Cluster0",
-                    database: "mopyon-paryaj",
-                    collection: "deposits",
-                    filter: { status: "pending" }
-                })
-            });
+        const KEY = "hugues";
+        async function load() {
+            const res = await fetch('/admin/all-data?key=' + KEY);
             const data = await res.json();
-            renderList(data.documents);
-        }
-
-        function renderList(deposits) {
             const listDiv = document.getElementById('list');
-            if (deposits.length === 0) { listDiv.innerHTML = "Pa gen okenn depo."; return; }
-            
-            listDiv.innerHTML = deposits.map(d => `
+            if (!data.deposits || data.deposits.length === 0) { listDiv.innerHTML = '<p>Pa gen okenn depo.</p>'; return; }
+            listDiv.innerHTML = data.deposits.map(d => `
                 <div class="card">
-                    <p><b>Telefòn:</b> ${d.phone}</p>
-                    <p><b>Montan:</b> ${d.amount}G</p>
-                    <p><b>TID:</b> ${d.tid}</p>
-                    <button onclick="approve('${d._id}', '${d.phone}', ${d.amount})">KONFIME ✅</button>
+                    <b>📞 ${d.phone}</b><br>
+                    <span>Montan: ${d.amount} G</span><br>
+                    <small>ID: ${d.tid}</small>
+                    <button onclick="confirmDep('${d._id}')">Konfime ✅</button>
                 </div>
             `).join('');
         }
-
-        async function approve(id, phone, amount) {
-            // 1. Mete depo a "approved"
-            // 2. Ajoute balans sou kont jwè a
-            alert("M ap valide " + amount + "G pou " + phone);
-            // Isit la nou voye "updateOne" nan MongoDB dirèkteman
-        }
-
-        loadDeposits();
+        load(); setInterval(load, 10000);
     </script>
 </body>
 </html>
