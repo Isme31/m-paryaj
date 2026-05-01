@@ -1,175 +1,104 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const path = require('path');
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon Blitz ⚡</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; }
+        .screen { width: 100%; max-width: 600px; margin: auto; padding: 20px; box-sizing: border-box; }
+        .hidden { display: none; }
+        .header-box { background:#1e1e1e; padding:15px; border-radius:15px; border: 1px solid #333; margin-bottom: 20px; }
+        input, button, select { padding: 18px; margin: 8px 0; border-radius: 12px; width: 100%; border: none; font-size: 16px; box-sizing: border-box; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 100%; aspect-ratio: 1/1; margin: 15px auto; background: #333; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
+        .online-tag { color: #00ff00; font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="auth-screen" class="screen">
+        <h1>Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <input type="password" id="pass" placeholder="Modpas">
+        <button onclick="login()">Konekte / Kreye Kont</button>
+    </div>
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+    <div id="game-screen" class="screen hidden">
+        <div class="header-box">
+            <p>Balans: <span id="bal" style="color:#00ff00; font-size: 26px; font-weight:bold;">0</span> G</p>
+            <div class="online-tag">🟢 <span id="online-count">0</span> moun online</div>
+            <div id="status">Pare pou jwe!</div>
+        </div>
+        <div id="main-menu">
+            <input type="number" id="bet-amount" value="50" min="50" style="text-align:center;">
+            <button onclick="findMatch()" style="background:#ff4757; height:80px; font-size:22px;">⚡ JWENN MATCH</button>
+        </div>
+        <div id="board" class="grid hidden"></div>
+        <div style="background:#1a1a1a; padding:15px; border-radius:15px; margin-top:20px;">
+            <p style="font-size:12px; color:#888;">MonCash: 31594645 | Natcash: 55110103</p>
+            <input type="text" id="tid" placeholder="ID Tranzaksyon">
+            <button onclick="voyeDepo()" style="background:#28a745;">Voye Depo ✅</button>
+        </div>
+    </div>
 
-// Connexion à MongoDB
-mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/blitz_db?retryWrites=true&w=majority")
-.then(() => console.log("✅ MongoDB connecté !"))
-.catch(err => console.log("❌ Erreur MongoDB :", err));
+    <script>
+        const socket = io();
+        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), currentPrize = 0;
 
-// Modèles de données
-const User = mongoose.model('User', { 
-    phone: String, 
-    password: String, 
-    balance: { type: Number, default: 0 } 
-});
+        socket.on('updateOnlineCount', (count) => { document.getElementById('online-count').innerText = count; });
 
-const Deposit = mongoose.model('Deposit', { 
-    phone: String, 
-    amount: Number, 
-    tid: String, 
-    method: String, 
-    status: { type: String, default: 'pending' } 
-});
-
-app.use(express.json());
-// Servir les fichiers statiques du dossier racine
-app.use(express.static(__dirname));
-
-let waitingPlayers = []; 
-let gameTimers = {};
-let onlineUsers = 0;
-
-// --- ROUTES POUR LES PAGES ---
-
-// Page d'accueil (Le jeu)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Page Admin - On utilise /admin-panel pour être sûr que ça charge admin.html
-app.get('/admin-panel', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin.html'));
-});
-
-// --- LOGIQUE DU TIMER ---
-function startTurnTimer(room, activePhone, prize) {
-    if (gameTimers[room]) clearTimeout(gameTimers[room]);
-    gameTimers[room] = setTimeout(async () => {
-        io.to(room).emit('timeout', { loser: activePhone });
-        const players = room.replace('room_', '').split('_');
-        const winnerPhone = players.find(p => p !== activePhone);
-        if (winnerPhone) await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } });
-        delete gameTimers[room];
-    }, 32000);
-}
-
-// --- API ROUTES ---
-
-app.post('/login', async (req, res) => {
-    const { phone, password } = req.body;
-    try {
-        let user = await User.findOne({ phone });
-        if (!user) { 
-            user = new User({ phone, password }); 
-            await user.save(); 
+        async function login() {
+            const phone = document.getElementById('phone').value;
+            const pass = document.getElementById('pass').value;
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password: pass }) });
+            const data = await res.json();
+            if(data.success) {
+                myPhone = data.phone; document.getElementById('bal').innerText = data.balance;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+            }
         }
-        if (user.password === password) {
-            res.json({ success: true, balance: user.balance, phone: user.phone });
-        } else {
-            res.json({ success: false, message: "Mot de passe incorrect !" });
+
+        function findMatch() {
+            const bet = parseFloat(document.getElementById('bet-amount').value);
+            socket.emit('findMatch', { phone: myPhone, bet });
         }
-    } catch (e) {
-        res.json({ success: false });
-    }
-});
 
-app.post('/submit-deposit', async (req, res) => {
-    try {
-        await new Deposit(req.body).save();
-        res.json({ success: true });
-    } catch (e) {
-        res.json({ success: false });
-    }
-});
+        socket.on('gameStart', (data) => {
+            currentRoom = data.room; currentPrize = data.prize;
+            mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
+            myTurn = (data.firstTurn === myPhone);
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('board').classList.remove('hidden');
+            document.getElementById('status').innerText = myTurn ? "Tou pa w!" : "Tann advèsè a...";
+            renderBoard();
+        });
 
-// Récupérer les dépôts pour l'admin
-app.get('/admin/all-data', async (req, res) => {
-    const { key } = req.query;
-    if (key !== "hugues") return res.status(403).send("Accès refusé");
-    try {
-        const deposits = await Deposit.find({ status: 'pending' });
-        res.json({ deposits });
-    } catch (e) {
-        res.status(500).json({ error: "Erreur DB" });
-    }
-});
+        socket.on('opponentMove', (data) => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); document.getElementById('status').innerText = "Tou pa w!"; });
 
-// Confirmer un dépôt
-app.post('/admin/confirm-deposit', async (req, res) => {
-    const { key, id } = req.body;
-    if (key !== "hugues") return res.status(403).json({ success: false });
-    try {
-        const dep = await Deposit.findById(id);
-        if (dep && dep.status === 'pending') {
-            const user = await User.findOneAndUpdate(
-                { phone: dep.phone }, 
-                { $inc: { balance: dep.amount } }, 
-                { new: true }
-            );
-            dep.status = 'confirmed'; 
-            await dep.save();
-            io.emit('balanceUpdate', { phone: dep.phone, newBalance: user.balance });
-            res.json({ success: true });
+        function makeMove(i) {
+            if(!myTurn || boardData[i] !== "") return;
+            boardData[i] = mySymbol; myTurn = false; renderBoard();
+            const opp = currentRoom.replace('room_', '').split('_').find(p => p !== myPhone);
+            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, nextPlayer: opp, prize: currentPrize });
         }
-    } catch (e) {
-        res.json({ success: false });
-    }
-});
 
-// --- SOCKET.IO ---
-io.on('connection', (socket) => {
-    onlineUsers++;
-    io.emit('updateOnlineCount', onlineUsers);
-
-    socket.on('findMatch', async (data) => {
-        const { phone, bet } = data;
-        const user = await User.findOne({ phone });
-        if (!user || user.balance < bet) return socket.emit('error_msg', "Balance trop basse !");
-
-        const opponentIndex = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== phone);
-        if (opponentIndex !== -1) {
-            const opponent = waitingPlayers[opponentIndex];
-            waitingPlayers.splice(opponentIndex, 1);
-            const room = `room_${opponent.phone}_${phone}`;
-            const prize = bet * 1.8; 
-            socket.join(room); 
-            opponent.socket.join(room);
-            await User.updateMany({ phone: { $in: [phone, opponent.phone] } }, { $inc: { balance: -bet } });
-            io.to(room).emit('gameStart', { room, players: [opponent.phone, phone], firstTurn: opponent.phone, prize });
-            startTurnTimer(room, opponent.phone, prize);
-        } else {
-            waitingPlayers.push({ phone, bet, socket });
-            socket.emit('status_update', `🔍 Recherche de match (${bet}G)...`);
+        function renderBoard() {
+            const b = document.getElementById('board'); b.innerHTML = "";
+            boardData.forEach((val, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell'; cell.innerText = val;
+                cell.onclick = () => makeMove(i); b.appendChild(cell);
+            });
         }
-    });
 
-    socket.on('move', (data) => {
-        socket.to(data.room).emit('opponentMove', data);
-        startTurnTimer(data.room, data.nextPlayer, data.prize);
-    });
-
-    socket.on('win', async (data) => {
-        if (gameTimers[data.room]) clearTimeout(gameTimers[data.room]);
-        await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: data.prize } });
-        io.to(data.room).emit('gameOver', { winner: data.phone });
-        delete gameTimers[data.room];
-    });
-
-    socket.on('disconnect', () => {
-        onlineUsers--;
-        io.emit('updateOnlineCount', onlineUsers);
-        waitingPlayers = waitingPlayers.filter(p => p.socket.id !== socket.id);
-    });
-});
-
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-    console.log(`🚀 Serveur lancé sur le port ${PORT}`);
-});
+        async function voyeDepo() {
+            await fetch('/submit-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, tid: document.getElementById('tid').value, amount: 50, method: "MonCash" }) });
+            alert("Voye!");
+        }
+        socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
+        socket.on('status_update', (msg) => document.getElementById('status').innerText = msg);
+    </script>
+</body>
+</html>
