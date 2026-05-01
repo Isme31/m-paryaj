@@ -7,12 +7,11 @@
         body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
         .card { background:#222; border-left: 8px solid #ff4757; padding:15px; margin:15px auto; border-radius:10px; text-align: left; max-width: 500px; }
         button { background:#28a745; color:white; border:none; padding:12px; width:100%; border-radius:8px; font-weight: bold; cursor:pointer; }
-        .tid { color: #007bff; background: #000; padding: 5px; display: block; margin: 10px 0; }
     </style>
 </head>
 <body>
     <h1>Panèl Kontwòl ⚡</h1>
-    <div id="list">Ap chaje depo yo...</div>
+    <div id="list">Ap chaje...</div>
 
     <script>
         const KEY = "hugues";
@@ -24,19 +23,15 @@
             listDiv.innerHTML = data.deposits.map(d => `
                 <div class="card">
                     <b>📞 ${d.phone}</b><br>
-                    <span>Montan: ${d.amount} G (${d.method})</span>
-                    <span class="tid">ID: ${d.tid}</span>
+                    <span>Montan: ${d.amount} G</span><br>
+                    <small>ID: ${d.tid}</small>
                     <button onclick="confirmDep('${d._id}')">Konfime ✅</button>
                 </div>
             `).join('');
         }
 
         async function confirmDep(id) {
-            const res = await fetch('/admin/confirm-deposit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: KEY, id })
-            });
+            const res = await fetch('/admin/confirm-deposit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: KEY, id }) });
             if ((await res.json()).success) { alert("Konfime!"); load(); }
         }
         load(); setInterval(load, 10000);
