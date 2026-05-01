@@ -15,10 +15,22 @@ const Deposit = mongoose.model('Deposit', { phone: String, amount: Number, trans
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// --- GESTION MATCHMAKING ---
 let waitingPlayer = null;
+let gameTimers = {};
 
-// --- ROUTES ---
+// --- LOJIK TIMER SÈVÈ ---
+function startTurnTimer(room, activePhone) {
+    if (gameTimers[room]) clearTimeout(gameTimers[room]);
+    gameTimers[room] = setTimeout(async () => {
+        io.to(room).emit('timeout', { loser: activePhone });
+        const players = room.replace('room_', '').split('_');
+        const winnerPhone = players.find(p => p !== activePhone);
+        if (winnerPhone) await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: 90 } });
+        delete gameTimers[room];
+    }, 32000); // 32s (pou bay kliyan an tan senkronize)
+}
+
+// --- ROUTES ADMIN & LOGIN ---
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     let user = await User.findOne({ phone });
@@ -28,8 +40,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/submit-deposit', async (req, res) => {
-    const { phone, tid, amount, method } = req.body;
-    await new Deposit({ phone, amount, transactionId: tid, method }).save();
+    await new Deposit(req.body).save();
     res.json({ success: true });
 });
 
@@ -52,50 +63,31 @@ app.post('/admin/confirm-deposit', async (req, res) => {
 
 // --- SOCKET.IO ---
 io.on('connection', (socket) => {
-    // Matchmaking
     socket.on('findMatch', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < 50) return socket.emit('error_msg', "Rechaje kont ou pou w jwe (50G)!");
+        if (!user || user.balance < 50) return socket.emit('error_msg', "Balans ba (50G)!");
 
         if (waitingPlayer && waitingPlayer.phone !== data.phone) {
-            const room = `room_${waitingPlayer.phone}_${data.phone}`;
             const opponent = waitingPlayer;
+            const room = `room_${opponent.phone}_${data.phone}`;
             waitingPlayer = null;
-
-            socket.join(room);
-            opponent.socket.join(room);
-
+            socket.join(room); opponent.socket.join(room);
             await User.updateMany({ phone: { $in: [data.phone, opponent.phone] } }, { $inc: { balance: -50 } });
-            io.to(room).emit('gameStart', { room, players: [opponent.phone, data.phone] });
+            io.to(room).emit('gameStart', { room, players: [opponent.phone, data.phone], firstTurn: opponent.phone });
+            startTurnTimer(room, opponent.phone);
         } else {
             waitingPlayer = { phone: data.phone, socket: socket };
-            socket.emit('status_update', "🔍 Ap chache advèsè...");
+            socket.emit('status_update', "🔍 Ap chache jwè...");
         }
     });
 
-    socket.on('cancelSearch', () => {
-        if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
-            waitingPlayer = null;
-            socket.emit('status_update', "Chache anile.");
-        }
+    socket.on('move', (data) => {
+        socket.to(data.room).emit('opponentMove', data);
+        startTurnTimer(data.room, data.nextPlayer);
     });
 
-    // Jwèt ak Kòd
-    socket.on('createPrivate', (data) => { socket.join(data.room); socket.myPhone = data.phone; });
-    socket.on('joinPrivate', async (data) => {
-        const room = io.sockets.adapter.rooms.get(data.room);
-        const user = await User.findOne({ phone: data.phone });
-        if (user && user.balance < 50) return socket.emit('error_msg', "Rechaje kont ou!");
-        if (room && room.size === 1) {
-            const hostSocket = io.sockets.sockets.get(Array.from(room)[0]);
-            socket.join(data.room);
-            await User.updateMany({ phone: { $in: [data.phone, hostSocket.myPhone] } }, { $inc: { balance: -50 } });
-            io.to(data.room).emit('gameStart', { room: data.room, players: [hostSocket.myPhone, data.phone] });
-        } else { socket.emit('error_msg', "Kòd envalid!"); }
-    });
-
-    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
     socket.on('win', async (data) => {
+        if (gameTimers[data.room]) clearTimeout(gameTimers[data.room]);
         await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: 90 } });
         io.to(data.room).emit('gameOver', { winner: data.phone });
     });
