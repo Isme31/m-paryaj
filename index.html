@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡</title>
+    <title>Mopyon Blitz ⚡ - Expert Bot</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
@@ -22,8 +22,7 @@
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <input type="text" id="ref" placeholder="Paren (Opsyonèl)">
-        <button onclick="login()">Konekte pou Jwe</button>
+        <button onclick="login()">Konekte</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
@@ -33,21 +32,15 @@
         </div>
         
         <div id="main-menu">
+            <button onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo Expert 🤖</button>
+            <br>
             <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
-            <div style="margin: 10px 0; color:#888;">— OSWA —</div>
-            <input type="text" id="join-code" placeholder="Antre kòd zanmi an">
-            <button onclick="joinPrivate()" style="background:#ffc107; color:black">Antre nan Tab la</button>
-            <br><br>
-            <button id="robotBtn" class="hidden" onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo (Admin)</button>
+            <input type="text" id="join-code" placeholder="Antre kòd zanmi">
+            <button onclick="joinPrivate()">Antre nan Tab</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
-
-        <div style="margin-top:20px; background:#222; padding:15px; border-radius:10px;">
-            <p>Depo MonCash: <b>55110103</b></p>
-            <input type="text" id="tid" placeholder="ID Tranzaksyon">
-            <button onclick="voyeDepo()">Mande Depo</button>
-        </div>
+        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti</button>
     </div>
 
     <script>
@@ -60,95 +53,105 @@
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value, ref: id('ref').value })
+                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value })
             });
             const data = await res.json();
             if(data.success) {
                 myPhone = data.phone; id('bal').innerText = data.balance;
                 id('auth-screen').classList.add('hidden');
                 id('game-screen').classList.remove('hidden');
-                if(myPhone === "55110103" || myPhone === "31594645") id('robotBtn').classList.remove('hidden');
             }
         }
 
-        async function voyeDepo() {
-            const tid = id('tid').value;
-            if(!tid) return alert("ID manke");
-            const res = await fetch('/submit-deposit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: myPhone, tid, amount: 50 })
-            });
-            const data = await res.json();
-            if(data.success) alert("Depo voye! Tann admin.");
-        }
-
-        socket.on('balanceUpdate', (data) => {
-            if(data.phone === myPhone) id('bal').innerText = data.newBalance;
-        });
-
-        function createPrivate() {
-            const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            socket.emit('createPrivate', { room: code, phone: myPhone });
-            window.open(`https://wa.me{code}*`, '_blank');
-            id('status').innerText = "Kòd ou: " + code;
-            id('main-menu').classList.add('hidden');
-        }
-
-        function joinPrivate() {
-            const code = id('join-code').value.toUpperCase();
-            socket.emit('joinPrivate', { room: code, phone: myPhone });
-        }
-
-        socket.on('gameStart', (data) => {
-            currentRoom = data.room;
-            mySymbol = data.players[0] === myPhone ? 'X' : 'O';
-            myTurn = (mySymbol === 'X');
-            id('board').classList.remove('hidden');
-            id('main-menu').classList.add('hidden');
-            id('status').innerText = "Ou se " + mySymbol;
-            renderBoard();
-        });
-
-        socket.on('opponentMove', (data) => {
-            boardData[data.index] = data.symbol;
-            myTurn = true;
-            id('status').innerText = "Tou pa w!";
-            renderBoard();
-            if(checkWin5(data.index, data.symbol)) { id('status').innerText = "Ou pèdi! ❌"; myTurn = false; }
-        });
-
+        // --- LOJIK ROBO EXPERT ---
         function startRobot() {
             isRobot = true; mySymbol = "X"; myTurn = true;
             boardData = Array(100).fill("");
             id('main-menu').classList.add('hidden');
             id('board').classList.remove('hidden');
-            id('status').innerText = "Ou vs Robo!";
+            id('status').innerText = "Ou vs Robo Expert! (Ou se X)";
             renderBoard();
         }
 
         function robotLogic() {
-            let empty = boardData.map((v,i) => v === "" ? i : null).filter(v => v !== null);
-            if(empty.length > 0) {
-                let move = empty[Math.floor(Math.random() * empty.length)];
-                boardData[move] = "O";
-                renderBoard();
-                if(checkWin5(move, "O")) { id('status').innerText = "Robo a ganyen! 🤖"; myTurn = false; }
-                else { myTurn = true; id('status').innerText = "Tou pa w!"; }
+            const robotSym = "O";
+            let bestScore = -Infinity;
+            let move = -1;
+
+            // Analize chak kaz vid
+            for (let i = 0; i < 100; i++) {
+                if (boardData[i] === "") {
+                    let score = evaluateMove(i, robotSym, mySymbol);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = i;
+                    }
+                }
             }
+
+            if (move !== -1) {
+                boardData[move] = robotSym;
+                renderBoard();
+                if (checkWin5(move, robotSym)) {
+                    id('status').innerText = "Robo a BAT OU! 🤖🔥";
+                    myTurn = false;
+                } else {
+                    myTurn = true;
+                    id('status').innerText = "Tou pa w!";
+                }
+            }
+        }
+
+        function evaluateMove(index, s, opp) {
+            let score = 0;
+            // Robo a bay priyorite atake (2x pwa) ak bloke jwè a
+            score += getPotential(index, s) * 2; 
+            score += getPotential(index, opp) * 1.5; 
+            return score;
+        }
+
+        function getPotential(index, s) {
+            const size = 10;
+            const r = Math.floor(index / size);
+            const c = index % size;
+            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+            let weight = 0;
+
+            for (let [dr, dc] of dirs) {
+                let line = 1;
+                // Konte pyon ki aliye nan de sans yo
+                for (let i = 1; i < 5; i++) {
+                    let nr = r + dr*i, nc = c + dc*i;
+                    if (nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc] === s) line++;
+                    else break;
+                }
+                for (let i = 1; i < 5; i++) {
+                    let nr = r - dr*i, nc = c - dc*i;
+                    if (nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc] === s) line++;
+                    else break;
+                }
+                
+                if (line >= 5) weight += 10000;
+                else if (line === 4) weight += 1000;
+                else if (line === 3) weight += 100;
+                else if (line === 2) weight += 10;
+            }
+            return weight;
         }
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; myTurn = false;
+            boardData[i] = mySymbol; 
+            myTurn = false;
             renderBoard();
+
             if(checkWin5(i, mySymbol)) {
-                id('status').innerText = "🎉 OU GANYEN!";
-                if(!isRobot) socket.emit('win', { room: currentRoom, phone: myPhone });
+                id('status').innerText = "OU BAT ROBO A! 🎉";
                 return;
             }
-            if(isRobot) setTimeout(robotLogic, 600);
-            else socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+
+            id('status').innerText = "Robo ap reflechi...";
+            setTimeout(robotLogic, 600);
         }
 
         function renderBoard() {
@@ -162,19 +165,19 @@
         }
 
         function checkWin5(index, s) {
-            const size = 10; const r = Math.floor(index / size); const c = index % size;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const r = Math.floor(index / 10), c = index % 10;
+            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
             for (let [dr, dc] of dirs) {
                 let count = 1;
-                for (let i = 1; i < 5; i++) {
-                    let nr = r+dr*i, nc = c+dc*i;
-                    if (nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===s) count++; else break;
+                for (let i=1; i<5; i++) {
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++; else break;
                 }
-                for (let i = 1; i < 5; i++) {
-                    let nr = r-dr*i, nc = c-dc*i;
-                    if (nr>=0 && nr<size && nc>=0 && nc<size && boardData[nr*size+nc]===s) count++; else break;
+                for (let i=1; i<5; i++) {
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++; else break;
                 }
-                if (count >= 5) return true;
+                if(count >= 5) return true;
             }
             return false;
         }
