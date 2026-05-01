@@ -1,80 +1,201 @@
-function robotLogic() {
-    const robotSym = "O";
-    const playerSym = mySymbol; // "X"
-    let bestScore = -Infinity;
-    let move = -1;
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon Blitz ⚡ - Robo Mèt</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
+        .hidden { display: none; } .screen { padding: 20px; }
+        input, button, select { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; }
+        .x { color: #007bff; } .o { color: #ff4757; }
+        .finance-box { background: #222; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+    </style>
+</head>
+<body>
 
-    // 1. Chèche tout kaz ki vid
-    let emptyCells = [];
-    for (let i = 0; i < 100; i++) {
-        if (boardData[i] === "") emptyCells.push(i);
-    }
+    <div id="auth-screen" class="screen">
+        <h1>Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <input type="password" id="pass" placeholder="Modpas">
+        <button onclick="login()">Konekte pou Jwe</button>
+    </div>
 
-    if (emptyCells.length === 0) return;
-
-    // 2. Analize chak kaz pou wè kote ki pi enpòtan
-    for (let i of emptyCells) {
-        let score = 0;
-
-        // --- DEFANS: Bloke jwè a (Trè Enpòtan) ---
-        let dangerLevel = evaluateMove(i, playerSym);
-        if (dangerLevel >= 1000) score += 5000; // Si jwè a pral genyen, BLOKE L KOUNYE A!
-        else score += dangerLevel * 2; // Bay defans la plis pwa
-
-        // --- ATAK: Chèche genyen (Offensif) ---
-        let attackLevel = evaluateMove(i, robotSym);
-        if (attackLevel >= 1000) score += 10000; // Si robo a ka genyen, l ap jwe l an premye
-        else score += attackLevel;
-
-        if (score > bestScore) {
-            bestScore = score;
-            move = i;
-        }
-    }
-
-    // 3. Poze pyon an
-    if (move !== -1) {
-        boardData[move] = robotSym;
-        renderBoard();
+    <div id="game-screen" class="screen hidden">
+        <div style="background:#222; padding:10px; border-radius:10px; border:1px solid #333;">
+            <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
+            <div id="status" style="font-weight:bold; color:#ffc107;">Chwazi yon mòd 👇</div>
+        </div>
         
-        if (checkWin5(move, robotSym)) {
-            id('status').innerText = "Robo a BAT OU! 🤖🔥";
+        <div id="main-menu" style="margin-top:15px;">
+            <button onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo Mèt 🤖 (DIFISIL)</button>
+            <button onclick="createPrivate()" style="background:#25D366">Defi yon Zanmi (50G)</button>
+            <input type="text" id="join-code" placeholder="Antre kòd zanmi">
+            <button onclick="joinPrivate()" style="background:#444">Antre nan Tab</button>
+        </div>
+
+        <div id="board" class="grid hidden"></div>
+
+        <div class="finance-box">
+            <div style="display:flex; justify-content:space-around; font-size:12px; margin-bottom:10px;">
+                <div style="color:#ff4757;"><b>MonCash</b><br>31594645</div>
+                <div style="color:#00ff00;"><b>Natcash</b><br>55110103</div>
+            </div>
+            <select id="dep-method" style="background:#333; color:white; width:95%;">
+                <option value="MonCash">Mwen voye sou MonCash</option>
+                <option value="Natcash">Mwen voye sou Natcash</option>
+            </select>
+            <input type="text" id="tid" placeholder="Kole ID Tranzaksyon an">
+            <button onclick="voyeDepo()" style="background:#28a745; width:95%;">Voye Depo ✅</button>
+        </div>
+        <button onclick="location.reload()" style="background:#333; font-size:12px;">Dekonekte</button>
+    </div>
+
+    <script>
+        const socket = io();
+        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
+
+        function id(n) { return document.getElementById(n); }
+
+        async function login() {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value })
+            });
+            const data = await res.json();
+            if(data.success) {
+                myPhone = data.phone; id('bal').innerText = data.balance;
+                id('auth-screen').classList.add('hidden');
+                id('game-screen').classList.remove('hidden');
+            }
+        }
+
+        async function voyeDepo() {
+            const tid = id('tid').value;
+            const method = id('dep-method').value;
+            if(!tid) return alert("ID manke!");
+            await fetch('/submit-deposit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: myPhone, tid, amount: 50, method })
+            });
+            alert("Depo " + method + " voye bay admin!");
+        }
+
+        // --- LOJIK ROBO MÈT (DIFISIL) ---
+        function startRobot() {
+            isRobot = true; mySymbol = "X"; myTurn = true;
+            boardData.fill("");
+            id('main-menu').classList.add('hidden');
+            id('board').classList.remove('hidden');
+            id('status').innerText = "Mòd Mèt: Ou se X";
+            renderBoard();
+        }
+
+        function robotLogic() {
+            const robotSym = "O";
+            const playerSym = "X";
+            let bestScore = -Infinity;
+            let move = -1;
+
+            // Analize chak kaz vid pou jwenn pi gwo danje/chans
+            for (let i = 0; i < 100; i++) {
+                if (boardData[i] === "") {
+                    let score = 0;
+                    
+                    // 1. Priyorite: Bloke jwè a (Defans)
+                    let defense = evaluate(i, playerSym);
+                    if (defense >= 1000) score += 5000; // Bloke 4 pwen ijan
+                    else score += defense * 2;
+
+                    // 2. Priyorite: Robo a pou l genyen (Atak)
+                    let attack = evaluate(i, robotSym);
+                    if (attack >= 1000) score += 10000; // Genyen jwèt la
+                    else score += attack;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = i;
+                    }
+                }
+            }
+
+            if (move !== -1) {
+                boardData[move] = robotSym;
+                renderBoard();
+                if (checkWin5(move, robotSym)) {
+                    id('status').innerText = "ROBO A BARE W, OU PÈDI! 🤖🔥";
+                    myTurn = false;
+                } else {
+                    myTurn = true;
+                    id('status').innerText = "Tou pa w!";
+                }
+            }
+        }
+
+        function evaluate(idx, s) {
+            const r = Math.floor(idx/10), c = idx%10;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            let total = 0;
+            dirs.forEach(([dr, dc]) => {
+                let count = 1;
+                [1, -1].forEach(d => {
+                    for(let i=1; i<5; i++) {
+                        let nr=r+dr*i*d, nc=c+dc*i*d;
+                        if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++;
+                        else break;
+                    }
+                });
+                if(count >= 5) total += 1000;
+                else if(count === 4) total += 500;
+                else if(count === 3) total += 50;
+                else if(count === 2) total += 5;
+            });
+            return total;
+        }
+
+        function makeMove(i) {
+            if(!myTurn || boardData[i] !== "") return;
+            boardData[i] = mySymbol; 
             myTurn = false;
-        } else {
-            myTurn = true;
-            id('status').innerText = "Tou pa w!";
-        }
-    }
-}
-
-// Fonksyon entèlijan pou evalye danje oswa chans sou yon kaz
-function evaluateMove(index, s) {
-    const size = 10;
-    const r = Math.floor(index / size);
-    const c = index % size;
-    const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
-    let maxPotential = 0;
-
-    for (let [dr, dc] of dirs) {
-        let count = 1;
-        // Gade devan
-        for (let i = 1; i < 5; i++) {
-            let nr = r + dr * i, nc = c + dc * i;
-            if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10 && boardData[nr * 10 + nc] === s) count++;
-            else break;
-        }
-        // Gade dèyè
-        for (let i = 1; i < 5; i++) {
-            let nr = r - dr * i, nc = c - dc * i;
-            if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10 && boardData[nr * 10 + nc] === s) count++;
-            else break;
+            renderBoard();
+            if(checkWin5(i, mySymbol)) {
+                id('status').innerText = "OU BAT MÈT LA! 🎉";
+                return;
+            }
+            id('status').innerText = "Robo ap bare w...";
+            setTimeout(robotLogic, 600);
         }
 
-        // Sistèm pwen agresif
-        if (count >= 5) maxPotential += 10000; // Viktwa
-        else if (count === 4) maxPotential += 1000; // 4 aliye (Danje lanmò)
-        else if (count === 3) maxPotential += 100;  // 3 aliye (Dwe bloke)
-        else if (count === 2) maxPotential += 10;
-    }
-    return maxPotential;
-}
+        function renderBoard() {
+            const b = id('board'); b.innerHTML = "";
+            boardData.forEach((val, i) => {
+                const cell = document.createElement('div');
+                cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
+                cell.onclick = () => makeMove(i);
+                b.appendChild(cell);
+            });
+        }
+
+        function checkWin5(idx, s) {
+            const r = Math.floor(idx/10), c = idx%10;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            return dirs.some(([dr, dc]) => {
+                let count = 1;
+                [1, -1].forEach(d => {
+                    for(let i=1; i<5; i++) {
+                        let nr=r+dr*i*d, nc=c+dc*i*d;
+                        if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++; else break;
+                    }
+                });
+                return count >= 5;
+            });
+        }
+    </script>
+</body>
+</html>
