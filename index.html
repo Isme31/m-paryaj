@@ -1,19 +1,16 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡ - Expert Bot</title>
+    <meta charset="UTF-8"><title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
         .hidden { display: none; } .screen { padding: 20px; }
-        input, button { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; font-size: 16px; }
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; border: 2px solid #444; }
-        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .x { color: #007bff; } .o { color: #ff4757; }
-        .status-box { background: #222; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
+        input, button, select { padding: 12px; margin: 5px; border-radius: 8px; width: 90%; max-width: 300px; border: none; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; max-width: 400px; margin: 15px auto; background: #444; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; border-radius: 2px; }
+        .finance-box { background: #222; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
     </style>
 </head>
 <body>
@@ -26,136 +23,110 @@
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div class="status-box">
-            <p>Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G</p>
-            <div id="status">Chwazi yon mòd 👇</div>
+        <div style="background:#333; padding:10px; border-radius:10px;">
+            Balans: <span id="bal" style="color:#00ff00; font-weight:bold;">0</span> G
+            <div id="status">Tou pa w!</div>
         </div>
-        
-        <div id="main-menu">
+
+        <div id="main-menu" style="margin-top:20px;">
             <button onclick="startRobot()" style="background:#6f42c1">Jwe ak Robo Expert 🤖</button>
-            <br>
-            <button onclick="createPrivate()" style="background:#25D366">Voye Kòd WhatsApp (50G)</button>
-            <input type="text" id="join-code" placeholder="Antre kòd zanmi">
-            <button onclick="joinPrivate()">Antre nan Tab</button>
+            <button onclick="createPrivate()" style="background:#25D366">Defi yon Zanmi (50G)</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
-        <button onclick="location.reload()" style="background:#444; margin-top:20px;">Soti</button>
+
+        <div class="finance-box">
+            <h3 style="margin:0 0 10px 0; font-size:16px;">Sistèm Depo</h3>
+            <div style="display:flex; justify-content:space-around; font-size:12px; margin-bottom:10px;">
+                <div style="color:#ff4757;"><b>MonCash</b><br>31594645</div>
+                <div style="color:#00ff00;"><b>Natcash</b><br>55110103</div>
+            </div>
+            <select id="dep-method">
+                <option value="MonCash">Mwen voye sou MonCash</option>
+                <option value="Natcash">Mwen voye sou Natcash</option>
+            </select>
+            <input type="text" id="tid" placeholder="Kole ID Tranzaksyon an">
+            <button onclick="voyeDepo()" style="background:#28a745;">Voye pou Konfimasyon</button>
+        </div>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, isRobot = false, boardData = Array(100).fill("");
-
-        function id(n) { return document.getElementById(n); }
+        let myPhone, mySymbol, myTurn = false, isRobot = false, boardData = Array(100).fill("");
 
         async function login() {
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: id('phone').value, password: id('pass').value })
+                body: JSON.stringify({ phone: document.getElementById('phone').value, password: document.getElementById('pass').value })
             });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.phone; id('bal').innerText = data.balance;
-                id('auth-screen').classList.add('hidden');
-                id('game-screen').classList.remove('hidden');
+                myPhone = data.phone; document.getElementById('bal').innerText = data.balance;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
             }
         }
 
-        // --- LOJIK ROBO EXPERT ---
+        async function voyeDepo() {
+            const tid = document.getElementById('tid').value;
+            const method = document.getElementById('dep-method').value;
+            if(!tid) return alert("Antre ID a!");
+            await fetch('/submit-deposit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: myPhone, tid, amount: 50, method })
+            });
+            alert("Depo voye! Tann admin konfime.");
+        }
+
+        socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
+
         function startRobot() {
-            isRobot = true; mySymbol = "X"; myTurn = true;
-            boardData = Array(100).fill("");
-            id('main-menu').classList.add('hidden');
-            id('board').classList.remove('hidden');
-            id('status').innerText = "Ou vs Robo Expert! (Ou se X)";
+            isRobot = true; mySymbol = "X"; myTurn = true; boardData.fill("");
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('board').classList.remove('hidden');
             renderBoard();
         }
 
         function robotLogic() {
-            const robotSym = "O";
-            let bestScore = -Infinity;
-            let move = -1;
-
-            // Analize chak kaz vid
-            for (let i = 0; i < 100; i++) {
-                if (boardData[i] === "") {
-                    let score = evaluateMove(i, robotSym, mySymbol);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        move = i;
-                    }
+            let bestScore = -1, move = -1;
+            boardData.forEach((val, i) => {
+                if(val === "") {
+                    let score = evaluateMove(i, "O") * 2 + evaluateMove(i, "X");
+                    if(score > bestScore) { bestScore = score; move = i; }
                 }
-            }
-
-            if (move !== -1) {
-                boardData[move] = robotSym;
-                renderBoard();
-                if (checkWin5(move, robotSym)) {
-                    id('status').innerText = "Robo a BAT OU! 🤖🔥";
-                    myTurn = false;
-                } else {
-                    myTurn = true;
-                    id('status').innerText = "Tou pa w!";
-                }
+            });
+            if(move !== -1) {
+                boardData[move] = "O"; renderBoard();
+                if(checkWin5(move, "O")) { document.getElementById('status').innerText = "Robo a Ganyen! 🤖"; myTurn = false; }
+                else { myTurn = true; }
             }
         }
 
-        function evaluateMove(index, s, opp) {
+        function evaluateMove(idx, s) {
             let score = 0;
-            // Robo a bay priyorite atake (2x pwa) ak bloke jwè a
-            score += getPotential(index, s) * 2; 
-            score += getPotential(index, opp) * 1.5; 
+            const dirs = [,,,[1,-1]];
+            dirs.forEach(([dr, dc]) => {
+                let count = 0;
+                for(let i=-4; i<=4; i++) {
+                    let r = Math.floor(idx/10)+dr*i, c = (idx%10)+dc*i;
+                    if(r>=0 && r<10 && c>=0 && c<10 && boardData[r*10+c] === s) count++;
+                }
+                score += Math.pow(10, count);
+            });
             return score;
-        }
-
-        function getPotential(index, s) {
-            const size = 10;
-            const r = Math.floor(index / size);
-            const c = index % size;
-            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
-            let weight = 0;
-
-            for (let [dr, dc] of dirs) {
-                let line = 1;
-                // Konte pyon ki aliye nan de sans yo
-                for (let i = 1; i < 5; i++) {
-                    let nr = r + dr*i, nc = c + dc*i;
-                    if (nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc] === s) line++;
-                    else break;
-                }
-                for (let i = 1; i < 5; i++) {
-                    let nr = r - dr*i, nc = c - dc*i;
-                    if (nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc] === s) line++;
-                    else break;
-                }
-                
-                if (line >= 5) weight += 10000;
-                else if (line === 4) weight += 1000;
-                else if (line === 3) weight += 100;
-                else if (line === 2) weight += 10;
-            }
-            return weight;
         }
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; 
-            myTurn = false;
-            renderBoard();
-
-            if(checkWin5(i, mySymbol)) {
-                id('status').innerText = "OU BAT ROBO A! 🎉";
-                return;
-            }
-
-            id('status').innerText = "Robo ap reflechi...";
-            setTimeout(robotLogic, 600);
+            boardData[i] = mySymbol; myTurn = false; renderBoard();
+            if(checkWin5(i, mySymbol)) { document.getElementById('status').innerText = "OU GANYEN! 🎉"; return; }
+            if(isRobot) setTimeout(robotLogic, 600);
         }
 
         function renderBoard() {
-            const b = id('board'); b.innerHTML = "";
+            const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const cell = document.createElement('div');
                 cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
@@ -164,22 +135,18 @@
             });
         }
 
-        function checkWin5(index, s) {
-            const r = Math.floor(index / 10), c = index % 10;
-            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
-            for (let [dr, dc] of dirs) {
+        function checkWin5(idx, s) {
+            const size=10, r=Math.floor(idx/size), c=idx%size, dirs=[,,,[1,-1]];
+            return dirs.some(([dr, dc]) => {
                 let count = 1;
-                for (let i=1; i<5; i++) {
-                    let nr=r+dr*i, nc=c+dc*i;
-                    if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++; else break;
-                }
-                for (let i=1; i<5; i++) {
-                    let nr=r-dr*i, nc=c-dc*i;
-                    if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*10+nc]===s) count++; else break;
-                }
-                if(count >= 5) return true;
-            }
-            return false;
+                [1, -1].forEach(dir => {
+                    for(let i=1; i<5; i++) {
+                        let nr=r+dr*i*dir, nc=c+dc*i*dir;
+                        if(nr>=0 && nr<10 && nc>=0 && nc<10 && boardData[nr*size+nc]===s) count++; else break;
+                    }
+                });
+                return count >= 5;
+            });
         }
     </script>
 </body>
