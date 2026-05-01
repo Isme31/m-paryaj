@@ -1,104 +1,65 @@
-<!DOCTYPE html>
-<html lang="ht">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        body { font-family: sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; }
-        .screen { width: 100%; max-width: 600px; margin: auto; padding: 20px; box-sizing: border-box; }
-        .hidden { display: none; }
-        .header-box { background:#1e1e1e; padding:15px; border-radius:15px; border: 1px solid #333; margin-bottom: 20px; }
-        input, button, select { padding: 18px; margin: 8px 0; border-radius: 12px; width: 100%; border: none; font-size: 16px; box-sizing: border-box; }
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 100%; aspect-ratio: 1/1; margin: 15px auto; background: #333; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; }
-        .online-tag { color: #00ff00; font-size: 14px; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div id="auth-screen" class="screen">
-        <h1>Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas">
-        <button onclick="login()">Konekte / Kreye Kont</button>
-    </div>
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const path = require('path');
 
-    <div id="game-screen" class="screen hidden">
-        <div class="header-box">
-            <p>Balans: <span id="bal" style="color:#00ff00; font-size: 26px; font-weight:bold;">0</span> G</p>
-            <div class="online-tag">🟢 <span id="online-count">0</span> moun online</div>
-            <div id="status">Pare pou jwe!</div>
-        </div>
-        <div id="main-menu">
-            <input type="number" id="bet-amount" value="50" min="50" style="text-align:center;">
-            <button onclick="findMatch()" style="background:#ff4757; height:80px; font-size:22px;">⚡ JWENN MATCH</button>
-        </div>
-        <div id="board" class="grid hidden"></div>
-        <div style="background:#1a1a1a; padding:15px; border-radius:15px; margin-top:20px;">
-            <p style="font-size:12px; color:#888;">MonCash: 31594645 | Natcash: 55110103</p>
-            <input type="text" id="tid" placeholder="ID Tranzaksyon">
-            <button onclick="voyeDepo()" style="background:#28a745;">Voye Depo ✅</button>
-        </div>
-    </div>
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-    <script>
-        const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill(""), currentPrize = 0;
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-        socket.on('updateOnlineCount', (count) => { document.getElementById('online-count').innerText = count; });
+// Koneksyon MongoDB (Ranplase sa ak lyen pa ou a)
+mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://admin:admin@cluster.mongodb.net/mopyon');
 
-        async function login() {
-            const phone = document.getElementById('phone').value;
-            const pass = document.getElementById('pass').value;
-            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password: pass }) });
-            const data = await res.json();
-            if(data.success) {
-                myPhone = data.phone; document.getElementById('bal').innerText = data.balance;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('game-screen').classList.remove('hidden');
-            }
+const User = mongoose.model('User', { phone: String, pass: String, balance: { type: Number, default: 0 } });
+const Deposit = mongoose.model('Deposit', { phone: String, tid: String, amount: Number, method: String, status: { type: String, default: 'pending' } });
+
+// --- ROUTES ---
+app.post('/login', async (req, res) => {
+    const { phone, password } = req.body;
+    let user = await User.findOne({ phone });
+    if (!user) user = await User.create({ phone, pass: password, balance: 0 });
+    res.json({ success: true, phone: user.phone, balance: user.balance });
+});
+
+app.post('/submit-deposit', async (req, res) => {
+    await Deposit.create(req.body);
+    res.json({ success: true });
+});
+
+// Route Admin Sekrè
+const ADMIN_KEY = "hugues";
+app.get('/admin/all-data', async (req, res) => {
+    if (req.query.key !== ADMIN_KEY) return res.status(401).send("Aksè refize");
+    const deposits = await Deposit.find({ status: 'pending' });
+    res.json({ deposits });
+});
+
+// --- LOGIK JWÈT ---
+let waitingPlayer = null;
+io.on('connection', (socket) => {
+    socket.on('findMatch', ({ phone, bet }) => {
+        if (!waitingPlayer) {
+            waitingPlayer = { socket, phone, bet };
+        } else {
+            const room = `room_${waitingPlayer.phone}_${phone}`;
+            socket.join(room); waitingPlayer.socket.join(room);
+            io.to(room).emit('gameStart', { room, firstTurn: waitingPlayer.phone, prize: bet * 2 });
+            waitingPlayer = null;
         }
+    });
 
-        function findMatch() {
-            const bet = parseFloat(document.getElementById('bet-amount').value);
-            socket.emit('findMatch', { phone: myPhone, bet });
-        }
+    socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
+    
+    socket.on('win', async ({ phone, prize }) => {
+        await User.findOneAndUpdate({ phone }, { $inc: { balance: prize } });
+        const user = await User.findOne({ phone });
+        io.emit('balanceUpdate', { phone, newBalance: user.balance });
+    });
+});
 
-        socket.on('gameStart', (data) => {
-            currentRoom = data.room; currentPrize = data.prize;
-            mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
-            myTurn = (data.firstTurn === myPhone);
-            document.getElementById('main-menu').classList.add('hidden');
-            document.getElementById('board').classList.remove('hidden');
-            document.getElementById('status').innerText = myTurn ? "Tou pa w!" : "Tann advèsè a...";
-            renderBoard();
-        });
-
-        socket.on('opponentMove', (data) => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); document.getElementById('status').innerText = "Tou pa w!"; });
-
-        function makeMove(i) {
-            if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; myTurn = false; renderBoard();
-            const opp = currentRoom.replace('room_', '').split('_').find(p => p !== myPhone);
-            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, nextPlayer: opp, prize: currentPrize });
-        }
-
-        function renderBoard() {
-            const b = document.getElementById('board'); b.innerHTML = "";
-            boardData.forEach((val, i) => {
-                const cell = document.createElement('div');
-                cell.className = 'cell'; cell.innerText = val;
-                cell.onclick = () => makeMove(i); b.appendChild(cell);
-            });
-        }
-
-        async function voyeDepo() {
-            await fetch('/submit-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, tid: document.getElementById('tid').value, amount: 50, method: "MonCash" }) });
-            alert("Voye!");
-        }
-        socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
-        socket.on('status_update', (msg) => document.getElementById('status').innerText = msg);
-    </script>
-</body>
-</html>
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Sèvè ap woule sou pòt ${PORT}`));
