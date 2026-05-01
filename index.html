@@ -5,60 +5,46 @@
     <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; padding: 0; }
-        .screen { width: 100%; max-width: 500px; margin: auto; padding: 20px; box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+        body { font-family: sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; }
+        .screen { width: 100%; max-width: 600px; margin: auto; padding: 20px; box-sizing: border-box; }
         .hidden { display: none; }
-        
         .header-box { background:#1e1e1e; padding:15px; border-radius:15px; border: 1px solid #333; margin-bottom: 20px; }
-        input, button, select { padding: 16px; margin: 8px 0; border-radius: 12px; width: 100%; border: none; font-size: 16px; box-sizing: border-box; }
-        
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:active { transform: scale(0.98); }
-
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 100%; aspect-ratio: 1/1; margin: 15px auto; background: #333; border: 2px solid #333; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .cell.x { color: #ff4757; } .cell.o { color: #2e9eff; }
-
-        #timer-box { background: #ff4757; color: white; padding: 8px 20px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 10px; }
-        .finance-box { background: #1a1a1a; padding: 20px; border-radius: 20px; border: 1px solid #444; margin-top: auto; }
+        input, button, select { padding: 18px; margin: 8px 0; border-radius: 12px; width: 100%; border: none; font-size: 16px; box-sizing: border-box; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 100%; aspect-ratio: 1/1; margin: 15px auto; background: #333; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; cursor: pointer; }
+        #timer-box { background: #ff4757; color: white; padding: 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
         .online-tag { color: #00ff00; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
-
     <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
-        <button onclick="login()">Konekte oswa Enskri</button>
+        <button onclick="login()">Konekte / Kreye Kont</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
         <div class="header-box">
-            <p style="margin:0;">Balans: <span id="bal" style="color:#00ff00; font-size: 24px; font-weight:bold;">0</span> G</p>
+            <p>Balans: <span id="bal" style="color:#00ff00; font-size: 26px; font-weight:bold;">0</span> G</p>
             <div class="online-tag">🟢 <span id="online-count">0</span> moun online</div>
-            <div id="status" style="margin-top:10px; color:#bbb;">Pare pou jwe!</div>
+            <div id="status">Pare pou jwe!</div>
         </div>
 
         <div id="timer-box" class="hidden">⏱️ <span id="timer-val">30</span>s</div>
         
         <div id="main-menu">
-            <p style="font-size:14px; color:#888;">Mize sa w vle (Min 50G):</p>
-            <input type="number" id="bet-amount" value="50" min="50" style="text-align:center; font-size: 22px;">
-            <button id="matchBtn" onclick="findMatch()" style="background:#ff4757; height:80px; font-size:22px; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);">⚡ JWENN MATCH</button>
+            <p>Mize (Min 50G):</p>
+            <input type="number" id="bet-amount" value="50" min="50" style="text-align:center;">
+            <button onclick="findMatch()" style="background:#ff4757; height:80px; font-size:22px;">⚡ JWENN MATCH</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
 
-        <div class="finance-box">
-            <div style="display:flex; justify-content:space-around; margin-bottom:15px;">
-                <div style="color:#ff4757; font-size:12px;"><b>MonCash</b><br>31594645</div>
-                <div style="color:#00ff00; font-size:12px;"><b>Natcash</b><br>55110103</div>
-            </div>
-            <select id="dep-method" style="background:#333; color:white;">
-                <option value="MonCash">Sou MonCash</option>
-                <option value="Natcash">Sou Natcash</option>
-            </select>
+        <div style="background:#1a1a1a; padding:15px; border-radius:15px; margin-top:20px;">
+            <p style="font-size:12px;">MonCash: 31594645 | Natcash: 55110103</p>
+            <select id="dep-method"><option value="MonCash">MonCash</option><option value="Natcash">Natcash</option></select>
             <input type="text" id="tid" placeholder="ID Tranzaksyon">
             <button onclick="voyeDepo()" style="background:#28a745;">Voye Depo ✅</button>
         </div>
@@ -73,36 +59,19 @@
         async function login() {
             const phone = document.getElementById('phone').value;
             const pass = document.getElementById('pass').value;
-            if(!phone || !pass) return alert("Ranpli tout bwat yo!");
-            const res = await fetch('/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone, password: pass })
-            });
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password: pass }) });
             const data = await res.json();
             if(data.success) {
                 myPhone = data.phone; document.getElementById('bal').innerText = data.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-            } else alert(data.message);
-        }
-
-        function startTimer() {
-            clearInterval(timerInt);
-            let timeLeft = 30;
-            document.getElementById('timer-box').classList.remove('hidden');
-            document.getElementById('timer-val').innerText = timeLeft;
-            timerInt = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer-val').innerText = timeLeft;
-                if(timeLeft <= 0) { clearInterval(timerInt); document.getElementById('timer-box').classList.add('hidden'); }
-            }, 1000);
+            }
         }
 
         function findMatch() {
             const bet = parseFloat(document.getElementById('bet-amount').value);
             const bal = parseFloat(document.getElementById('bal').innerText);
-            if(bet < 50 || bal < bet) return alert("Miz envalid oswa balans ba!");
+            if(bet < 50 || bal < bet) return alert("Balans ou twò ba!");
             socket.emit('findMatch', { phone: myPhone, bet });
         }
 
@@ -110,54 +79,34 @@
             currentRoom = data.room; currentPrize = data.prize;
             mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
             myTurn = (data.firstTurn === myPhone);
-            boardData.fill("");
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('board').classList.remove('hidden');
             document.getElementById('status').innerText = myTurn ? "Tou pa w!" : "Tann advèsè a...";
-            if(myTurn) startTimer();
             renderBoard();
         });
 
-        socket.on('opponentMove', (data) => {
-            boardData[data.index] = data.symbol;
-            myTurn = true; renderBoard();
-            document.getElementById('status').innerText = "Tou pa w!";
-            startTimer();
-        });
-
-        socket.on('timeout', (data) => {
-            alert(data.loser === myPhone ? "⏰ Tan fini! Ou pèdi." : "🎉 Advèsè a pèdi tan! Ou ganyen.");
-            location.reload();
-        });
+        socket.on('opponentMove', (data) => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); document.getElementById('status').innerText = "Tou pa w!"; });
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            clearInterval(timerInt);
-            document.getElementById('timer-box').classList.add('hidden');
             boardData[i] = mySymbol; myTurn = false; renderBoard();
             const players = currentRoom.replace('room_', '').split('_');
-            const opponentPhone = players.find(p => p !== myPhone);
-            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, nextPlayer: opponentPhone, prize: currentPrize });
-            if(checkWin5(i, mySymbol)) {
-                socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
-                alert("🎉 OU GANYEN " + currentPrize + "G!");
-                location.reload();
-            }
+            const opp = players.find(p => p !== myPhone);
+            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, nextPlayer: opp, prize: currentPrize });
+            if(checkWin(i, mySymbol)) { socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize }); alert("OU GANYEN!"); location.reload(); }
         }
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const cell = document.createElement('div');
-                cell.className = `cell ${val.toLowerCase()}`; cell.innerText = val;
-                cell.onclick = () => makeMove(i);
-                b.appendChild(cell);
+                cell.className = 'cell'; cell.innerText = val;
+                cell.onclick = () => makeMove(i); b.appendChild(cell);
             });
         }
 
-        function checkWin5(idx, s) {
-            const r=Math.floor(idx/10), c=idx%10;
-            const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+        function checkWin(idx, s) {
+            const r=Math.floor(idx/10), c=idx%10, dirs=[[0,1],[1,0],[1,1],[1,-1]];
             return dirs.some(([dr, dc]) => {
                 let count = 1;
                 [1, -1].forEach(d => {
@@ -171,18 +120,10 @@
         }
 
         async function voyeDepo() {
-            const tid = document.getElementById('tid').value;
-            if(!tid) return alert("Mete ID tranzaksyon an!");
-            await fetch('/submit-deposit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: myPhone, tid: tid, amount: 50, method: document.getElementById('dep-method').value })
-            });
-            alert("Depo voye! Tann admin konfime l.");
+            await fetch('/submit-deposit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, tid: document.getElementById('tid').value, amount: 50, method: document.getElementById('dep-method').value }) });
+            alert("Voye!");
         }
         socket.on('balanceUpdate', (data) => { if(data.phone === myPhone) document.getElementById('bal').innerText = data.newBalance; });
-        socket.on('status_update', (msg) => document.getElementById('status').innerText = msg);
-        socket.on('error_msg', (msg) => alert(msg));
     </script>
 </body>
 </html>
