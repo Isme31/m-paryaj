@@ -15,8 +15,6 @@
         input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 85%; background: #fff; text-align: center; color:#000; font-weight:bold; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: auto; background: #444; border: 2px solid #ff4757; }
         .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; min-height: 25px; }
-        .social-link { text-decoration: none; padding: 10px; border-radius: 8px; font-size: 12px; color: white; font-weight: bold; width: 45%; }
-        .domino-card { background: white; color: black; padding: 5px; border-radius: 4px; font-weight: bold; width: 35px; border: 1px solid #000; }
         #result-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
@@ -24,7 +22,7 @@
 
     <div id="auth-screen" class="screen">
         <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <input type="text" id="phone" placeholder="Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()" style="background:#ff4757; width:90%">KONEKTE</button>
     </div>
@@ -33,14 +31,9 @@
         <div class="bal-box">
             <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
             <div class="btn-row">
-                <button onclick="alert('Kontakte Admin sou WhatsApp')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
+                <button onclick="alert('Kontakte Admin')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
                 <button onclick="withdraw()" style="background:#ffa502; width:48%;">RETRÈ 💸</button>
             </div>
-        </div>
-
-        <div class="btn-row">
-            <a href="https://whatsapp.com" class="social-link" style="background:#25d366">Gwoup WhatsApp</a>
-            <a href="https://wa.me" class="social-link" style="background:#3498db">Asistan 👨‍💻</a>
         </div>
 
         <div id="lobby">
@@ -48,55 +41,44 @@
                 <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
                 <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
             </div>
-            <p style="margin:0; font-size:12px; color:#aaa;">Miz (Min 50G)</p>
+            <p style="margin:0; font-size:12px">Miz (Min 50G)</p>
             <input type="number" id="bet" value="50">
             <button onclick="createRoom()" style="background:#2ecc71; width:90%">KREYE KÒD</button>
-            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:10px;">
-                Kòd: <b id="c-val" style="font-size:24px; color:#ff4757">----</b>
+            
+            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:15px; color:#ff4757">
+                Kòd: <b id="c-val" style="font-size:28px">----</b>
             </div>
+
             <hr style="border:0.1px solid #333; margin:15px">
             <input type="text" id="join-code" placeholder="Kòd zanmi w">
             <button onclick="joinRoom()" style="background:#ffa502; width:90%">ANTRE MATCH</button>
-            <hr style="border:0.1px solid #333; margin:15px">
-            <div style="display:flex; justify-content:center; gap:5px">
-                <input type="text" id="ref-link" readonly style="font-size:10px; width:65%; background:#000; color:#0f0">
-                <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px">KOPYE</button>
-            </div>
         </div>
 
         <div id="board-container" class="hidden">
             <h3 id="status">Atann...</h3>
             <div id="board" class="grid"></div>
         </div>
-
-        <div id="domino-container" class="hidden">
-            <h3>Match Domino 🀄</h3>
-            <div id="my-hand" class="btn-row" style="flex-wrap:wrap"></div>
-        </div>
     </div>
 
-    <!-- MODAL REZILTA -->
     <div id="result-modal" class="hidden">
         <h1 id="res-title" style="color:#ff4757">FINI!</h1>
         <p id="res-msg" style="font-size:18px; margin:20px;"></p>
-        <button onclick="location.reload()" style="background:#2ecc71; padding:15px; width:200px;">RETOUNEN NAN MENI</button>
+        <button onclick="location.reload()" style="background:#2ecc71; padding:15px; width:200px;">RETOUNEN</button>
     </div>
 
     <script>
         const socket = io();
         let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(225).fill(""), myType = 'mopyon';
-        const refParam = new URLSearchParams(window.location.search).get('ref');
 
         async function login() {
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('pass').value;
-            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password, ref: refParam}) });
+            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password}) });
             const d = await res.json();
             if(d.success) {
                 myPhone = d.phone; document.getElementById('bal').innerText = d.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-                document.getElementById('ref-link').value = window.location.origin + "?ref=" + myPhone;
             } else alert(d.msg);
         }
 
@@ -106,8 +88,21 @@
             document.getElementById('btnD').style.opacity = t === 'domino' ? "1" : "0.5";
         }
 
-        function createRoom() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value, game: myType }); }
-        function joinRoom() { socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); }
+        function createRoom() { 
+            const betVal = document.getElementById('bet').value;
+            // Nou voye jwèt la bay sèvè a kòrèkteman
+            socket.emit('createPrivate', { phone: myPhone, bet: betVal, game: myType }); 
+        }
+
+        function joinRoom() { 
+            socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); 
+        }
+
+        socket.on('roomCreated', d => { 
+            document.getElementById('c-val').innerText = d.code; 
+            document.getElementById('room-display').classList.remove('hidden'); 
+        });
+
         socket.on('errorMsg', m => alert(m));
 
         socket.on('gameStart', d => {
@@ -119,11 +114,6 @@
                 myTurn = (d.firstTurn === myPhone);
                 boardData = Array(225).fill("");
                 renderBoard();
-            } else {
-                document.getElementById('domino-container').classList.remove('hidden');
-                const hand = (d.firstTurn === myPhone) ? d.hand1 : d.hand2;
-                const hDiv = document.getElementById('my-hand'); hDiv.innerHTML = "";
-                hand.forEach(p => { hDiv.innerHTML += `<div class="domino-card">${p[0]}<br>--<br>${p[1]}</div>`; });
             }
         });
 
@@ -146,7 +136,7 @@
 
         function checkWin(idx, s) {
             const size = 15; const r = Math.floor(idx / size), c = idx % size;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]]; // Ranje direksyon yo
             for (let [dr, dc] of dirs) {
                 let cnt = 1;
                 for (let i=1; i<5; i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
@@ -159,20 +149,8 @@
         socket.on('gameOver', d => {
             const modal = document.getElementById('result-modal');
             modal.classList.remove('hidden');
-            document.getElementById('res-msg').innerHTML = d.winner === myPhone ? 
-                `OU GENYEN! 🏆<br>Lajan: +${d.prize}G<br>Balans: ${d.newBalance}G` : 
-                `OU PÈDI! ❌<br>Gayan: ${d.winner}`;
+            document.getElementById('res-msg').innerHTML = d.winner === myPhone ? "OU GENYEN! 🏆" : "OU PÈDI! ❌";
         });
-
-        function copyRef() { const l = document.getElementById("ref-link"); l.select(); navigator.clipboard.writeText(l.value); alert("Kopye!"); }
-        async function withdraw() { 
-            const a = prompt("Konbe ou vle retire?"); 
-            if(a>=100) { 
-                const res = await fetch('/request-withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:myPhone, amount:a}) });
-                const d = await res.json();
-                if(d.success) { document.getElementById('bal').innerText = d.newBalance; alert("Mande voye!"); } else alert(d.msg);
-            } 
-        }
     </script>
 </body>
 </html>
