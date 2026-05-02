@@ -12,9 +12,17 @@
         .hidden { display: none !important; }
         .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
+        
+        /* Mopyon */
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #444; border: 2px solid var(--primary); }
         .cell { aspect-ratio: 1/1; background: #111; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; font-weight: bold; }
-        .domino-piece { background: white; color: black; padding: 8px; border-radius: 5px; font-weight: bold; cursor: pointer; display: inline-block; margin: 3px; border: 1px solid #999; }
+        
+        /* Domino Realiste */
+        .domino-piece { background: #fdfdfd; color: #000; width: 35px; height: 70px; border-radius: 4px; border: 2px solid #333; display: flex; flex-direction: column; justify-content: space-around; align-items: center; cursor: pointer; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        .domino-piece::after { content: ""; width: 80%; height: 2px; background: #333; position: absolute; top: 50%; }
+        .dot-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; height: 40%; width: 80%; justify-items: center; align-items: center; }
+        .dot { width: 6px; height: 6px; background: black; border-radius: 50%; }
+        #chain { min-height: 150px; display: flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap; padding: 20px; background: #0e3d0e; border-radius: 15px; border: 5px solid #5d4037; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -24,7 +32,7 @@
         <div class="card">
             <input type="text" id="phone" placeholder="Telefòn" style="width:90%; padding:10px;">
             <input type="password" id="pass" placeholder="Modpas" style="width:90%; padding:10px; margin-top:10px;">
-            <button class="btn" style="margin-top:10px" onclick="login()">KONEKTE / ENSKRI</button>
+            <button class="btn" style="margin-top:10px" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
@@ -32,10 +40,10 @@
         <div class="card">
             <h2 id="u-bal" style="color:#2ecc71">0 G</h2>
             <div style="display:flex; gap:5px; justify-content:center; margin-bottom:10px">
-                <a href="https://chat.whatsapp.com/GPgkOxVfpO2Ceu0lm7hssR?mode=gi_t" target="_blank" style="background:#25d366; padding:8px; border-radius:5px; text-decoration:none; color:white; font-size:12px;">Gwoup WhatsApp</a>
+                <a href="https://whatsapp.com" target="_blank" style="background:#25d366; padding:8px; border-radius:5px; text-decoration:none; color:white; font-size:12px;">Gwoup WhatsApp</a>
                 <a href="https://wa.me" target="_blank" style="background:#3498db; padding:8px; border-radius:5px; text-decoration:none; color:white; font-size:12px;">Asistan 👨‍💻</a>
             </div>
-            <p style="font-size:10px; color:#aaa">MonCash: 31594645 | NatCash: 55110103</p>
+            <p style="font-size:10px; color:#aaa">Depo MonCash: 31594645 | NatCash: 55110103</p>
         </div>
 
         <div class="card">
@@ -51,7 +59,7 @@
 
         <div class="card">
             <input type="text" id="join-c" placeholder="Kòd match">
-            <button class="btn" onclick="join()" style="background:#ffa502; margin-top:5px">ANTRE NAN MATCH</button>
+            <button class="btn" onclick="join()" style="background:#ffa502; margin-top:5px">ANTRE</button>
         </div>
     </div>
 
@@ -93,29 +101,21 @@
             if(myT) startTimer();
         });
 
-        function renderMopyon() {
-            const area = document.getElementById('board-area');
-            area.innerHTML = `<div class="grid"></div>`;
-            const grid = area.querySelector('.grid');
-            boardData.forEach((val, i) => {
-                const c = document.createElement('div'); c.className = 'cell'; c.innerText = val;
-                if(val === 'X') c.style.color = 'red'; else if(val === 'O') c.style.color = 'cyan';
-                c.onclick = () => {
-                    if(!myT || boardData[i] !== "") return;
-                    boardData[i] = myS; myT = false; renderMopyon();
-                    socket.emit('move', { room: curR, index: i, symbol: myS, type: 'mopyon' });
-                    if(checkMopyonWin(i, myS)) socket.emit('win', { room: curR, phone: myP, prize: curPrize });
-                };
-                grid.appendChild(c);
-            });
+        function getDots(n) {
+            let h = '<div class="dot-container">';
+            for(let i=0; i<n; i++) h += '<div class="dot"></div>';
+            return h + '</div>';
         }
 
         function renderDomino() {
             const area = document.getElementById('board-area');
-            area.innerHTML = `<div id="chain" style="margin-bottom:20px"></div><div id="hand"></div>`;
-            dominoChain.forEach(p => document.getElementById('chain').innerHTML += `<div class="domino-piece">${p[0]}|${p[1]}</div>`);
+            area.innerHTML = `<div id="chain"></div><div id="hand" style="display:flex; justify-content:center; gap:10px; overflow-x:auto;"></div>`;
+            const cDiv = document.getElementById('chain');
+            dominoChain.forEach(p => cDiv.innerHTML += `<div class="domino-piece" style="height:35px; width:70px; flex-direction:row;">${getDots(p[0])}${getDots(p[1])}</div>`);
+            const hDiv = document.getElementById('hand');
             myHand.forEach((p, i) => {
-                const d = document.createElement('div'); d.className = 'domino-piece'; d.innerText = `${p[0]}|${p[1]}`;
+                const d = document.createElement('div'); d.className = 'domino-piece';
+                d.innerHTML = getDots(p[0]) + getDots(p[1]);
                 d.onclick = () => {
                     if(!myT) return;
                     if(dominoChain.length === 0) dominoChain.push(p);
@@ -131,7 +131,24 @@
                     socket.emit('move', { room: curR, chain: dominoChain, type: 'domino' });
                     if(myHand.length === 0) socket.emit('win', { room: curR, phone: myP, prize: curPrize });
                 };
-                document.getElementById('hand').appendChild(d);
+                hDiv.appendChild(d);
+            });
+        }
+
+        function renderMopyon() {
+            const area = document.getElementById('board-area');
+            area.innerHTML = `<div class="grid"></div>`;
+            const grid = area.querySelector('.grid');
+            boardData.forEach((val, i) => {
+                const c = document.createElement('div'); c.className = 'cell'; c.innerText = val;
+                if(val === 'X') c.style.color = 'red'; else if(val === 'O') c.style.color = 'cyan';
+                c.onclick = () => {
+                    if(!myT || boardData[i] !== "") return;
+                    boardData[i] = myS; myT = false; renderMopyon();
+                    socket.emit('move', { room: curR, index: i, symbol: myS, type: 'mopyon' });
+                    if(checkMopyonWin(i, myS)) socket.emit('win', { room: curR, phone: myP, prize: curPrize });
+                };
+                grid.appendChild(c);
             });
         }
 
