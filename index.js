@@ -36,14 +36,14 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// --- ADMIN API (Pou balans) ---
+// --- ADMIN API ---
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount } = req.body;
     await User.findOneAndUpdate({ phone }, { $inc: { balance: amount } });
     res.json({ success: true });
 });
 
-// --- JWÈT ---
+// --- LOGIC JWÈT ---
 let waitingPlayers = [];
 let activeGames = {};
 
@@ -63,7 +63,11 @@ io.on('connection', (socket) => {
                     const oppSock = io.sockets.sockets.get(opponent.socketId);
                     if (oppSock) oppSock.join(room);
 
-                    activeGames[room] = { prize: (data.bet * 2) * 0.9, players: [socket.id, opponent.socketId] };
+                    activeGames[room] = { 
+                        prize: (data.bet * 2) * 0.9, 
+                        players: [socket.id, opponent.socketId],
+                        phones: [data.phone, opponent.phone]
+                    };
                     io.to(room).emit('gameStart', { room, prize: activeGames[room].prize, firstTurn: data.phone });
                 } else {
                     waitingPlayers.push({ ...data, socketId: socket.id });
@@ -87,10 +91,14 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
+        for (const room in activeGames) {
+            if (activeGames[room].players.includes(socket.id)) {
+                io.to(room).emit('gameOver', { msg: "Advèsè a dekonekte!" });
+                delete activeGames[room];
+            }
+        }
     });
 });
 
-// Anpeche sèvè a mouri si gen erè
 process.on('uncaughtException', (err) => console.log('Erè evite ❌'));
-
 server.listen(process.env.PORT || 3000, () => console.log("Sèvè Live 🚀"));
