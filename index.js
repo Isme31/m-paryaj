@@ -16,13 +16,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- KONEKSYON BAZ DE DONE ---
 const mongoURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
-mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅"));
+mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅")).catch(err => console.log("Erè MongoDB:", err));
 
 // --- MODÈL YO ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
-    balance: { type: Number, default: 50 }, // KADO 50G LÈ ENSKRI
+    balance: { type: Number, default: 50 },
     referralCount: { type: Number, default: 0 },
     referredBy: { type: String, default: null }
 }));
@@ -43,7 +43,6 @@ app.post('/login', async (req, res) => {
         let user = await User.findOne({ phone: cleanPhone });
 
         if (!user) {
-            // Sistèm Referral: bay 5G komisyon si gen yon kòd
             if (ref && ref !== cleanPhone) {
                 await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
             }
@@ -55,22 +54,18 @@ app.post('/login', async (req, res) => {
     } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
-app.post('/request-withdraw', async (req, res) => {
-    const { phone, amount } = req.body;
-    const amt = Number(amount);
-    
-    if (amt < 100) return res.json({ success: false, msg: "Limit retrè se 100G minimòm! 🛑" });
+// --- ADMIN ROUTES ---
+app.post('/admin/update-balance', async (req, res) => {
+    const { phone, amount, secret } = req.body;
+    if (secret !== ADMIN_SECRET) return res.json({ success: false, msg: "Kle a pa bon!" });
+    const user = await User.findOneAndUpdate({ phone: phone.trim() }, { $inc: { balance: Number(amount) } }, { new: true });
+    res.json({ success: !!user });
+});
 
-    const user = await User.findOne({ phone: phone.trim() });
-    if (user && user.balance >= amt) {
-        const adminFee = amt * 0.05; // 5% Komisyon Admin sou retrè
-        const finalAmount = amt - adminFee;
-
-        await User.updateOne({ phone: phone.trim() }, { $inc: { balance: -amt } });
-        await Withdraw.create({ phone: phone.trim(), amount: finalAmount, fee: adminFee });
-        
-        res.json({ success: true, newBalance: user.balance - amt });
-    } else { res.json({ success: false, msg: "Balans ensifizan!" }); }
+app.get('/admin/withdraws', async (req, res) => {
+    if (req.query.secret !== ADMIN_SECRET) return res.json([]);
+    const list = await Withdraw.find({ status: 'Pending' });
+    res.json(list);
 });
 
 // --- LOGIC JWÈT ---
@@ -80,30 +75,27 @@ let activeGames = {};
 io.on('connection', (socket) => {
     socket.on('createPrivate', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans piti!");
+        const bet = Number(data.bet);
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou twò piti!");
 
         const code = Math.floor(1000 + Math.random() * 9000).toString();
-        privateRooms[code] = { host: data.phone, bet: Number(data.bet) };
+        privateRooms[code] = { host: data.phone, bet: bet };
         socket.join(code);
-        socket.emit('roomCreated', { code, bet: data.bet });
+        socket.emit('roomCreated', { code, bet: bet });
     });
 
     socket.on('joinPrivate', async (data) => {
         const room = privateRooms[data.code];
         const user = await User.findOne({ phone: data.phone });
-
         if (room && user && user.balance >= room.bet) {
             await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
             await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
-
-            const totalPot = room.bet * 2;
-            const prize = totalPot * 0.95; // 5% Komisyon Admin sou chak mise
-            
+            const prize = (room.bet * 2) * 0.95;
             activeGames[data.code] = { prize, players: [room.host, data.phone] };
             socket.join(data.code);
             io.to(data.code).emit('gameStart', { room: data.code, prize, firstTurn: room.host });
             delete privateRooms[data.code];
-        } else { socket.emit('errorMsg', "Kòd la pa bon oswa balans ou piti!"); }
+        } else { socket.emit('errorMsg', "Kòd pa bon oswa kòb ou pa ase!"); }
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
