@@ -12,18 +12,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- KONEKSYON MONGODB ---
-// Lyen an mete ajou ak modpas "hugues" la
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyonDB?retryWrites=true&w=majority&appName=hugues";
 
 mongoose.connect(dbURI)
-    .then(() => console.log("MongoDB Konekte nan Nwaj la! ✅"))
-    .catch(err => console.error("Erè Koneksyon DB ❌:", err));
+    .then(() => console.log("MongoDB Konekte ✅"))
+    .catch(err => console.error("Erè DB ❌:", err));
 
 // --- MODEL DONE ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: String,
-    balance: { type: Number, default: 0 }
+    balance: { type: Number, default: 100 } // 100G kado pou tès
 }));
 
 const Deposit = mongoose.model('Deposit', new mongoose.Schema({
@@ -36,41 +35,31 @@ app.post('/login', async (req, res) => {
     try {
         let user = await User.findOne({ phone });
         if (!user) {
-            // Nou kreye itilizatè a si l pa egziste epi nou ba l 100G pou l teste
             user = await User.create({ phone, password, balance: 100 });
-            console.log("Nouvo jwè: " + phone);
         } else if (user.password !== password) {
             return res.json({ success: false, msg: "Modpas pa bon" });
         }
         res.json({ success: true, phone: user.phone, balance: user.balance });
-    } catch (e) {
-        console.error("Erè nan login:", e);
-        res.status(500).json({ success: false, msg: "Erè Sèvè" });
-    }
-});
-
-app.post('/submit-deposit', async (req, res) => {
-    try { 
-        await Deposit.create(req.body); 
-        res.json({ success: true }); 
     } catch (e) { res.status(500).json({ success: false }); }
-});
-
-app.get('/admin/all-data', async (req, res) => {
-    if(req.query.key !== 'hugues') return res.status(403).send('Aksè refize');
-    const deposits = await Deposit.find({ status: 'pending' });
-    res.json({ deposits });
 });
 
 // --- LOJIK JWÈT (SOCKET.IO) ---
 let waitingPlayers = []; 
 
 io.on('connection', (socket) => {
+    
     socket.on('findMatch', async (data) => {
         try {
             const user = await User.findOne({ phone: data.phone });
-            if (!user || user.balance < data.bet) return socket.emit('error', 'Kòb ou pa ase!');
+            if (!user || user.balance < data.bet) {
+                return socket.emit('error_msg', 'Kòb ou pa ase!');
+            }
 
+            // 1. RETIRE MIZE A SOU KONT JWÈ A DEPI L AP CHACHE MATCH
+            await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+            console.log(`Mize ${data.bet}G soti sou kont ${data.phone}`);
+
+            // 2. CHACHE ADVÈSÈ
             let opponentIndex = waitingPlayers.findIndex(p => p.bet === data.bet && p.phone !== data.phone);
 
             if (opponentIndex > -1) {
@@ -81,9 +70,13 @@ io.on('connection', (socket) => {
                 const oppSocket = io.sockets.sockets.get(opponent.socketId);
                 if (oppSocket) oppSocket.join(room);
 
+                // Ganyan an ap touche mize pa l + mize lòt la (mwens 10% pou admin)
+                // Egzanp: (50 + 50) * 0.9 = 90G
+                const prize = (data.bet * 2) * 0.9;
+
                 io.to(room).emit('gameStart', {
                     room, 
-                    prize: data.bet * 1.9,
+                    prize: prize,
                     firstTurn: Math.random() > 0.5 ? data.phone : opponent.phone
                 });
             } else {
@@ -92,12 +85,20 @@ io.on('connection', (socket) => {
         } catch (e) { console.error(e); }
     });
 
-    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+    socket.on('move', (data) => {
+        socket.to(data.room).emit('opponentMove', data);
+    });
 
     socket.on('win', async (data) => {
         try {
-            await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: data.prize } });
-            console.log("Ganyan: " + data.phone + " + " + data.prize + "G");
+            // 3. BAY GANYAN AN TOUT KÒB PO A
+            const winner = await User.findOneAndUpdate(
+                { phone: data.phone }, 
+                { $inc: { balance: data.prize } },
+                { new: true }
+            );
+            console.log(`💰 ${data.phone} genyen ${data.prize}G!`);
+            io.to(socket.id).emit('balanceUpdate', { balance: winner.balance });
         } catch (e) { console.error(e); }
     });
 
