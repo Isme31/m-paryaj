@@ -3,30 +3,20 @@
 <head><title>Admin Panel</title></head>
 <body style="font-family:sans-serif; padding:20px; background:#eee;">
     <h2>Admin Blitz ⚡</h2>
-    <input type="password" id="key" placeholder="Kle Sekrè">
+    <input type="password" id="key" placeholder="Kle Sekrè (1234)">
     <hr>
     <h3>Ajoute Balans</h3>
     <input type="text" id="p" placeholder="Telefòn Jwè">
     <input type="number" id="a" placeholder="Montan">
     <button onclick="up()">RECHAJE ✅</button>
-    <hr>
-    <h3>Retrè an Atant (5% deja dekonpte)</h3>
-    <button onclick="getW()">LIS RETRÈ 🔄</button>
-    <div id="list"></div>
     <script>
         async function up() {
-            const res = await fetch('/admin/update-balance', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: document.getElementById('p').value, amount: document.getElementById('a').value, secret: document.getElementById('key').value }) });
+            const res = await fetch('/admin/update-balance', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ phone: document.getElementById('p').value, amount: document.getElementById('a').value, secret: document.getElementById('key').value }) 
+            });
             const d = await res.json(); alert(d.success ? "Rechaj fèt!" : "Erè!");
-        }
-        async function getW() {
-            const res = await fetch(`/admin/withdraws?secret=${document.getElementById('key').value}`);
-            const data = await res.json();
-            const div = document.getElementById('list'); div.innerHTML = "";
-            data.forEach(w => { div.innerHTML += `<p>${w.phone}: <b>${w.amount}G</b> <button onclick="conf('${w._id}')">Konfime ✅</button></p>`; });
-        }
-        async function conf(id) {
-            await fetch('/admin/confirm-withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, secret: document.getElementById('key').value }) });
-            getW();
         }
     </script>
 </body>
