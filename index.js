@@ -1,124 +1,195 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const path = require('path');
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mopyon Blitz ⚡</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
+        .screen { padding: 15px; }
+        .hidden { display: none !important; }
+        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
+        .btn-row { display: flex; justify-content: space-around; margin: 10px 0; gap: 8px; }
+        button { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 85%; background: #fff; text-align: center; color:#000; font-weight:bold;}
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: auto; background: #444; border: 2px solid #ff4757; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; min-height: 25px;}
+        .social-link { text-decoration: none; padding: 10px; border-radius: 8px; font-size: 12px; color: white; font-weight: bold; width: 45%; }
+        .domino-card { background: white; color: black; padding: 5px; border-radius: 4px; font-weight: bold; width: 40px; border: 2px solid #000; margin: 2px; }
+        #result-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    </style>
+</head>
+<body>
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+    <div id="auth-screen" class="screen">
+        <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Telefòn">
+        <input type="password" id="pass" placeholder="Modpas">
+        <button onclick="login()" style="background:#ff4757; width:90%">KONEKTE</button>
+    </div>
 
-const ADMIN_SECRET = "MOPYON2024";
-const PORT = process.env.PORT || 3000;
+    <div id="game-screen" class="screen hidden">
+        <div class="bal-box">
+            <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
+            <div class="btn-row">
+                <button onclick="alert('Ekri Admin sou WhatsApp')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
+                <button onclick="withdraw()" style="background:#ffa502; width:48%;">RETRÈ 💸</button>
+            </div>
+        </div>
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+        <div class="btn-row">
+            <a href="https://whatsapp.com" class="social-link" style="background:#25d366">WhatsApp</a>
+            <a href="https://wa.me" class="social-link" style="background:#3498db">Asistan 👨‍💻</a>
+        </div>
 
-// --- KONEKSYON MONGODB ---
-const mongoURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
-mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅"));
+        <div id="lobby">
+            <div class="btn-row">
+                <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
+                <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
+            </div>
+            <p style="margin:0; font-size:12px">Miz (Min 50G)</p>
+            <input type="number" id="bet" value="50">
+            <button onclick="createRoom()" style="background:#2ecc71; width:90%">KREYE KÒD</button>
+            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:10px; color:#ff4757">
+                Kòd: <b id="c-val" style="font-size:24px">----</b>
+            </div>
+            <hr style="border:0.1px solid #333; margin:15px">
+            <input type="text" id="join-code" placeholder="Mete kòd la">
+            <button onclick="joinRoom()" style="background:#ffa502; width:90%">ANTRE MATCH</button>
+            <hr style="border:0.1px solid #333; margin:15px">
+            <div style="display:flex; justify-content:center; gap:5px">
+                <input type="text" id="ref-link" readonly style="font-size:10px; width:65%; background:#000; color:#0f0">
+                <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px">KOPYE</button>
+            </div>
+        </div>
 
-// --- MODÈL YO ---
-const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    balance: { type: Number, default: 50 },
-    referralCount: { type: Number, default: 0 },
-    referredBy: { type: String, default: null }
-}));
+        <div id="board-container" class="hidden">
+            <h3 id="status">Atann...</h3>
+            <div id="board" class="grid"></div>
+        </div>
 
-const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
-    phone: String, amount: Number, fee: Number, status: { type: String, default: 'Pending' }, date: { type: Date, default: Date.now }
-}));
+        <div id="domino-container" class="hidden">
+            <h3>Match Domino 🀄</h3>
+            <div id="my-hand" class="btn-row" style="flex-wrap:wrap"></div>
+        </div>
+    </div>
 
-// --- DOMINO DECK ---
-function createDeck() {
-    let deck = [];
-    for (let i = 0; i <= 6; i++) {
-        for (let j = i; j <= 6; j++) { deck.push([i, j]); }
-    }
-    return deck.sort(() => Math.random() - 0.5);
-}
+    <div id="result-modal" class="hidden">
+        <h1 id="res-title" style="color:#ff4757">MATCH FINI!</h1>
+        <p id="res-msg" style="font-size:18px; margin:20px;"></p>
+        <button onclick="backToLobby()" style="background:#2ecc71; padding:15px; width:200px;">RETOUNEN</button>
+    </div>
 
-// --- ROUTES ---
-app.post('/login', async (req, res) => {
-    try {
-        const { phone, password, ref } = req.body;
-        const cleanPhone = phone.trim();
-        let user = await User.findOne({ phone: cleanPhone });
-        if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-            user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
-        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
-        res.json({ success: true, phone: user.phone, balance: user.balance });
-    } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
-});
+    <script>
+        const socket = io();
+        let myPhone, myPass, mySymbol, currentRoom, myTurn = false, boardData = Array(225).fill(""), myType = 'mopyon';
+        const refParam = new URLSearchParams(window.location.search).get('ref');
 
-app.post('/request-withdraw', async (req, res) => {
-    const { phone, amount } = req.body;
-    const amt = Number(amount);
-    if (amt < 100) return res.json({ success: false, msg: "Minimòm se 100G!" });
-    const user = await User.findOne({ phone: phone.trim() });
-    if (user && user.balance >= amt) {
-        const fee = amt * 0.05;
-        await User.updateOne({ phone: phone.trim() }, { $inc: { balance: -amt } });
-        await Withdraw.create({ phone: phone.trim(), amount: amt - fee, fee });
-        res.json({ success: true, newBalance: user.balance - amt });
-    } else res.json({ success: false, msg: "Balans ensifizan!" });
-});
-
-// --- SOCKET LOGIC ---
-let privateRooms = {};
-let activeGames = {};
-
-io.on('connection', (socket) => {
-    socket.on('createPrivate', async (data) => {
-        const betAmt = Number(data.bet);
-        if (betAmt < 50) return socket.emit('errorMsg', "Miz minimòm se 50G!");
-        const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < betAmt) return socket.emit('errorMsg', "Balans ou ensifizan!");
-
-        const code = Math.floor(1000 + Math.random() * 9000).toString();
-        privateRooms[code] = { host: data.phone, bet: betAmt, game: data.game || 'mopyon' };
-        socket.join(code);
-        socket.emit('roomCreated', { code, bet: betAmt });
-    });
-
-    socket.on('joinPrivate', async (data) => {
-        const room = privateRooms[data.code];
-        const user = await User.findOne({ phone: data.phone });
-        if (room && user && user.balance >= room.bet) {
-            await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
-            await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
-            const prize = (room.bet * 2) * 0.95;
-            
-            let gameData = { prize, players: [room.host, data.phone], game: room.game };
-            if (room.game === 'domino') {
-                let deck = createDeck();
-                gameData.hand1 = deck.splice(0, 7);
-                gameData.hand2 = deck.splice(0, 7);
-            }
-
-            activeGames[data.code] = gameData;
-            socket.join(data.code);
-            io.to(data.code).emit('gameStart', { 
-                room: data.code, prize, game: room.game, firstTurn: room.host,
-                hand1: gameData.hand1, hand2: gameData.hand2
-            });
-            delete privateRooms[data.code];
-        } else socket.emit('errorMsg', "Kòd mal oswa balans piti!");
-    });
-
-    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-
-    socket.on('win', async (data) => {
-        const game = activeGames[data.room];
-        if (game) {
-            delete activeGames[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, prize: game.prize.toFixed(2), newBalance: winner.balance });
+        async function login() {
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('pass').value;
+            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password, ref: refParam}) });
+            const d = await res.json();
+            if(d.success) {
+                myPhone = d.phone; myPass = password;
+                document.getElementById('bal').innerText = d.balance;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                document.getElementById('ref-link').value = window.location.origin + "?ref=" + myPhone;
+            } else alert(d.msg);
         }
-    });
-});
 
-server.listen(PORT, () => console.log(`Sèvè kouri sou ${PORT}`));
+        function setGame(t) {
+            myType = t;
+            document.getElementById('btnM').style.opacity = t === 'mopyon' ? "1" : "0.5";
+            document.getElementById('btnD').style.opacity = t === 'domino' ? "1" : "0.5";
+        }
+
+        function createRoom() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value, game: myType }); }
+        function joinRoom() { socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); }
+
+        socket.on('roomCreated', d => { 
+            document.getElementById('c-val').innerText = d.code; 
+            document.getElementById('room-display').classList.remove('hidden'); 
+        });
+
+        socket.on('gameStart', d => {
+            currentRoom = d.room;
+            document.getElementById('lobby').classList.add('hidden');
+            if(d.game === 'mopyon') {
+                document.getElementById('board-container').classList.remove('hidden');
+                mySymbol = (d.firstTurn === myPhone) ? 'X' : 'O';
+                myTurn = (d.firstTurn === myPhone);
+                boardData = Array(225).fill("");
+                renderBoard();
+            } else {
+                document.getElementById('domino-container').classList.remove('hidden');
+                const hand = (d.firstTurn === myPhone) ? d.hand1 : d.hand2;
+                const hDiv = document.getElementById('my-hand'); hDiv.innerHTML = "";
+                hand.forEach(p => { hDiv.innerHTML += `<div class="domino-card">${p[0]}<br>--<br>${p[1]}</div>`; });
+            }
+        });
+
+        function renderBoard() {
+            const b = document.getElementById('board'); b.innerHTML = "";
+            boardData.forEach((val, i) => {
+                const c = document.createElement('div'); c.className = 'cell'; c.innerText = val;
+                if(val === 'X') c.style.color = '#ff4757'; else if(val === 'O') c.style.color = '#3498db';
+                c.onclick = () => { if(myTurn && boardData[i] === "") {
+                    boardData[i] = mySymbol; myTurn = false; renderBoard();
+                    socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                    if(checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
+                }};
+                b.appendChild(c);
+            });
+            document.getElementById('status').innerText = myTurn ? "Se tou pa w! ⚡" : "Atann lòt jwè a... ⏳";
+        }
+
+        socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myTurn = true; renderBoard(); });
+
+        function checkWin(idx, s) {
+            const size = 15; const r = Math.floor(idx / size), c = idx % size;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let [dr, dc] of dirs) {
+                let cnt = 1;
+                for (let i=1; i<5; i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
+                for (let i=1; i<5; i++) { let nr=r-dr*i, nc=c-dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
+                if(cnt>=5) return true;
+            }
+            return false;
+        }
+
+        socket.on('gameOver', d => {
+            const modal = document.getElementById('result-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('res-msg').innerHTML = d.winner === myPhone ? 
+                `BRAVO! 🏆<br>+${d.prize}G<br>Balans: ${d.newBalance}G` : 
+                `OU PÈDI! ❌<br>Gayan: ${d.winner}`;
+        });
+
+        async function backToLobby() {
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('board-container').classList.add('hidden');
+            document.getElementById('domino-container').classList.add('hidden');
+            document.getElementById('room-display').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            // Rafrechi balans lan
+            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:myPhone, password:myPass}) });
+            const d = await res.json();
+            if(d.success) document.getElementById('bal').innerText = d.balance;
+        }
+
+        function copyRef() { const l = document.getElementById("ref-link"); l.select(); navigator.clipboard.writeText(l.value); alert("Kopye!"); }
+        async function withdraw() { 
+            const a = prompt("Konbe?"); 
+            if(a>=100) { 
+                const res = await fetch('/request-withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:myPhone, amount:a}) });
+                const d = await res.json();
+                if(d.success) { document.getElementById('bal').innerText = d.newBalance; alert("Mande voye!"); } else alert(d.msg);
+            } 
+        }
+        socket.on('errorMsg', m => alert(m));
+    </script>
+</body>
+</html>
