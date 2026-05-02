@@ -27,6 +27,8 @@
     <div id="game-screen" class="screen hidden">
         <div id="status">Pare pou jwe!</div>
         <h3>Balans: <span id="bal" style="color:#00ff00;">0</span> G</h3>
+        <button onclick="requestWithdraw()" style="background:#ffa502; width:auto; padding:5px 15px; font-size:12px;">MANDE RETRÈ 💸</button>
+        
         <div id="lobby">
             <input type="number" id="bet" value="50" min="50"><br>
             <button onclick="findMatch()">⚡ MATCH RAPID</button><hr>
@@ -52,6 +54,15 @@
             } else alert("Erè!");
         }
 
+        async function requestWithdraw() {
+            const amount = prompt("Konbe ou vle retire? (Min 100G)");
+            if (!amount || amount < 100) return;
+            const res = await fetch('/request-withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, amount: parseFloat(amount) }) });
+            const data = await res.json();
+            if(data.success) { alert("Demann voye!"); document.getElementById('bal').innerText = data.newBalance; }
+            else alert(data.msg);
+        }
+
         function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value) }); }
         function joinPrivate() { socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room: document.getElementById('roomCode').value }); }
 
@@ -59,25 +70,17 @@
 
         socket.on('gameStart', data => {
             currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
-            boardData.fill(""); // Netwaye tablo a nan memwa
-            document.getElementById('lobby').classList.add('hidden'); document.getElementById('board').classList.remove('hidden');
-            renderBoard(); // Redesinen tablo a vid
-            updateStatus(); if(myTurn) startTimer();
+            boardData.fill(""); document.getElementById('lobby').classList.add('hidden'); document.getElementById('board').classList.remove('hidden');
+            renderBoard(); updateStatus(); if(myTurn) startTimer();
         });
 
         socket.on('opponentMove', data => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); updateStatus(); startTimer(); });
 
         socket.on('gameOver', data => {
-            clearInterval(timerInterval);
-            alert(data.msg || (data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!"));
+            clearInterval(timerInterval); alert(data.msg || (data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!"));
             if(data.newBalance !== undefined) document.getElementById('bal').innerText = data.newBalance;
-            
-            // RESET KONPLE
-            boardData.fill(""); 
-            document.getElementById('board').innerHTML = ""; 
-            document.getElementById('board').classList.add('hidden');
-            document.getElementById('lobby').classList.remove('hidden');
-            document.getElementById('status').innerText = "Pare pou yon lòt!";
+            boardData.fill(""); document.getElementById('board').innerHTML = ""; 
+            document.getElementById('board').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden');
         });
 
         socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
