@@ -12,23 +12,21 @@
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
         .btn-row { display: flex; justify-content: space-around; margin: 10px 0; gap: 10px; }
         button { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
-        input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 85%; background: #fff; color: #000; text-align: center; }
-        .social-link { text-decoration: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; color: white; width: 45%; }
+        input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 85%; background: #fff; color: #000; text-align: center; font-size: 16px; }
+        .social-btn { text-decoration: none; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: bold; color: white; width: 48%; display: inline-block; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 400px; margin: auto; background: #444; }
         .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN -->
     <div id="auth-screen" class="screen">
         <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <input type="text" id="phone" placeholder="Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()" style="background:#ff4757; width:90%">KONEKTE</button>
     </div>
 
-    <!-- JWÈT -->
     <div id="game-screen" class="screen hidden">
         <div class="bal-box">
             <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
@@ -39,8 +37,8 @@
         </div>
 
         <div class="btn-row">
-            <a href="https://whatsapp.com" class="social-link" style="background:#25d366">Gwoup WhatsApp</a>
-            <a href="https://wa.me" class="social-link" style="background:#3498db">Asistan 👨‍💻</a>
+            <a href="https://whatsapp.com" class="social-btn" style="background:#25d366">Gwoup WhatsApp</a>
+            <a href="https://wa.me" class="social-btn" style="background:#3498db">Asistan 👨‍💻</a>
         </div>
 
         <div id="lobby">
@@ -50,11 +48,12 @@
             </div>
 
             <h3 id="g-title">Jwe Mopyon 🔒</h3>
+            <p style="margin:0; font-size:12px; color:#aaa">Montan Miz (Min 50G)</p>
             <input type="number" id="bet" value="50">
             <button onclick="createRoom()" style="background:#2ecc71; width:90%">KREYE KÒD</button>
             
-            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:10px">
-                Kòd: <b id="c-val" style="font-size:24px; color:#ff4757">----</b>
+            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:15px;">
+                Kòd zanmi an:<br><b id="c-val" style="font-size:28px; color:#ff4757">----</b>
             </div>
 
             <hr style="border:0.1px solid #333; margin:15px">
@@ -65,7 +64,7 @@
             <h4>Referral 💰</h4>
             <div style="display:flex; justify-content:center; gap:5px">
                 <input type="text" id="ref-link" readonly style="font-size:10px; background:#000; color:#0f0; width:65%">
-                <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px">KOPYE</button>
+                <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px 10px;">KOPYE</button>
             </div>
         </div>
 
@@ -77,7 +76,7 @@
 
     <script>
         const socket = io();
-        let myPhone, myType = 'mopyon', boardData = Array(225).fill(""), currentRoom;
+        let myPhone, myType = 'mopyon', boardData = Array(225).fill("");
         const refParam = new URLSearchParams(window.location.search).get('ref');
 
         async function login() {
@@ -93,6 +92,8 @@
             } else alert(d.msg);
         }
 
+        socket.on('errorMsg', m => alert(m));
+
         function setGame(t) {
             myType = t;
             document.getElementById('g-title').innerText = t === 'mopyon' ? "Jwe Mopyon 🔒" : "Jwe Domino 🀄";
@@ -100,41 +101,33 @@
             document.getElementById('btnD').style.opacity = t === 'domino' ? "1" : "0.5";
         }
 
-        function createRoom() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value, game: myType }); }
+        function createRoom() { 
+            const b = document.getElementById('bet').value;
+            if(b < 50) return alert("Miz la dwe 50G minimòm!");
+            socket.emit('createPrivate', { phone: myPhone, bet: b, game: myType }); 
+        }
+
         function joinRoom() { socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); }
         
         socket.on('roomCreated', d => { document.getElementById('c-val').innerText = d.code; document.getElementById('room-display').classList.remove('hidden'); });
-        
-        socket.on('gameStart', d => {
-            if(d.game === 'domino') {
-                alert("Match Domino kòmanse! (Sistèm nan ap chaje...)");
-            } else {
-                document.getElementById('lobby').classList.add('hidden');
-                document.getElementById('board-container').classList.remove('hidden');
-                renderBoard();
-            }
-        });
 
         function copyRef() {
-            const link = document.getElementById("ref-link"); link.select();
-            navigator.clipboard.writeText(link.value); alert("Lyen kopye!");
+            const l = document.getElementById("ref-link"); l.select();
+            navigator.clipboard.writeText(l.value); alert("Lyen kopye!");
         }
 
         async function withdraw() {
-            const amt = prompt("Konbe ou vle retire?");
-            if(amt) {
-                const res = await fetch('/request-withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:myPhone, amount:amt}) });
+            const a = prompt("Konbe ou vle retire?");
+            if(a >= 100) {
+                const res = await fetch('/request-withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:myPhone, amount:a}) });
                 const d = await res.json();
-                if(d.success) { document.getElementById('bal').innerText = d.newBalance; alert("Mande voye bay Admin!"); } else alert(d.msg);
-            }
+                if(d.success) { document.getElementById('bal').innerText = d.newBalance; alert("Mande voye!"); } else alert(d.msg);
+            } else { alert("Minimòm se 100G!"); }
         }
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
-            boardData.forEach((v, i) => {
-                const c = document.createElement('div'); c.className = 'cell'; c.innerText = v;
-                b.appendChild(c);
-            });
+            boardData.forEach(v => { const c = document.createElement('div'); c.className = 'cell'; c.innerText = v; b.appendChild(c); });
         }
     </script>
 </body>
