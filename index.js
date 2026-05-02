@@ -31,16 +31,21 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
     phone: String, amount: Number, fee: Number, status: { type: String, default: 'Pending' }, date: { type: Date, default: Date.now }
 }));
 
-// --- ROUTES LOGIN & RETRÈ ---
+// --- ROUTES ---
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
         const cleanPhone = phone.trim();
         let user = await User.findOne({ phone: cleanPhone });
+
         if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            if (ref && ref !== cleanPhone) {
+                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            }
             user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
-        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon!" });
+        }
         res.json({ success: true, phone: user.phone, balance: user.balance });
     } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
@@ -58,7 +63,7 @@ app.post('/request-withdraw', async (req, res) => {
     } else res.json({ success: false, msg: "Balans ensifizan!" });
 });
 
-// --- ROUTES ADMIN ---
+// --- ADMIN PANEL ---
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.json({ success: false });
@@ -66,12 +71,7 @@ app.post('/admin/update-balance', async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/admin/withdraws', async (req, res) => {
-    if (req.query.secret !== ADMIN_SECRET) return res.json([]);
-    res.json(await Withdraw.find({ status: 'Pending' }));
-});
-
-// --- LOGIC SOCKET.IO (JWÈT) ---
+// --- LOGIC JWÈT (SOCKET.IO) ---
 let privateRooms = {};
 let activeGames = {};
 
@@ -79,8 +79,10 @@ io.on('connection', (socket) => {
     socket.on('createPrivate', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans ou piti!");
+        
         const code = Math.floor(1000 + Math.random() * 9000).toString();
-        privateRooms[code] = { host: data.phone, bet: Number(data.bet), game: data.game || 'mopyon' };
+        privateRooms[code] = { host: data.phone, bet: Number(data.bet), game: data.game };
+        
         socket.join(code);
         socket.emit('roomCreated', { code, bet: data.bet, game: data.game });
     });
@@ -88,15 +90,20 @@ io.on('connection', (socket) => {
     socket.on('joinPrivate', async (data) => {
         const room = privateRooms[data.code];
         const user = await User.findOne({ phone: data.phone });
+        
         if (room && user && user.balance >= room.bet) {
             await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
             await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
+            
             const prize = (room.bet * 2) * 0.95;
             activeGames[data.code] = { prize, players: [room.host, data.phone], game: room.game };
+            
             socket.join(data.code);
-            io.to(data.code).emit('gameStart', { room: data.code, prize, firstTurn: room.host, game: room.game });
+            io.to(data.code).emit('gameStart', { room: data.code, prize, game: room.game, firstTurn: room.host });
             delete privateRooms[data.code];
-        } else socket.emit('errorMsg', "Kòd mal oswa balans piti!");
+        } else {
+            socket.emit('errorMsg', "Kòd mal oswa balans piti!");
+        }
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
@@ -111,4 +118,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`🚀 Sèvè a pare sou pòt ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Sèvè ap kouri sou pòt ${PORT}`));
