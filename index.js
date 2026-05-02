@@ -31,15 +31,6 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
     phone: String, amount: Number, fee: Number, status: { type: String, default: 'Pending' }, date: { type: Date, default: Date.now }
 }));
 
-// --- DOMINO LOGIC ---
-function createDeck() {
-    let deck = [];
-    for (let i = 0; i <= 6; i++) {
-        for (let j = i; j <= 6; j++) { deck.push([i, j]); }
-    }
-    return deck.sort(() => Math.random() - 0.5);
-}
-
 // --- ROUTES ---
 app.post('/login', async (req, res) => {
     try {
@@ -57,7 +48,7 @@ app.post('/login', async (req, res) => {
 app.post('/request-withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const amt = Number(amount);
-    if (amt < 100) return res.json({ success: false, msg: "Minimòm retrè se 100G!" });
+    if (amt < 100) return res.json({ success: false, msg: "Minimòm se 100G!" });
     const user = await User.findOne({ phone: phone.trim() });
     if (user && user.balance >= amt) {
         const fee = amt * 0.05;
@@ -79,7 +70,9 @@ io.on('connection', (socket) => {
         if (!user || user.balance < betAmt) return socket.emit('errorMsg', "Balans ou ensifizan!");
 
         const code = Math.floor(1000 + Math.random() * 9000).toString();
-        privateRooms[code] = { host: data.phone, bet: betAmt, game: data.game };
+        // Nou asire nou jwèt la sove byen
+        privateRooms[code] = { host: data.phone, bet: betAmt, game: data.game || 'mopyon' };
+        
         socket.join(code);
         socket.emit('roomCreated', { code, bet: betAmt, game: data.game });
     });
@@ -92,19 +85,9 @@ io.on('connection', (socket) => {
             await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
             const prize = (room.bet * 2) * 0.95;
             
-            let gameData = { prize, players: [room.host, data.phone], game: room.game };
-            if (room.game === 'domino') {
-                let deck = createDeck();
-                gameData.hand1 = deck.splice(0, 7);
-                gameData.hand2 = deck.splice(0, 7);
-            }
-
-            activeGames[data.code] = gameData;
+            activeGames[data.code] = { prize, players: [room.host, data.phone], game: room.game };
             socket.join(data.code);
-            io.to(data.code).emit('gameStart', { 
-                room: data.code, prize, game: room.game, firstTurn: room.host,
-                hand1: gameData.hand1, hand2: gameData.hand2
-            });
+            io.to(data.code).emit('gameStart', { room: data.code, prize, game: room.game, firstTurn: room.host });
             delete privateRooms[data.code];
         } else socket.emit('errorMsg', "Kòd mal oswa balans piti!");
     });
