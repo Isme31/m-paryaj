@@ -45,7 +45,31 @@
             <a href="https://wa.me" class="social-btn" style="background:#3498db">Asistan 👨‍💻</a>
         </div>
 
-        <div id="lobby">
+        <<div id="lobby">
+    <div class="btn-row">
+        <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
+        <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
+    </div>
+
+    <!-- MEN PANTAN KI TE MANKE A -->
+    <p style="margin: 15px 0 5px; font-size: 14px; color: #ccc; font-weight: bold;">Montan Miz (Min 50G)</p>
+    <input type="number" id="bet" value="50" style="width: 90%; height: 45px; font-size: 20px; border: 2px solid #333;">
+    
+    <button onclick="createRoom()" style="background:#2ecc71; width:90%; margin-top: 10px; height: 50px; font-size: 18px;">KREYE KÒD</button>
+    
+    <div id="room-display" class="hidden" style="margin:15px; border:1px dashed #ff4757; padding:15px; border-radius: 10px;">
+        Kòd zanmi an:<br>
+        <b id="c-val" style="font-size:32px; color:#ff4757; letter-spacing: 5px;">----</b>
+    </div>
+
+    <hr style="border:0.1px solid #333; margin:20px">
+    
+    <input type="text" id="join-code" placeholder="Mete kòd zanmi w" style="width: 90%; height: 45px;">
+    <button onclick="joinRoom()" style="background:#ffa502; width:90%; height: 50px; font-size: 18px;">ANTRE MATCH</button>
+    
+    <!-- ... rès kòd referral la ... -->
+</div>
+>
             <div class="btn-row">
                 <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
                 <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
