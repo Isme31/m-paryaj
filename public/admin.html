@@ -1,28 +1,26 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html>
 <head>
-    <meta charset="UTF-8"><title>Admin Blitz</title>
-    <style>
-        body { background:#111; color:white; font-family:sans-serif; text-align:center; padding:20px; }
-        .card { background:#222; border-left: 8px solid #ff4757; padding:15px; margin:15px auto; border-radius:10px; text-align: left; max-width: 500px; }
-        button { background:#28a745; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; }
-    </style>
+    <title>Admin - Mopyon</title>
+    <style>body { background: #f0f0f0; padding: 20px; font-family: sans-serif; }</style>
 </head>
 <body>
-    <h1>Panèl Kontwòl ⚡</h1>
-    <div id="list">Ap chaje...</div>
+    <h2>Depoze Kòb sou Kont Jwè</h2>
+    <input type="text" id="p" placeholder="Telefòn Jwè">
+    <input type="number" id="a" placeholder="Montan">
+    <button onclick="add()">AJOUTE KÒB ✅</button>
+
     <script>
-        async function load() {
-            const res = await fetch('/admin/all-data?key=hugues');
-            const data = await res.json();
-            document.getElementById('list').innerHTML = data.deposits.map(d => `
-                <div class="card">
-                    <b>📞 ${d.phone}</b> | 💰 ${d.amount}G<br>
-                    <small>ID: ${d.tid}</small>
-                </div>
-            `).join('');
+        async function add() {
+            const phone = document.getElementById('p').value;
+            const amount = document.getElementById('a').value;
+            await fetch('/admin/update-balance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone, amount: parseFloat(amount) })
+            });
+            alert("Kòb la ajoute!");
         }
-        load(); setInterval(load, 10000);
     </script>
 </body>
 </html>
