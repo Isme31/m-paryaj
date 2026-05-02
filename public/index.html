@@ -6,11 +6,29 @@
     <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
+        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; overflow-x: hidden; }
         .screen { padding: 20px; }
         .hidden { display: none !important; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 95%; max-width: 400px; margin: 20px auto; background: #444; border: 2px solid #444; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(15, 1fr); 
+            gap: 1px; 
+            width: 98%; 
+            max-width: 500px; 
+            margin: 10px auto; 
+            background: #444; 
+            border: 2px solid #444; 
+        }
+        .cell { 
+            aspect-ratio: 1/1; 
+            background: #181818; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: clamp(10px, 3vw, 16px); 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
         input, button { padding: 15px; margin: 10px 0; width: 90%; max-width: 300px; border-radius: 10px; border: none; font-size: 16px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
         #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; }
@@ -40,7 +58,8 @@
 
     <script>
         const socket = io();
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(100).fill("");
+        const SIZE = 15;
+        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(SIZE * SIZE).fill("");
 
         async function login() {
             const phone = document.getElementById('phone').value;
@@ -69,6 +88,7 @@
             currentRoom = data.room;
             mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
             myTurn = (data.firstTurn === myPhone);
+            boardData.fill("");
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board').classList.remove('hidden');
             renderBoard();
@@ -81,18 +101,15 @@
         });
 
         socket.on('gameOver', (data) => {
-            alert(data.winner === myPhone ? "OU GANYEN " + data.prize + "G!" : "OU PÈDI!");
-            document.getElementById('bal').innerText = data.newBalance;
+            if(data.msg) alert(data.msg);
+            else alert(data.winner === myPhone ? "OU GANYEN " + data.prize + "G!" : "OU PÈDI!");
+            if(data.newBalance) document.getElementById('bal').innerText = data.newBalance;
             resetUI();
         });
 
-        socket.on('balanceUpdate', (data) => {
-            document.getElementById('bal').innerText = data.balance;
-        });
+        socket.on('balanceUpdate', (data) => { document.getElementById('bal').innerText = data.balance; });
 
         function resetUI() {
-            boardData = Array(100).fill("");
-            currentRoom = null;
             document.getElementById('board').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
             document.getElementById('status').innerText = "Pare!";
@@ -102,7 +119,27 @@
             if(!myTurn || boardData[i] !== "") return;
             boardData[i] = mySymbol; myTurn = false; renderBoard(); updateStatus();
             socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            // Isit la ou ka mete lojik checkWin ou a
+            if (checkWin(i, mySymbol)) {
+                socket.emit('win', { room: currentRoom, phone: myPhone });
+            }
+        }
+
+        function checkWin(index, symbol) {
+            const row = Math.floor(index / SIZE);
+            const col = index % SIZE;
+            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+            for (let [dr, dc] of dirs) {
+                let count = 1;
+                [1, -1].forEach(s => {
+                    for (let i = 1; i < 5; i++) {
+                        let r = row + dr * i * s, c = col + dc * i * s;
+                        if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && boardData[r * SIZE + c] === symbol) count++;
+                        else break;
+                    }
+                });
+                if (count >= 5) return true;
+            }
+            return false;
         }
 
         function renderBoard() {
