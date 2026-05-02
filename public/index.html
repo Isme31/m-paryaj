@@ -13,8 +13,8 @@
         .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; }
         input, button { padding: 12px; margin: 5px 0; width: 90%; max-width: 300px; border-radius: 8px; border: none; font-size: 15px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
-        #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; min-height: 40px; }
-        #timer-box { font-size: 18px; color: #ffeb3b; }
+        #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; }
+        #timer { color: #ffeb3b; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -33,9 +33,9 @@
         <div id="lobby">
             <input type="number" id="bet" value="50" min="50"><br>
             <button onclick="findMatch()">⚡ JWENN MATCH RAPID</button>
-            <p>Oswa jwe ak yon zanmi:</p>
-            <input type="text" id="roomCode" placeholder="Kòd Chanm">
-            <button onclick="joinPrivate()" style="background: #2ecc71;">ANTRE NAN CHANM</button>
+            <hr>
+            <input type="text" id="roomCode" placeholder="Kòd Chanm Prive">
+            <button onclick="joinPrivate()" style="background: #2ecc71;">JWE AK ZANMI</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
@@ -57,17 +57,21 @@
                 document.getElementById('bal').innerText = data.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-            } else { alert("Erè!"); }
+            } else { alert(data.msg || "Erè!"); }
         }
 
         function findMatch() {
+            const balance = parseFloat(document.getElementById('bal').innerText);
+            if (balance < 50) return alert("Ou bezwen pi piti 50G!");
             socket.emit('findMatch', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value) });
             document.getElementById('status').innerText = "Ap chache advèsè...";
         }
 
         function joinPrivate() {
+            const balance = parseFloat(document.getElementById('bal').innerText);
             const room = document.getElementById('roomCode').value;
-            if(!room) return alert("Antre yon kòd!");
+            if (balance < 50) return alert("Ou bezwen pi piti 50G!");
+            if (!room) return alert("Antre yon kòd!");
             socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room });
         }
 
@@ -78,31 +82,26 @@
             boardData.fill("");
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board').classList.remove('hidden');
-            renderBoard();
-            updateStatus();
+            renderBoard(); updateStatus();
             if(myTurn) startTimer();
         });
 
         socket.on('opponentMove', (data) => {
             boardData[data.index] = data.symbol;
-            myTurn = true; 
-            renderBoard(); 
-            updateStatus();
-            startTimer();
+            myTurn = true; renderBoard(); updateStatus(); startTimer();
         });
 
         socket.on('gameOver', (data) => {
             clearInterval(timerInterval);
-            alert(data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!");
+            alert(data.msg || (data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!"));
             if(data.newBalance) document.getElementById('bal').innerText = data.newBalance;
-            backToLobby();
+            resetUI();
         });
 
-        function backToLobby() {
+        function resetUI() {
             document.getElementById('board').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
             document.getElementById('status').innerText = "Pare!";
-            document.getElementById('status').style.background = "#28a745";
         }
 
         function startTimer() {
@@ -113,7 +112,7 @@
                 updateStatus();
                 if(timeLeft <= 0) {
                     clearInterval(timerInterval);
-                    // Lojik si tan fini (pèdi pa fòfè)
+                    alert("Tan an fini!");
                 }
             }, 1000);
         }
@@ -121,15 +120,14 @@
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
             clearInterval(timerInterval);
-            boardData[i] = mySymbol; myTurn = false; 
-            renderBoard(); updateStatus();
+            boardData[i] = mySymbol; myTurn = false; renderBoard(); updateStatus();
             socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
             if (checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
         }
 
         function checkWin(index, s) {
             const r = Math.floor(index / SIZE), c = index % SIZE;
-            const dirs = [,,, [1,-1]];
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for (let [dr, dc] of dirs) {
                 let count = 1;
                 [1, -1].forEach(side => {
@@ -157,14 +155,11 @@
 
         function updateStatus() {
             const s = document.getElementById('status');
-            if(myTurn) {
-                s.innerHTML = `TOU PA W (${mySymbol}) - <span id="timer-box">${timeLeft}s</span>`;
-                s.style.background = "#28a745";
-            } else {
-                s.innerText = "Tann advèsè a...";
-                s.style.background = "#ffc107";
-            }
+            if(myTurn) s.innerHTML = `Tou pa w (${mySymbol}) - <span id="timer">${timeLeft}s</span>`;
+            else s.innerText = "Tann advèsè a...";
         }
+        
+        socket.on('balanceUpdate', (data) => { document.getElementById('bal').innerText = data.balance; });
     </script>
 </body>
 </html>
