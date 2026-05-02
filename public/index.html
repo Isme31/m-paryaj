@@ -19,7 +19,7 @@
 <body>
     <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Telefòn">
+        <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE</button>
     </div>
@@ -53,27 +53,31 @@
         }
 
         function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value) }); }
-        
-        function joinPrivate() {
-            const room = document.getElementById('roomCode').value;
-            if(!room) return alert("Antre yon kòd!");
-            socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room });
-        }
+        function joinPrivate() { socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room: document.getElementById('roomCode').value }); }
 
         socket.on('statusUpdate', msg => { document.getElementById('status').innerText = msg; });
 
         socket.on('gameStart', data => {
             currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
-            boardData.fill(""); document.getElementById('lobby').classList.add('hidden'); document.getElementById('board').classList.remove('hidden');
-            renderBoard(); updateStatus(); if(myTurn) startTimer();
+            boardData.fill(""); // Netwaye tablo a nan memwa
+            document.getElementById('lobby').classList.add('hidden'); document.getElementById('board').classList.remove('hidden');
+            renderBoard(); // Redesinen tablo a vid
+            updateStatus(); if(myTurn) startTimer();
         });
 
         socket.on('opponentMove', data => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); updateStatus(); startTimer(); });
 
         socket.on('gameOver', data => {
-            clearInterval(timerInterval); alert(data.msg || (data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!"));
+            clearInterval(timerInterval);
+            alert(data.msg || (data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!"));
             if(data.newBalance !== undefined) document.getElementById('bal').innerText = data.newBalance;
-            document.getElementById('board').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden');
+            
+            // RESET KONPLE
+            boardData.fill(""); 
+            document.getElementById('board').innerHTML = ""; 
+            document.getElementById('board').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            document.getElementById('status').innerText = "Pare pou yon lòt!";
         });
 
         socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
