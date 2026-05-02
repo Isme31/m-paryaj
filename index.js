@@ -11,24 +11,48 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- KONEKSYON DB ---
+// --- KONEKSYON MONGODB ---
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyonDB?retryWrites=true&w=majority&appName=hugues";
-mongoose.connect(dbURI).then(() => console.log("DB Konekte ✅"));
+mongoose.connect(dbURI).then(() => console.log("MongoDB Konekte ✅")).catch(e => console.log("Erè DB ❌"));
 
+// --- MODEL ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: String,
     balance: { type: Number, default: 100 }
 }));
 
+// --- LOGIN ---
+app.post('/login', async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+        let user = await User.findOne({ phone });
+        if (!user) {
+            user = await User.create({ phone, password, balance: 100 });
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon" });
+        }
+        res.json({ success: true, phone: user.phone, balance: user.balance });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
+
+// --- ADMIN API ---
+app.post('/admin/update-balance', async (req, res) => {
+    const { phone, amount } = req.body;
+    await User.findOneAndUpdate({ phone }, { $inc: { balance: amount } });
+    res.json({ success: true });
+});
+
 let waitingPlayers = [];
 let activeGames = {};
 
 io.on('connection', (socket) => {
-    // Matchmaking
+    // --- MATCH RAPID ---
     socket.on('findMatch', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (user && user.balance >= data.bet) {
+        if (!user || user.balance < 50) return socket.emit('gameOver', { msg: "Ou bezwen pi piti 50G pou w jwe!" });
+
+        if (user.balance >= data.bet) {
             await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
             socket.emit('balanceUpdate', { balance: user.balance - data.bet });
 
@@ -48,20 +72,22 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Chanm Prive
+    // --- MATCH PRIVE ---
     socket.on('joinPrivate', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (user && user.balance >= data.bet) {
-            const roomName = `private_${data.room}`;
-            socket.join(roomName);
-            const clients = io.sockets.adapter.rooms.get(roomName);
-            if (clients.size === 2) {
-                await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
-                activeGames[roomName] = { prize: (data.bet * 2) * 0.9, players: Array.from(clients) };
-                io.to(roomName).emit('gameStart', { room: roomName, prize: activeGames[roomName].prize, firstTurn: data.phone });
-            } else {
-                await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
-            }
+        if (!user || user.balance < 50) return socket.emit('gameOver', { msg: "Ou bezwen pi piti 50G pou w jwe!" });
+
+        const roomName = `private_${data.room}`;
+        socket.join(roomName);
+        const clients = io.sockets.adapter.rooms.get(roomName);
+
+        if (clients.size === 2) {
+            await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+            activeGames[roomName] = { prize: (data.bet * 2) * 0.9, players: Array.from(clients) };
+            io.to(roomName).emit('gameStart', { room: roomName, prize: activeGames[roomName].prize, firstTurn: data.phone });
+        } else {
+            await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+            socket.emit('balanceUpdate', { balance: user.balance - data.bet });
         }
     });
 
