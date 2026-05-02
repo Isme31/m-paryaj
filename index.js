@@ -11,16 +11,15 @@ const io = new Server(server);
 app.use(express.json());
 
 // --- SÈVI PAJ WEB LA ---
-// Liy sa a ap fè sèvè a voye paj index.html la lè ou louvri lyen an
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Si ou gen lòt dosye (css, imaj), mete yo bò kote index.html
+// Pou sèvi lòt dosye (css, js) ki bò kote index.html
 app.use(express.static(__dirname));
 
 // --- KONEKSYON MONGODB ---
-// Mwen mete lyen an dirèkteman ak modpas "hugues" la pou si Render pa jwenn varyab la
+// Sèvi ak lyen sa a dirèkteman ak modpas "hugues" la
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
@@ -66,26 +65,53 @@ app.get('/admin/all-data', async (req, res) => {
 });
 
 // --- LOGIK JWÈT (SOCKET.IO) ---
-let waitingPlayer = null;
+let waitingPlayer = null; // Pou match piblik
+let privateRooms = {};    // Pou match ak kòd (zanmi)
+
 io.on('connection', (socket) => {
-    socket.on('findMatch', async ({ phone, bet }) => {
+    socket.on('findMatch', async ({ phone, bet, code }) => {
         const user = await User.findOne({ phone });
         if (!user || user.balance < bet) return socket.emit('status_update', "Kòb ou pa ase!");
 
-        if (!waitingPlayer) {
-            waitingPlayer = { socket, phone, bet };
-            socket.emit('status_update', "Ap chèche moun...");
-        } else {
-            const room = `room_${waitingPlayer.phone}_${phone}`;
-            const prize = (waitingPlayer.bet + bet) * 0.9;
-            
-            await User.updateOne({ phone: waitingPlayer.phone }, { $inc: { balance: -waitingPlayer.bet } });
-            await User.updateOne({ phone: phone }, { $inc: { balance: -bet } });
+        // SI GEN YON KÒD (Match Prive)
+        if (code && code.trim() !== "") {
+            const roomKey = code.trim().toLowerCase();
+            if (!privateRooms[roomKey]) {
+                privateRooms[roomKey] = { socket, phone, bet };
+                socket.emit('status_update', `W ap tann zanmi w nan kòd: ${roomKey}`);
+            } else {
+                const opponent = privateRooms[roomKey];
+                if (opponent.phone === phone) return;
 
-            socket.join(room);
-            waitingPlayer.socket.join(room);
-            io.to(room).emit('gameStart', { room, firstTurn: waitingPlayer.phone, prize });
-            waitingPlayer = null;
+                const room = `room_${roomKey}`;
+                const prize = (opponent.bet + bet) * 0.9;
+
+                await User.updateOne({ phone: opponent.phone }, { $inc: { balance: -opponent.bet } });
+                await User.updateOne({ phone: phone }, { $inc: { balance: -bet } });
+
+                socket.join(room);
+                opponent.socket.join(room);
+                io.to(room).emit('gameStart', { room, firstTurn: opponent.phone, prize });
+                delete privateRooms[roomKey];
+            }
+        } 
+        // SI PA GEN KÒD (Match Piblik)
+        else {
+            if (!waitingPlayer) {
+                waitingPlayer = { socket, phone, bet };
+                socket.emit('status_update', "Ap chèche moun piblik...");
+            } else {
+                const room = `room_${waitingPlayer.phone}_${phone}`;
+                const prize = (waitingPlayer.bet + bet) * 0.9;
+                
+                await User.updateOne({ phone: waitingPlayer.phone }, { $inc: { balance: -waitingPlayer.bet } });
+                await User.updateOne({ phone: phone }, { $inc: { balance: -bet } });
+
+                socket.join(room);
+                waitingPlayer.socket.join(room);
+                io.to(room).emit('gameStart', { room, firstTurn: waitingPlayer.phone, prize });
+                waitingPlayer = null;
+            }
         }
     });
 
