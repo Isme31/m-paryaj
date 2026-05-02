@@ -18,6 +18,8 @@
         #timer { color: #ffeb3b; }
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
         .btn-row { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+        .support-link { margin-top: 20px; font-size: 13px; color: #888; display: block; }
+        .support-link a { color: #ff4757; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -29,6 +31,11 @@
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE / ENSRIPSYON</button>
+        
+        <span class="support-link">
+            Pwoblèm koneksyon oswa kont bloke? <br>
+            <a href="javascript:void(0)" onclick="contactSupport()">Kontakte Sipò (Asistan) 🛠️</a>
+        </span>
     </div>
 
     <!-- SCREEN JWÈT -->
@@ -45,7 +52,7 @@
         </div>
         
         <div id="lobby">
-            <p>Konbe ou vle parye nan match la?</p>
+            <p>Konbe ou vle parye?</p>
             <input type="number" id="bet" value="50" min="50" style="text-align: center;">
             <button onclick="findMatch()">⚡ MATCH RAPID</button>
             <div style="margin: 20px 0; color: #444;">— OSWA —</div>
@@ -85,19 +92,27 @@
             } else alert(data.msg);
         }
 
-        // 2. RECHAJE (DEPO)
+        // 2. SIPÒ TEKNIK (ASISTAN)
+        function contactSupport() {
+            const chwa = confirm("Ki asistan ou vle kontakte?\n\nPeze [OK] pou Asistan 1 (3159-4645)\nPeze [ANNULER] pou Asistan 2 (5511-0103)");
+            const adminPhone = chwa ? "50931594645" : "50955110103";
+            const mesaj = encodeURIComponent("Bonjou, mwen bezwen èd. Kont Mopyon Blitz mwen bloke oswa mwen bliye modpas mwen.");
+            window.open(`https://wa.me{adminPhone}?text=${mesaj}`, '_blank');
+        }
+
+        // 3. RECHAJE (DEPO)
         function showDepoMenu() {
-            const chwa = confirm("Ki metòd ou vle itilize?\n\nPeze [OK] pou MONCASH (3159-4645)\nPeze [ANNULER] pou NATCASH (5511-0103)");
+            const chwa = confirm("Chwazi metòd peman an:\n\nPeze [OK] pou MONCASH (3159-4645)\nPeze [ANNULER] pou NATCASH (5511-0103)");
             const adminPhone = chwa ? "50931594645" : "50955110103";
             const metòd = chwa ? "MONCASH" : "NATCASH";
 
-            alert(`ENSTRIKSYON:\n1. Voye kòb la sou ${metòd} nan nimewo ${adminPhone}.\n2. Apre sa, voye prèv la sou WhatsApp pou admin aktive balans ou.`);
+            alert(`ENSTRIKSYON:\n1. Voye kòb la sou ${metòd} nan nimewo ${adminPhone}.\n2. Apre sa, voye prèv la sou WhatsApp pou admin valide balans ou.`);
 
-            const mesaj = `*DEPO LAJAN - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💳 *Metòd:* ${metòd}\n✅ *Mwen fèk voye kòb la, tanpri aktive balans mwen.*`;
+            const mesaj = `*DEPO LAJAN - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💳 *Metòd:* ${metòd}\n✅ *Mwen fèk voye kòb la, tanpri moute balans mwen.*`;
             window.open(`https://wa.me{adminPhone}?text=${encodeURIComponent(mesaj)}`, '_blank');
         }
 
-        // 3. RETRÈ
+        // 4. RETRÈ
         async function requestWithdraw() {
             const amount = prompt("Konbe ou vle retire? (Min 100G)");
             if (!amount || amount < 100) return alert("Minimòm retrè se 100G");
@@ -111,18 +126,18 @@
 
             if(data.success) {
                 const netAmount = amount * 0.95; 
-                const chwa = confirm("Ki Admin ou vle kontakte pou retrè a?\n\nPeze [OK] pou Admin 1 (3159-4645)\nPeze [ANNULER] pou Admin 2 (5511-0103)");
+                const chwa = confirm("Voye konfimasyon bay ki Admin?\n\nPeze [OK] pou Admin 1 (3159-4645)\nPeze [ANNULER] pou Admin 2 (5511-0103)");
                 const adminPhone = chwa ? "50931594645" : "50955110103";
 
-                const mesaj = `*DEMANN RETRÈ - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💰 *Montan mande:* ${amount}G\n💵 *Sa m dwe resevwa (apre 5%):* ${netAmount}G\n\n_Tanpri valide demann mwen an._`;
+                const mesaj = `*DEMANN RETRÈ - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💰 *Mande:* ${amount}G\n💵 *Resevwa (apre 5%):* ${netAmount}G\n\n_Konfime demann mwen an sou sistèm nan._`;
                 window.open(`https://wa.me{adminPhone}?text=${encodeURIComponent(mesaj)}`, '_blank');
                 
-                alert("Demann anrejistre! Balans ou mete ajou.");
+                alert("Demann voye! Balans ou mete ajou.");
                 document.getElementById('bal').innerText = data.newBalance;
             } else alert(data.msg);
         }
 
-        // 4. JWÈT (SOCKET)
+        // 5. JWÈT (SOCKET)
         function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value) }); }
         function joinPrivate() { socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room: document.getElementById('roomCode').value }); }
 
@@ -164,7 +179,7 @@
 
         function checkWin(index, s) {
             const r = Math.floor(index / SIZE), c = index % SIZE;
-            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+            const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
             for (let [dr, dc] of dirs) {
                 let count = 1;
                 [1, -1].forEach(side => {
