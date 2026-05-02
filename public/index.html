@@ -1,164 +1,123 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz ⚡</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; overflow-x: hidden; }
-        .screen { padding: 20px; }
-        .hidden { display: none !important; }
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(15, 1fr); 
-            gap: 1px; 
-            width: 98%; 
-            max-width: 500px; 
-            margin: 10px auto; 
-            background: #444; 
-            border: 2px solid #444; 
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const path = require('path');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- KONEKSYON MONGODB ---
+const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyonDB?retryWrites=true&w=majority&appName=hugues";
+mongoose.connect(dbURI).then(() => console.log("MongoDB Konekte ✅")).catch(e => console.log("Erè DB ❌"));
+
+// --- MODEL ---
+const User = mongoose.model('User', new mongoose.Schema({
+    phone: { type: String, unique: true },
+    password: String,
+    balance: { type: Number, default: 100 }
+}));
+
+// --- LOGIN ---
+app.post('/login', async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+        let user = await User.findOne({ phone });
+        if (!user) {
+            user = await User.create({ phone, password, balance: 100 });
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon" });
         }
-        .cell { 
-            aspect-ratio: 1/1; 
-            background: #181818; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: clamp(10px, 3vw, 16px); 
-            font-weight: bold; 
-            cursor: pointer; 
-        }
-        input, button { padding: 15px; margin: 10px 0; width: 90%; max-width: 300px; border-radius: 10px; border: none; font-size: 16px; }
-        button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
-        #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; }
-    </style>
-</head>
-<body>
+        res.json({ success: true, phone: user.phone, balance: user.balance });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
 
-    <div id="auth-screen" class="screen">
-        <h1>Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn">
-        <input type="password" id="pass" placeholder="Modpas">
-        <button onclick="login()">KONEKTE</button>
-    </div>
+// --- ADMIN API ---
+app.post('/admin/update-balance', async (req, res) => {
+    const { phone, amount } = req.body;
+    await User.findOneAndUpdate({ phone }, { $inc: { balance: amount } });
+    res.json({ success: true });
+});
 
-    <div id="game-screen" class="screen hidden">
-        <div id="status">Pare pou jwe!</div>
-        <h3>Balans: <span id="bal" style="color:#00ff00;">0</span> G</h3>
-        
-        <div id="lobby">
-            <label>Mize (G):</label><br>
-            <input type="number" id="bet" value="50" min="50">
-            <button onclick="findMatch()">⚡ JWENN MATCH</button>
-        </div>
+// --- LOGIC JWÈT ---
+let waitingPlayers = [];
+let activeGames = {};
 
-        <div id="board" class="grid hidden"></div>
-    </div>
+io.on('connection', (socket) => {
+    // --- MATCH RAPID ---
+    socket.on('findMatch', async (data) => {
+        try {
+            const user = await User.findOne({ phone: data.phone });
+            if (user && user.balance >= data.bet) {
+                await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+                socket.emit('balanceUpdate', { balance: user.balance - data.bet });
 
-    <script>
-        const socket = io();
-        const SIZE = 15;
-        let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(SIZE * SIZE).fill("");
+                let oppIdx = waitingPlayers.findIndex(p => p.bet === data.bet && p.phone !== data.phone);
+                if (oppIdx > -1) {
+                    const opponent = waitingPlayers.splice(oppIdx, 1)[0];
+                    const room = `room_${Date.now()}`;
+                    socket.join(room);
+                    const oppSock = io.sockets.sockets.get(opponent.socketId);
+                    if (oppSock) oppSock.join(room);
 
-        async function login() {
-            const phone = document.getElementById('phone').value;
-            const password = document.getElementById('pass').value;
-            const res = await fetch('/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone, password })
-            });
-            const data = await res.json();
-            if (data.success) {
-                myPhone = data.phone;
-                document.getElementById('bal').innerText = data.balance;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('game-screen').classList.remove('hidden');
-            } else { alert(data.msg || "Erè koneksyon!"); }
-        }
+                    activeGames[room] = { prize: (data.bet * 2) * 0.9, players: [socket.id, opponent.socketId] };
+                    io.to(room).emit('gameStart', { room, prize: activeGames[room].prize, firstTurn: data.phone });
+                } else {
+                    waitingPlayers.push({ ...data, socketId: socket.id });
+                }
+            }
+        } catch(e) { console.log(e); }
+    });
 
-        function findMatch() {
-            const bet = parseFloat(document.getElementById('bet').value);
-            socket.emit('findMatch', { phone: myPhone, bet });
-            document.getElementById('status').innerText = "Ap chache advèsè...";
-        }
+    // --- JWÈT PRIVE (ZANMI) ---
+    socket.on('joinPrivate', async (data) => {
+        try {
+            const user = await User.findOne({ phone: data.phone });
+            if (user && user.balance >= data.bet) {
+                const roomName = `private_${data.room}`;
+                socket.join(roomName);
+                
+                const clients = io.sockets.adapter.rooms.get(roomName);
+                if (clients.size === 2) {
+                    await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+                    socket.emit('balanceUpdate', { balance: user.balance - data.bet });
+                    
+                    activeGames[roomName] = { prize: (data.bet * 2) * 0.9, players: Array.from(clients) };
+                    io.to(roomName).emit('gameStart', { room: roomName, prize: activeGames[roomName].prize, firstTurn: data.phone });
+                } else {
+                    await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+                    socket.emit('balanceUpdate', { balance: user.balance - data.bet });
+                }
+            }
+        } catch(e) { console.log(e); }
+    });
 
-        socket.on('gameStart', (data) => {
-            currentRoom = data.room;
-            mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
-            myTurn = (data.firstTurn === myPhone);
-            boardData.fill("");
-            document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('board').classList.remove('hidden');
-            renderBoard();
-            updateStatus();
-        });
+    socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
 
-        socket.on('opponentMove', (data) => {
-            boardData[data.index] = data.symbol;
-            myTurn = true; renderBoard(); updateStatus();
-        });
+    socket.on('win', async (data) => {
+        try {
+            const game = activeGames[data.room];
+            if (game) {
+                const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
+                io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize });
+                delete activeGames[data.room];
+            }
+        } catch(e) { console.log(e); }
+    });
 
-        socket.on('gameOver', (data) => {
-            if(data.msg) alert(data.msg);
-            else alert(data.winner === myPhone ? "OU GANYEN " + data.prize + "G!" : "OU PÈDI!");
-            if(data.newBalance) document.getElementById('bal').innerText = data.newBalance;
-            resetUI();
-        });
-
-        socket.on('balanceUpdate', (data) => { document.getElementById('bal').innerText = data.balance; });
-
-        function resetUI() {
-            document.getElementById('board').classList.add('hidden');
-            document.getElementById('lobby').classList.remove('hidden');
-            document.getElementById('status').innerText = "Pare!";
-        }
-
-        function makeMove(i) {
-            if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; myTurn = false; renderBoard(); updateStatus();
-            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            if (checkWin(i, mySymbol)) {
-                socket.emit('win', { room: currentRoom, phone: myPhone });
+    socket.on('disconnect', () => {
+        waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
+        for (const room in activeGames) {
+            if (activeGames[room].players.includes(socket.id)) {
+                io.to(room).emit('gameOver', { msg: "Advèsè a dekonekte!" });
+                delete activeGames[room];
             }
         }
+    });
+});
 
-        function checkWin(index, symbol) {
-            const row = Math.floor(index / SIZE);
-            const col = index % SIZE;
-            const dirs = [[0,1], [1,0], [1,1], [1,-1]];
-            for (let [dr, dc] of dirs) {
-                let count = 1;
-                [1, -1].forEach(s => {
-                    for (let i = 1; i < 5; i++) {
-                        let r = row + dr * i * s, c = col + dc * i * s;
-                        if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && boardData[r * SIZE + c] === symbol) count++;
-                        else break;
-                    }
-                });
-                if (count >= 5) return true;
-            }
-            return false;
-        }
-
-        function renderBoard() {
-            const b = document.getElementById('board'); b.innerHTML = "";
-            boardData.forEach((val, i) => {
-                const cell = document.createElement('div');
-                cell.className = 'cell'; cell.innerText = val;
-                if(val === 'X') cell.style.color = '#ff4757';
-                if(val === 'O') cell.style.color = '#2ecc71';
-                cell.onclick = () => makeMove(i);
-                b.appendChild(cell);
-            });
-        }
-
-        function updateStatus() {
-            const s = document.getElementById('status');
-            s.innerText = myTurn ? `Tou pa w (${mySymbol})` : "Tann advèsè a...";
-            s.style.background = myTurn ? "#28a745" : "#ffc107";
-        }
-    </script>
-</body>
-</html>
+server.listen(process.env.PORT || 3000, () => console.log("Sèvè Live 🚀"));
