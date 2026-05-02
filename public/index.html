@@ -6,23 +6,23 @@
     <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
+        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; overflow-x: hidden; }
         .screen { padding: 20px; }
         .hidden { display: none !important; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 500px; margin: auto; background: #444; border: 2px solid #ff4757; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; border: 0.1px solid #222; }
         input, button { padding: 12px; margin: 5px 0; width: 90%; border-radius: 8px; border: none; font-size: 15px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
         #timer { font-size: 24px; color: #ff4757; font-weight: bold; margin: 10px 0; }
-        .social-links { margin-bottom: 15px; display: flex; justify-content: center; gap: 10px; }
-        .social-links a { background: #25d366; color: white; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-size: 12px; }
-        /* Style pou Modal Rejwe */
+        .social-links { margin-bottom: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .social-links a { background: #25d366; color: white; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         #game-over-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
 <body>
 
+    <!-- LOGIN -->
     <div id="auth-screen" class="screen">
         <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
@@ -30,6 +30,7 @@
         <button onclick="login()">KONEKTE</button>
     </div>
 
+    <!-- MAIN INTERFACE -->
     <div id="game-screen" class="screen hidden">
         <div class="bal-box">
             <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
@@ -44,32 +45,34 @@
 
         <div id="lobby">
             <h3>Kreye Chanm Privé 🔒</h3>
-            <input type="number" id="bet" value="100" style="width: 80px;">
+            <input type="number" id="bet" value="100" style="width: 80px; text-align: center;">
             <button onclick="createPrivate()" style="background: #2ecc71;">KREYE KÒD</button>
+            
             <div id="display-code" class="hidden" style="margin-top:15px; border: 2px dashed #ff4757; padding: 10px;">
                 <p>Voye kòd sa a bay zanmi w:</p>
                 <h1 id="room-code-val" style="color: #ff4757; letter-spacing: 5px;">----</h1>
-                <button id="share-btn" style="background:#25d366; width: auto;">WhatsApp 📲</button>
+                <button id="share-btn" style="background:#25d366; width: auto;">Voye sou WhatsApp 📲</button>
             </div>
-            <hr>
+            <hr style="margin: 20px 0; border: 0.5px solid #333;">
             <h3>Antre nan yon Chanm</h3>
             <input type="text" id="join-code" placeholder="Mete kòd la">
             <button onclick="joinPrivate()" style="background: #ffa502;">ANTRE NAN MATCH</button>
         </div>
 
+        <!-- GAME BOARD -->
         <div id="board-container" class="hidden">
             <div id="timer">30s</div>
-            <div id="status">Atann...</div>
+            <div id="status" style="margin-bottom: 10px;">Atann...</div>
             <div id="board" class="grid"></div>
         </div>
     </div>
 
-    <!-- MODAL REJWE -->
+    <!-- MODAL FINI MATCH -->
     <div id="game-over-modal" class="hidden">
         <h1 id="result-text" style="font-size:40px;"></h1>
-        <p id="prize-text" style="color:#0f0; font-size:20px;"></p>
+        <p id="prize-text" style="color:#0f0; font-size:24px; font-weight: bold;"></p>
         <button onclick="restartLobby()" style="background:#2ecc71; width:200px; padding:15px; margin-bottom:10px;">REJWE 🎮</button>
-        <button onclick="location.reload()" style="background:#333; width:200px; padding:10px;">SÒTI 🚪</button>
+        <button onclick="location.reload()" style="background:#333; width:200px; padding:10px;">DEKONEKTE 🚪</button>
     </div>
 
     <script>
@@ -82,7 +85,12 @@
             const password = document.getElementById('pass').value;
             const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
             const data = await res.json();
-            if (data.success) { myPhone = data.phone; document.getElementById('bal').innerText = data.balance; document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('game-screen').classList.remove('hidden'); } else alert(data.msg);
+            if (data.success) { 
+                myPhone = data.phone; 
+                document.getElementById('bal').innerText = data.balance; 
+                document.getElementById('auth-screen').classList.add('hidden'); 
+                document.getElementById('game-screen').classList.remove('hidden'); 
+            } else alert(data.msg);
         }
 
         function showDepoMenu() {
@@ -96,7 +104,11 @@
             if (!amt || amt < 100) return alert("Minimòm se 100G");
             const res = await fetch('/request-withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, amount: parseFloat(amt) }) });
             const data = await res.json();
-            if(data.success) { window.open(`https://wa.me?text=*RETRÈ*%0AJwè: ${myPhone}%0AMontan: ${amt}G`, '_blank'); document.getElementById('bal').innerText = data.newBalance; alert("Voye!"); } else alert(data.msg);
+            if(data.success) { 
+                window.open(`https://wa.me?text=*RETRÈ*%0AJwè: ${myPhone}%0AMontan: ${amt}G`, '_blank'); 
+                document.getElementById('bal').innerText = data.newBalance; 
+                alert("Demann voye!"); 
+            } else alert(data.msg);
         }
 
         function createPrivate() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value }); }
@@ -105,8 +117,21 @@
         socket.on('roomCreated', data => {
             document.getElementById('room-code-val').innerText = data.code;
             document.getElementById('display-code').classList.remove('hidden');
-            document.getElementById('share-btn').onclick = () => { window.open(`https://wa.me{data.code}*%20(${data.bet}G)`, '_blank'); };
+            document.getElementById('share-btn').onclick = () => { window.open(`https://wa.me{data.code}*%20Mise:%20${data.bet}G`, '_blank'); };
         });
+
+        function startTimer() {
+            clearInterval(timerInterval); timeLeft = 30;
+            document.getElementById('timer').innerText = "30s";
+            timerInterval = setInterval(() => {
+                timeLeft--; 
+                document.getElementById('timer').innerText = timeLeft + "s";
+                if (timeLeft <= 0) { 
+                    clearInterval(timerInterval); 
+                    if (myTurn) socket.emit('win', { room: currentRoom, phone: "ADVÈSÈ", prize: currentPrize }); 
+                }
+            }, 1000);
+        }
 
         function clearBoard() {
             boardData = Array(225).fill("");
@@ -115,23 +140,15 @@
         }
 
         socket.on('gameStart', data => {
-            clearBoard(); // Netwaye tablo a chak fwa yon match kòmanse
+            clearBoard();
             currentRoom = data.room; currentPrize = data.prize;
             mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board-container').classList.remove('hidden');
             renderBoard();
-            document.getElementById('status').innerText = myTurn ? "Tou pa w! (X)" : "Atann lòt la... (O)";
+            document.getElementById('status').innerText = myTurn ? "Tou pa w! ("+mySymbol+")" : "Atann lòt la...";
             if(myTurn) startTimer();
         });
-
-        function startTimer() {
-            clearInterval(timerInterval); timeLeft = 30;
-            timerInterval = setInterval(() => {
-                timeLeft--; document.getElementById('timer').innerText = timeLeft + "s";
-                if (timeLeft <= 0) { clearInterval(timerInterval); if (myTurn) socket.emit('win', { room: currentRoom, phone: "LÒT LA", prize: 0 }); }
-            }, 1000);
-        }
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
@@ -140,30 +157,56 @@
                 if(c === 'X') d.style.color = '#ff4757'; else if(c === 'O') d.style.color = '#3498db';
                 d.onclick = () => {
                     if(!myTurn || boardData[i] !== "") return;
-                    boardData[i] = mySymbol; myTurn = false; clearInterval(timerInterval); renderBoard();
+                    boardData[i] = mySymbol; myTurn = false; 
+                    clearInterval(timerInterval); 
+                    renderBoard();
                     socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                    if(checkVictory(i, mySymbol)) {
+                        socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
+                    }
                 };
                 b.appendChild(d);
             });
         }
 
-        socket.on('opponentMove', data => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); startTimer(); });
+        socket.on('opponentMove', data => { 
+            boardData[data.index] = data.symbol; 
+            myTurn = true; 
+            renderBoard(); 
+            document.getElementById('status').innerText = "Tou pa w! ("+mySymbol+")";
+            startTimer(); 
+        });
+
+        function checkVictory(index, symbol) {
+            const size = 15; const row = Math.floor(index / size); const col = index % size;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let [dr, dc] of dirs) {
+                let count = 1;
+                for (let i=1; i<5; i++) { 
+                    let r=row+dr*i, c=col+dc*i; 
+                    if(r>=0 && r<size && c>=0 && c<size && boardData[r*size+c] === symbol) count++; else break; 
+                }
+                for (let i=1; i<5; i++) { 
+                    let r=row-dr*i, c=col-dc*i; 
+                    if(r>=0 && r<size && c>=0 && c<size && boardData[r*size+c] === symbol) count++; else break; 
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
 
         socket.on('gameOver', data => {
             clearInterval(timerInterval);
             const modal = document.getElementById('game-over-modal');
-            const resText = document.getElementById('result-text');
-            const przText = document.getElementById('prize-text');
-            
             modal.classList.remove('hidden');
             if (data.winner === myPhone) {
-                resText.innerText = "🎉 OU GANYEN!";
-                resText.style.color = "#2ecc71";
-                przText.innerText = `+${data.prize} Goud`;
+                document.getElementById('result-text').innerText = "🎉 OU GANYEN!";
+                document.getElementById('result-text').style.color = "#2ecc71";
+                document.getElementById('prize-text').innerText = "+" + data.prize + " Goud";
             } else {
-                resText.innerText = "💀 OU PÈDI!";
-                resText.style.color = "#ff4757";
-                przText.innerText = "";
+                document.getElementById('result-text').innerText = "💀 OU PÈDI!";
+                document.getElementById('result-text').style.color = "#ff4757";
+                document.getElementById('prize-text').innerText = "";
             }
             if(data.newBalance) document.getElementById('bal').innerText = data.newBalance;
         });
@@ -174,7 +217,7 @@
             document.getElementById('lobby').classList.remove('hidden');
             document.getElementById('display-code').classList.add('hidden');
             document.getElementById('join-code').value = "";
-            clearBoard(); // Netwaye tablo a pou sekirite
+            clearBoard();
         }
 
         socket.on('errorMsg', msg => alert(msg));
