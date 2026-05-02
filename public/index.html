@@ -13,8 +13,8 @@
         .btn-row { display: flex; justify-content: space-around; margin: 10px 0; gap: 8px; }
         button { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
         input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 85%; background: #fff; text-align: center; color:#000; font-weight:bold; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: auto; background: #444; border: 2px solid #ff4757; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; min-height: 25px; }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: auto; background: #444; border: 1px solid #ff4757; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; }
         #result-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
@@ -32,7 +32,7 @@
             <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
             <div class="btn-row">
                 <button onclick="alert('Kontakte Admin')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
-                <button onclick="withdraw()" style="background:#ffa502; width:48%;">RETRÈ 💸</button>
+                <button style="background:#ffa502; width:48%;">RETRÈ 💸</button>
             </div>
         </div>
 
@@ -41,16 +41,14 @@
                 <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
                 <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
             </div>
-            <p style="margin:0; font-size:12px">Miz (Min 50G)</p>
+            <p>Miz (Min 50G)</p>
             <input type="number" id="bet" value="50">
             <button onclick="createRoom()" style="background:#2ecc71; width:90%">KREYE KÒD</button>
-            
-            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:15px; color:#ff4757">
-                Kòd: <b id="c-val" style="font-size:28px">----</b>
+            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:10px;">
+                Kòd: <b id="c-val" style="font-size:24px; color:#ff4757">----</b>
             </div>
-
-            <hr style="border:0.1px solid #333; margin:15px">
-            <input type="text" id="join-code" placeholder="Kòd zanmi w">
+            <hr>
+            <input type="text" id="join-code" placeholder="Mete kòd la">
             <button onclick="joinRoom()" style="background:#ffa502; width:90%">ANTRE MATCH</button>
         </div>
 
@@ -61,8 +59,8 @@
     </div>
 
     <div id="result-modal" class="hidden">
-        <h1 id="res-title" style="color:#ff4757">FINI!</h1>
-        <p id="res-msg" style="font-size:18px; margin:20px;"></p>
+        <h1 id="res-title">FINI!</h1>
+        <p id="res-msg"></p>
         <button onclick="location.reload()" style="background:#2ecc71; padding:15px; width:200px;">RETOUNEN</button>
     </div>
 
@@ -88,33 +86,28 @@
             document.getElementById('btnD').style.opacity = t === 'domino' ? "1" : "0.5";
         }
 
-        function createRoom() { 
-            const betVal = document.getElementById('bet').value;
-            // Nou voye jwèt la bay sèvè a kòrèkteman
-            socket.emit('createPrivate', { phone: myPhone, bet: betVal, game: myType }); 
+        function createRoom() {
+            const b = document.getElementById('bet').value;
+            socket.emit('createPrivate', { phone: myPhone, bet: b, game: myType });
         }
 
-        function joinRoom() { 
-            socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); 
+        function joinRoom() {
+            socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone });
         }
 
-        socket.on('roomCreated', d => { 
-            document.getElementById('c-val').innerText = d.code; 
-            document.getElementById('room-display').classList.remove('hidden'); 
+        socket.on('roomCreated', d => {
+            document.getElementById('c-val').innerText = d.code;
+            document.getElementById('room-display').classList.remove('hidden');
         });
-
-        socket.on('errorMsg', m => alert(m));
 
         socket.on('gameStart', d => {
             currentRoom = d.room;
             document.getElementById('lobby').classList.add('hidden');
-            if(d.game === 'mopyon') {
-                document.getElementById('board-container').classList.remove('hidden');
-                mySymbol = (d.firstTurn === myPhone) ? 'X' : 'O';
-                myTurn = (d.firstTurn === myPhone);
-                boardData = Array(225).fill("");
-                renderBoard();
-            }
+            document.getElementById('board-container').classList.remove('hidden');
+            mySymbol = (d.firstTurn === myPhone) ? 'X' : 'O';
+            myTurn = (d.firstTurn === myPhone);
+            boardData = Array(225).fill("");
+            renderBoard();
         });
 
         function renderBoard() {
@@ -129,28 +122,35 @@
                 }};
                 b.appendChild(c);
             });
-            document.getElementById('status').innerText = myTurn ? "Se tou pa w! ⚡" : "Atann... ⏳";
+            document.getElementById('status').innerText = myTurn ? "Se tou pa w! ⚡" : "Atann lòt jwè a... ⏳";
         }
 
         socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myTurn = true; renderBoard(); });
 
         function checkWin(idx, s) {
             const size = 15; const r = Math.floor(idx / size), c = idx % size;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]]; // Ranje direksyon yo
+            const dirs = [[0,1], [1,0], [1,1], [1,-1]]; // GADE SA: Mwen ranje l!
             for (let [dr, dc] of dirs) {
                 let cnt = 1;
-                for (let i=1; i<5; i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
-                for (let i=1; i<5; i++) { let nr=r-dr*i, nc=c-dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
+                for (let i=1; i<5; i++) {
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break;
+                }
+                for (let i=1; i<5; i++) {
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break;
+                }
                 if(cnt>=5) return true;
             }
             return false;
         }
 
         socket.on('gameOver', d => {
-            const modal = document.getElementById('result-modal');
-            modal.classList.remove('hidden');
-            document.getElementById('res-msg').innerHTML = d.winner === myPhone ? "OU GENYEN! 🏆" : "OU PÈDI! ❌";
+            document.getElementById('result-modal').classList.remove('hidden');
+            document.getElementById('res-msg').innerText = d.winner === myPhone ? "OU GENYEN! 🏆" : "OU PÈDI! ❌";
         });
+
+        socket.on('errorMsg', m => alert(m));
     </script>
 </body>
 </html>
