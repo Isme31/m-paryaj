@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const path = require('path');
-const bcrypt = require('bcryptjs'); // Nou kite sa pou ansyen modpas yo
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,11 +17,9 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "MOPYON2024";
 
 // --- DB CONNECTION ---
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDB Konekte ✅"))
-    .catch(err => console.log("Erè DB:", err));
+mongoose.connect(process.env.MONGO_URI).then(() => console.log("MongoDB Konekte ✅"));
 
-// --- MODÈL ---
+// --- MODÈL YO ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -29,10 +27,20 @@ const User = mongoose.model('User', new mongoose.Schema({
     referredBy: { type: String, default: null }
 }));
 
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
+    phone: String,
+    amount: Number,
+    fee: Number,
+    status: { type: String, default: 'Pending' },
+    date: { type: Date, default: Date.now }
+}));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- API LOGIN (RANJÉ NÈT) ---
+// --- API ROUTES ---
+
+// Login ki aksepte modpas ankripte ak modpas nòmal
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
@@ -40,36 +48,40 @@ app.post('/login', async (req, res) => {
         let user = await User.findOne({ phone: cleanPhone });
 
         if (!user) {
-            // Pou nouvo kont: n ap sere modpas la nòmalman (san ankripte)
-            user = await User.create({ 
-                phone: cleanPhone, 
-                password: password, 
-                balance: 100, 
-                referredBy: ref 
-            });
+            user = await User.create({ phone: cleanPhone, password: password, balance: 100, referredBy: ref });
             if (ref) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5 } });
             return res.json({ success: true, phone: user.phone, balance: user.balance });
         }
 
-        // Tcheke si modpas la match (Nou tcheke vèsyon nòmal AK vèsyon ankripte)
-        let isMatch = (password === user.password); // Tcheke tèks nòmal
-        
-        if (!isMatch && user.password.startsWith('$2')) { 
-            // Si modpas nan DB a ankripte (kòmanse ak $2), nou sèvi ak bcrypt
+        let isMatch = (password === user.password);
+        if (!isMatch && user.password.startsWith('$2')) {
             isMatch = await bcrypt.compare(password, user.password);
         }
 
-        if (!isMatch) {
-            return res.json({ success: false, msg: "Modpas pa bon" });
-        }
-
+        if (!isMatch) return res.json({ success: false, msg: "Modpas pa bon" });
         res.json({ success: true, phone: user.phone, balance: user.balance });
-    } catch (err) { 
-        console.log("Erè login:", err);
-        res.json({ success: false, msg: "Erè sèvè" }); 
-    }
+    } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
+// Demann Retrè
+app.post('/request-withdraw', async (req, res) => {
+    try {
+        const { phone, amount } = req.body;
+        const amt = parseFloat(amount);
+        const user = await User.findOne({ phone: phone.trim() });
+
+        if (user && user.balance >= amt && amt >= 100) {
+            await User.updateOne({ phone: phone.trim() }, { $inc: { balance: -amt } });
+            const fee = amt * 0.05; // 5% frè
+            await Withdraw.create({ phone: phone.trim(), amount: amt - fee, fee: fee });
+            res.json({ success: true, newBalance: user.balance - amt });
+        } else {
+            res.json({ success: false, msg: "Balans ensifizan (Min 100G)" });
+        }
+    } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
+});
+
+// Admin Update Balance
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.status(403).json({ success: false });
@@ -77,25 +89,22 @@ app.post('/admin/update-balance', async (req, res) => {
     res.json({ success: true, newBalance: user ? user.balance : 0 });
 });
 
-// --- JWÈT & MATCHMAKING ---
-let waitingPlayers = []; 
-let privateRooms = {};   
-let activeGames = {};
+// --- GAME LOGIC (SOCKET.IO) ---
+let waitingPlayers = [], privateRooms = {}, activeGames = {};
 
 io.on('connection', (socket) => {
-    
+
     socket.on('findMatch', async (data) => {
-        const bet = parseFloat(data.bet);
         const user = await User.findOne({ phone: data.phone });
+        const bet = parseFloat(data.bet);
         if (!user || user.balance < bet) return socket.emit('gameOver', { msg: "Balans piti!" });
 
         let oppIdx = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== data.phone);
         if (oppIdx > -1) {
-            const opponent = waitingPlayers.splice(oppIdx, 1)[0];
-            startGame(socket, opponent, bet, `rapid_${Date.now()}`, data.phone);
+            startGame(socket, waitingPlayers.splice(oppIdx, 1)[0], bet, `rapid_${Date.now()}`, data.phone);
         } else {
             waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id });
-            socket.emit('statusUpdate', "Ap chèche jwè...");
+            socket.emit('statusUpdate', "Ap chèche moun...");
         }
     });
 
@@ -109,30 +118,36 @@ io.on('connection', (socket) => {
 
         if (privateRooms[cleanRoom]) {
             const opp = privateRooms[cleanRoom];
-            if (opp.phone === phone) return socket.emit('statusUpdate', "Tann zanmi w...");
             delete privateRooms[cleanRoom];
             startGame(socket, opp, bAmount, cleanRoom, phone);
         } else {
             privateRooms[cleanRoom] = { phone, bet: bAmount, socketId: socket.id };
             socket.join(cleanRoom);
-            socket.emit('statusUpdate', `Kòd: ${cleanRoom}. Tann zanmi w...`);
+            socket.emit('statusUpdate', `Kòd: ${cleanRoom}. Tann zanmi...`);
         }
     });
 
     async function startGame(s1, s2, bet, room, p1Phone) {
         await User.updateOne({ phone: p1Phone }, { $inc: { balance: -bet } });
         await User.updateOne({ phone: s2.phone }, { $inc: { balance: -bet } });
-
         s1.join(room);
         const s2Socket = io.sockets.sockets.get(s2.socketId);
         if (s2Socket) s2Socket.join(room);
-
         const prize = (bet * 2) * 0.9;
         activeGames[room] = { prize, players: [{id: s1.id, phone: p1Phone}, {id: s2.socketId, phone: s2.phone}] };
         io.to(room).emit('gameStart', { room, prize, firstTurn: p1Phone });
     }
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+
+    socket.on('win', async (data) => {
+        const game = activeGames[data.room];
+        if (game) {
+            delete activeGames[data.room];
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize });
+        }
+    });
 
     socket.on('timesUp', async (data) => {
         const game = activeGames[data.room];
@@ -144,19 +159,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('win', async (data) => {
-        const game = activeGames[data.room];
-        if (game) {
-            delete activeGames[data.room];
-            const winUser = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winUser.balance, prize: game.prize });
-        }
-    });
-
     socket.on('disconnect', () => {
         waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
-        for (let r in privateRooms) if (privateRooms[r].socketId === socket.id) delete privateRooms[r];
     });
 });
 
-server.listen(PORT, () => console.log(`🚀 Sèvè LIVE sou ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Sèvè LIVE sou pòt ${PORT}`));
