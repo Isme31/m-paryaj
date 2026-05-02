@@ -55,6 +55,18 @@ app.post('/admin/update-balance', async (req, res) => {
     res.json({ success: true, newBalance: user ? user.balance : 0 });
 });
 
+app.get('/admin/withdraws', async (req, res) => {
+    if (req.query.secret !== ADMIN_SECRET) return res.status(403).send("Refize");
+    const list = await Withdraw.find({ status: 'Pending' }).sort({date: -1});
+    res.json(list);
+});
+
+app.post('/admin/confirm-withdraw', async (req, res) => {
+    if (req.body.secret !== ADMIN_SECRET) return res.status(403).json({ success: false });
+    await Withdraw.findByIdAndUpdate(req.body.id, { status: 'Completed' });
+    res.json({ success: true });
+});
+
 app.post('/request-withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const user = await User.findOne({ phone: phone.trim() });
@@ -85,15 +97,19 @@ io.on('connection', (socket) => {
             await User.updateOne({ phone: opponent.phone }, { $inc: { balance: -bet } });
 
             socket.join(room);
-            io.sockets.sockets.get(opponent.socketId)?.join(room);
+            const oppSocket = io.sockets.sockets.get(opponent.socketId);
+            if (oppSocket) oppSocket.join(room);
+
             const prize = (bet * 2) * 0.9;
             activeGames[room] = { prize, players: [socket.id, opponent.socketId] };
             io.to(room).emit('gameStart', { room, prize, firstTurn: data.phone });
             
             socket.emit('balanceUpdate', { balance: user.balance - bet });
             const oppUser = await User.findOne({ phone: opponent.phone });
-            io.to(opponent.socketId).emit('balanceUpdate', { balance: oppUser.balance });
-        } else { waitingPlayers.push({ ...data, bet, socketId: socket.id }); }
+            if (oppSocket) oppSocket.emit('balanceUpdate', { balance: oppUser.balance });
+        } else { 
+            waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id }); 
+        }
     });
 
     socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
