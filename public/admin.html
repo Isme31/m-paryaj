@@ -1,42 +1,105 @@
 <!DOCTYPE html>
-<html>
-<head><title>Admin Panel</title></head>
-<body style="font-family:sans-serif; padding:20px;">
+<html lang="ht">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Mopyon Blitz</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { padding: 10px; margin: 5px 0; width: 250px; display: block; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button.refresh { background: #3498db; }
+        button.confirm { background: #e67e22; padding: 5px 10px; font-size: 12px; }
+        .withdraw-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
     <h2>Admin Mopyon Blitz ⚡</h2>
-    <input type="password" id="key" placeholder="Kle Sekrè">
-    <hr>
-    <h3>Depo (Ajoute Balans)</h3>
-    <input type="text" id="p" placeholder="Telefòn Jwè">
-    <input type="number" id="a" placeholder="Montan Goud">
-    <button onclick="up()">RECHAJE ✅</button>
-    <hr>
-    <h3>Retrè An Atant</h3>
-    <button onclick="getW()">RAFRECHI LIS 🔄</button>
-    <div id="list"></div>
+    
+    <div class="card">
+        <input type="password" id="key" placeholder="Kle Sekrè Admin">
+    </div>
+
+    <div class="card">
+        <h3>Depo (Ajoute Balans)</h3>
+        <input type="text" id="p" placeholder="Telefòn Jwè (eg: 48000000)">
+        <input type="number" id="a" placeholder="Montan Goud">
+        <button onclick="up()">RECHAJE ✅</button>
+    </div>
+
+    <div class="card">
+        <h3>Retrè An Atant</h3>
+        <button class="refresh" onclick="getW()">RAFRECHI LIS 🔄</button>
+        <div id="list" style="margin-top: 15px;">
+            <p style="color: #888;">Peze rafrechi pou wè demand yo...</p>
+        </div>
+    </div>
 
     <script>
         async function up() {
+            const phone = document.getElementById('p').value.trim();
+            const amount = document.getElementById('a').value;
+            const secret = document.getElementById('key').value;
+
+            if(!phone || !amount || !secret) return alert("Ranpli tout bwat yo!");
+
             const res = await fetch('/admin/update-balance', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: document.getElementById('p').value, amount: document.getElementById('a').value, secret: document.getElementById('key').value })
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone, amount: Number(amount), secret })
             });
             const d = await res.json();
-            alert(d.success ? "Balans moute!" : "Erè nan kle a");
+            if(d.success) {
+                alert(`Balans ${phone} moute ak ${amount}G!`);
+                document.getElementById('p').value = "";
+                document.getElementById('a').value = "";
+            } else {
+                alert("Erè: Kle a pa bon oswa jwè a pa egziste.");
+            }
         }
+
         async function getW() {
-            const res = await fetch(`/admin/withdraws?secret=${document.getElementById('key').value}`);
-            const data = await res.json();
-            const div = document.getElementById('list'); div.innerHTML = "";
-            data.forEach(w => {
-                div.innerHTML += `<p>${w.phone} mande ${w.amount}G <button onclick="conf('${w._id}')">Konfime ✅</button></p>`;
-            });
+            const secret = document.getElementById('key').value;
+            if(!secret) return alert("Mete kle sekrè a anlè a!");
+
+            try {
+                const res = await fetch(`/admin/withdraws?secret=${secret}`);
+                const data = await res.json();
+                const div = document.getElementById('list'); 
+                div.innerHTML = "";
+
+                if(data.length === 0) {
+                    div.innerHTML = "<p>Pa gen okenn retrè an atant.</p>";
+                    return;
+                }
+
+                data.forEach(w => {
+                    const date = new Date(w.date).toLocaleDateString('fr-FR');
+                    div.innerHTML += `
+                        <div class="withdraw-item">
+                            <span><strong>${w.phone}</strong> mande <strong>${w.amount}G</strong> (${date})</span>
+                            <button class="confirm" onclick="conf('${w._id}')">KONFIME ✅</button>
+                        </div>`;
+                });
+            } catch (err) {
+                alert("Erè nan chaje lis la. Verifye kle sekrè a.");
+            }
         }
+
         async function conf(id) {
-            await fetch('/admin/confirm-withdraw', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id, secret: document.getElementById('key').value })
+            const secret = document.getElementById('key').value;
+            const res = await fetch('/admin/confirm-withdraw', {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, secret })
             });
-            getW();
+            const d = await res.json();
+            if(d.success) {
+                getW(); // Rafrechi lis la apre konfimasyon
+            } else {
+                alert("Erè nan konfimasyon.");
+            }
         }
     </script>
 </body>
