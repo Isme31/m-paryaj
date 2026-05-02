@@ -16,6 +16,7 @@
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: auto; background: #444; border: 2px solid #ff4757; }
         .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; min-height: 25px;}
         .social-link { text-decoration: none; padding: 10px; border-radius: 8px; font-size: 12px; color: white; font-weight: bold; width: 45%; }
+        .domino-card { background: white; color: black; padding: 5px; border-radius: 4px; font-weight: bold; width: 40px; border: 2px solid #000; margin: 2px; }
         #result-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
@@ -26,16 +27,14 @@
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()" style="background:#ff4757; width:90%">KONEKTE</button>
     </div>
-
     <div id="game-screen" class="screen hidden">
         <div class="bal-box">
             <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
             <div class="btn-row">
-                <button onclick="alert('Kontakte Admin sou WhatsApp')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
-                <button onclick="alert('Retrè ap trete')" style="background:#ffa502; width:48%;">RETRÈ 💸</button>
+                <button onclick="alert('Ekri Admin')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
+                <button onclick="withdraw()" style="background:#ffa502; width:48%;">RETRÈ 💸</button>
             </div>
         </div>
-
         <div id="lobby">
             <div class="btn-row">
                 <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
@@ -46,48 +45,66 @@
             <div id="room-display" class="hidden">Kòd: <b id="c-val">----</b></div>
             <input type="text" id="join-code" placeholder="Mete kòd la">
             <button onclick="joinRoom()" style="background:#ffa502; width:90%">ANTRE MATCH</button>
+            <input type="text" id="ref-link" readonly style="font-size:10px; width:65%; background:#000; color:#0f0">
+            <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px">KOPYE</button>
         </div>
-
         <div id="board-container" class="hidden">
             <h3 id="status">Atann...</h3>
             <div id="board" class="grid"></div>
         </div>
+        <div id="domino-container" class="hidden">
+            <h3>Match Domino 🀄</h3>
+            <div id="my-hand" class="btn-row" style="flex-wrap:wrap"></div>
+        </div>
     </div>
-
     <div id="result-modal" class="hidden">
         <h1 id="res-title">FINI!</h1>
+        <p id="res-msg"></p>
         <button onclick="location.reload()">RETOUNEN</button>
     </div>
 
     <script>
         const socket = io();
         let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(225).fill(""), myType = 'mopyon';
+        const refParam = new URLSearchParams(window.location.search).get('ref');
 
         async function login() {
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('pass').value;
-            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password}) });
+            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password, ref: refParam}) });
             const d = await res.json();
             if(d.success) {
                 myPhone = d.phone; document.getElementById('bal').innerText = d.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-            }
+                document.getElementById('ref-link').value = window.location.origin + "?ref=" + myPhone;
+            } else alert(d.msg);
         }
 
         function setGame(t) { myType = t; }
         function createRoom() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value, game: myType }); }
         function joinRoom() { socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); }
+        function copyRef() { navigator.clipboard.writeText(document.getElementById('ref-link').value); alert("Kopye!"); }
 
-        socket.on('roomCreated', d => { document.getElementById('c-val').innerText = d.code; document.getElementById('room-display').classList.remove('hidden'); });
+        socket.on('roomCreated', d => { 
+            document.getElementById('c-val').innerText = d.code; 
+            document.getElementById('room-display').classList.remove('hidden'); 
+        });
 
         socket.on('gameStart', d => {
             currentRoom = d.room;
             document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('board-container').classList.remove('hidden');
-            mySymbol = (d.firstTurn === myPhone) ? 'X' : 'O';
-            myTurn = (d.firstTurn === myPhone);
-            renderBoard();
+            if(d.game === 'mopyon') {
+                document.getElementById('board-container').classList.remove('hidden');
+                mySymbol = (d.firstTurn[0] === myPhone) ? 'X' : 'O';
+                myTurn = (d.firstTurn[0] === myPhone);
+                renderBoard();
+            } else {
+                document.getElementById('domino-container').classList.remove('hidden');
+                const hand = (d.firstTurn[0] === myPhone) ? d.hand1 : d.hand2;
+                const hDiv = document.getElementById('my-hand'); hDiv.innerHTML = "";
+                hand.forEach(p => { hDiv.innerHTML += `<div class="domino-card">${p[0]}<br>--<br>${p[1]}</div>`; });
+            }
         });
 
         socket.on('timerUpdate', d => { document.getElementById('status').innerText = "Tan: " + d.time + "s ⏳"; });
@@ -96,19 +113,20 @@
             const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const c = document.createElement('div'); c.className = 'cell'; c.innerText = val;
-                c.onclick = () => {
-                    if(myTurn && boardData[i] === "") {
-                        boardData[i] = mySymbol; myTurn = false; renderBoard();
-                        socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-                        if(checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
-                    }
-                };
+                c.onclick = () => { if(myTurn && boardData[i] === "") {
+                    boardData[i] = mySymbol; myTurn = false; renderBoard();
+                    socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                    if(checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
+                }};
                 b.appendChild(c);
             });
         }
 
         socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myTurn = true; renderBoard(); });
-        socket.on('gameOver', d => { document.getElementById('result-modal').classList.remove('hidden'); });
+        socket.on('gameOver', d => {
+            document.getElementById('result-modal').classList.remove('hidden');
+            document.getElementById('res-msg').innerText = d.winner === myPhone ? "OU GENYEN! 🏆" : "OU PÈDI! ❌";
+        });
 
         function checkWin(idx, s) {
             const size = 15; const r = Math.floor(idx / size), c = idx % size;
