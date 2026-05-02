@@ -49,41 +49,7 @@
             <a href="#" class="social-btn" style="background:#3498db">Asistan 👨‍💻</a>
         </div>
 
-        <<div id="lobby">
-    <!-- Bouton pou chwazi jwèt -->
-    <div class="btn-row">
-        <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
-        <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
-    </div>
-
-    <!-- Seksyon Miz -->
-    <p style="margin: 15px 0 5px; font-size: 14px; color: #ccc; font-weight: bold;">Montan Miz (Min 50G)</p>
-    <input type="number" id="bet" value="50" style="width: 90%; height: 45px; font-size: 20px; border-radius: 8px; border: none; background: white; color: black; margin-bottom: 10px;">
-    
-    <button onclick="createRoom()" style="background:#2ecc71; width:90%; height: 50px; font-size: 18px; border-radius: 8px;">KREYE KÒD</button>
-    
-    <!-- Kote kòd la ap parèt apre ou fin klike sou Kreye -->
-    <div id="room-display" class="hidden" style="margin:15px; border:1px dashed #ff4757; padding:15px; border-radius: 10px;">
-        Kòd zanmi an:<br>
-        <b id="c-val" style="font-size:32px; color:#ff4757; letter-spacing: 5px;"></b>
-    </div>
-
-    <hr style="border:0.1px solid #333; margin:20px">
-    
-    <!-- Seksyon pou antre nan yon match ki egziste deja -->
-    <input type="text" id="join-code" placeholder="Mete kòd zanmi w" style="width: 90%; height: 45px; border-radius: 8px; border: none; background: white; color: black; margin-bottom: 10px;">
-    <button onclick="joinRoom()" style="background:#ffa502; width:90%; height: 50px; font-size: 18px; border-radius: 8px;">ANTRE MATCH</button>
-
-    <hr style="border:0.1px solid #333; margin:20px">
-
-    <!-- Sistèm Referal -->
-    <h4>Referral 💰</h4>
-    <div style="display:flex; justify-content:center; gap:5px; padding-bottom: 20px;">
-        <input type="text" id="ref-link" readonly style="font-size:10px; background:#000; color:#0f0; width:65%; border-radius: 5px; border: 1px solid #333;">
-        <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px 10px; border-radius: 5px;">KOPYE</button>
-    </div>
-</div>
->
+        <div id="lobby">
             <div class="btn-row">
                 <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
                 <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
