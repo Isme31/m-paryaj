@@ -9,11 +9,19 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// --- SÈVI PAJ WEB LA ---
+// Liy sa a ap fè sèvè a voye paj index.html la lè ou louvri lyen an
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Si ou gen lòt dosye (css, imaj), mete yo bò kote index.html
+app.use(express.static(__dirname));
 
 // --- KONEKSYON MONGODB ---
-// Liy sa a ap pran lyen an nan Render Environment Variables (MONGO_URI)
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:MODPAS_OU_ISI@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+// Mwen mete lyen an dirèkteman ak modpas "hugues" la pou si Render pa jwenn varyab la
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("✅ MongoDB Konekte!"))
@@ -90,4 +98,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Sèvè ap woule sou pòt ${PORT}`));
+server.listen(PORT, () => console.log(`✅ Sèvè ap woule sou pòt ${PORT}`));
