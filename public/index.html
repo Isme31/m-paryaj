@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 <html lang="ht">
 <head>
     <meta charset="UTF-8">
@@ -7,35 +7,53 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
-        .screen { padding: 20px; box-sizing: border-box; min-height: 100vh; }
+        .screen { padding: 15px; }
         .hidden { display: none !important; }
-        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
-        .btn-row { display: flex; justify-content: space-around; margin: 10px 0; gap: 10px; }
+        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
+        .btn-row { display: flex; justify-content: space-around; margin: 10px 0; gap: 8px; }
         button { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
-        input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 90%; background: #fff; color: #000; text-align: center; font-size: 16px; }
-        .social-btn { text-decoration: none; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: bold; color: white; width: 48%; display: inline-block; }
-        #domino-board { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 20px; background: #0a3d1d; border-radius: 15px; min-height: 80px; margin: 15px 0; border: 3px solid #052a14; }
-        .tile { background: #fff; color: #000; width: 35px; height: 60px; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-around; align-items: center; font-weight: bold; border: 1px solid #999; position: relative; }
-        .tile::after { content: ""; width: 80%; height: 1px; background: #ccc; position: absolute; top: 50%; }
-        .my-tile:hover { transform: translateY(-5px); border: 2px solid #ff4757; }
+        
+        /* GRID 15x15 POU MOPYON */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(15, 1fr); 
+            gap: 1px; 
+            width: 100%; 
+            max-width: 450px; 
+            margin: auto; 
+            background: #444; 
+            border: 2px solid #ff4757;
+        }
+        .cell { 
+            aspect-ratio: 1/1; 
+            background: #181818; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 14px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+        .cell:empty:hover { background: #222; }
+        
+        input { padding: 12px; margin: 5px; border-radius: 8px; border: none; width: 85%; text-align: center; }
+        .social-btn { text-decoration: none; padding: 12px; border-radius: 8px; font-size: 12px; font-weight: bold; color: white; width: 48%; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen" class="screen">
-        <h1 style="color:#ff4757; margin-top: 50px;">Mopyon Blitz ⚡</h1>
-        <div style="background: #1e1e1e; padding: 20px; border-radius: 15px; border: 1px solid #333;">
-            <input type="text" id="phone" placeholder="Telefòn">
-            <input type="password" id="pass" placeholder="Modpas">
-            <button onclick="login()" style="background:#ff4757; width:90%; margin-top: 10px; height: 50px;">KONEKTE</button>
-        </div>
+        <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <input type="password" id="pass" placeholder="Modpas">
+        <button onclick="login()" style="background:#ff4757; width:90%">KONEKTE</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
         <div class="bal-box">
             <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
             <div class="btn-row">
-                <button onclick="window.location.href='https://wa.me'" style="background:#2ecc71; width:48%;">DEPO 💰</button>
+                <button onclick="alert('Kontakte Admin')" style="background:#2ecc71; width:48%;">DEPO 💰</button>
                 <button onclick="withdraw()" style="background:#ffa502; width:48%;">RETRÈ 💸</button>
             </div>
         </div>
@@ -50,36 +68,38 @@
                 <button onclick="setGame('mopyon')" id="btnM" style="background:#ff4757; width:48%">MOPYON</button>
                 <button onclick="setGame('domino')" id="btnD" style="background:#3498db; width:48%; opacity:0.5">DOMINO</button>
             </div>
-            <p style="margin:15px 0 5px; font-size:14px; color:#ccc;">Montan Miz (Min 50G)</p>
+            <p style="margin:0; font-size:12px">Miz Minimòm (50G)</p>
             <input type="number" id="bet" value="50">
-            <button onclick="createRoom()" style="background:#2ecc71; width:90%; height: 50px;">KREYE KÒD</button>
-            <div id="room-display" class="hidden" style="margin:15px; border:1px dashed #ff4757; padding:15px;">
-                Kòd: <b id="c-val" style="font-size:28px; color:#ff4757;"></b>
+            <button onclick="createRoom()" style="background:#2ecc71; width:90%">KREYE KÒD</button>
+            <div id="room-display" class="hidden" style="margin:10px; border:1px dashed #ff4757; padding:10px;">
+                Kòd: <b id="c-val" style="font-size:24px; color:#ff4757">----</b>
             </div>
-            <hr style="border:0.1px solid #333; margin:20px">
-            <input type="text" id="join-code" placeholder="Mete kòd zanmi">
-            <button onclick="joinRoom()" style="background:#ffa502; width:90%; height: 50px;">ANTRE MATCH</button>
-            <hr style="border:0.1px solid #333; margin:20px">
-            <h4>Referral 💰</h4>
-            <input type="text" id="ref-link" readonly style="font-size:10px; background:#000; color:#0f0; width:65%">
-            <button onclick="copyRef()" style="background:#3498db; padding:5px 10px;">KOPYE</button>
+            <hr style="border:0.1px solid #333; margin:15px">
+            <input type="text" id="join-code" placeholder="Kòd zanmi w">
+            <button onclick="joinRoom()" style="background:#ffa502; width:90%">ANTRE MATCH</button>
+            <hr style="border:0.1px solid #333; margin:15px">
+            <input type="text" id="ref-link" readonly style="font-size:10px; width:60%">
+            <button onclick="copyRef()" style="background:#3498db; width:auto; padding:5px">KOPYE REF</button>
         </div>
 
-        <div id="board-container" class="hidden">
-            <h3 id="status">Atann...</h3>
-            <div id="domino-board"></div>
-            <div id="my-hand" style="display:flex; justify-content:center; gap:5px; flex-wrap:wrap;"></div>
+        <!-- TABLEAU MOPYON 15x15 -->
+        <div id="mopyon-board-container" class="hidden">
+            <h3 id="status" style="color: #ffa502;">Atann lòt jwè a...</h3>
+            <div id="mopyon-board" class="grid"></div>
+            <button onclick="location.reload()" style="background:#444; margin-top:10px;">SÒTI</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let myPhone, myType = 'mopyon', myHand = [], currentRoom = "";
-        const refParam = new URLSearchParams(window.location.search).get('ref');
+        let myPhone, mySymbol, currentRoom, myTurn = false;
+        let boardData = Array(225).fill(""); // 15x15 = 225 cellules
+        let myType = 'mopyon';
 
         async function login() {
-            const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
-            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password, ref: refParam}) });
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('pass').value;
+            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password}) });
             const d = await res.json();
             if(d.success) {
                 myPhone = d.phone; document.getElementById('bal').innerText = d.balance;
@@ -89,58 +109,96 @@
             } else alert(d.msg);
         }
 
-        function setGame(t) { 
-            myType = t; 
-            document.getElementById('btnM').style.opacity = t==='mopyon'?'1':'0.5';
-            document.getElementById('btnD').style.opacity = t==='domino'?'1':'0.5';
+        function setGame(t) {
+            myType = t;
+            document.getElementById('btnM').style.opacity = t === 'mopyon' ? "1" : "0.5";
+            document.getElementById('btnD').style.opacity = t === 'domino' ? "1" : "0.5";
         }
 
         function createRoom() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value, game: myType }); }
         function joinRoom() { socket.emit('joinPrivate', { code: document.getElementById('join-code').value, phone: myPhone }); }
+
         socket.on('roomCreated', d => { document.getElementById('c-val').innerText = d.code; document.getElementById('room-display').classList.remove('hidden'); });
 
         socket.on('gameStart', d => {
             currentRoom = d.room;
-            document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('board-container').classList.remove('hidden');
-            updateStatus(d.turn);
+            if(d.game === 'mopyon') {
+                document.getElementById('lobby').classList.add('hidden');
+                document.getElementById('mopyon-board-container').classList.remove('hidden');
+                mySymbol = (d.firstTurn === myPhone) ? 'X' : 'O';
+                myTurn = (d.firstTurn === myPhone);
+                updateStatus();
+                renderBoard();
+            }
         });
 
-        socket.on('receiveHand', d => { myHand = d.hands[myPhone]; renderHand(); });
-        socket.on('updateBoard', d => {
-            const b = document.getElementById('domino-board'); b.innerHTML = "";
-            d.board.forEach(t => { b.innerHTML += `<div class="tile"><div>${t.a}</div><div>${t.b}</div></div>`; });
-            updateStatus(d.turn); renderHand();
-        });
-
-        function renderHand() {
-            const h = document.getElementById('my-hand'); h.innerHTML = "";
-            myHand.forEach((t, i) => {
-                const div = document.createElement('div'); div.className = 'tile my-tile'; div.style.cursor="pointer";
-                div.innerHTML = `<div>${t.a}</div><div>${t.b}</div>`;
-                div.onclick = () => socket.emit('dominoMove', { room: currentRoom, phone: myPhone, tile: t, index: i });
-                h.appendChild(div);
+        // LOJIK POU AFICHE TABLO A
+        function renderBoard() {
+            const b = document.getElementById('mopyon-board');
+            b.innerHTML = "";
+            boardData.forEach((val, i) => {
+                const c = document.createElement('div');
+                c.className = 'cell';
+                c.innerText = val;
+                if(val === 'X') c.style.color = '#ff4757';
+                if(val === 'O') c.style.color = '#3498db';
+                
+                c.onclick = () => {
+                    if(!myTurn || boardData[i] !== "") return;
+                    makeMove(i);
+                };
+                b.appendChild(c);
             });
         }
 
-        function updateStatus(turn) {
-            const s = document.getElementById('status');
-            s.innerText = (turn === myPhone) ? "Se tou pa w!" : "Atann lòt la...";
-            s.style.color = (turn === myPhone) ? "#0f0" : "#fff";
-        }
-
-        async function withdraw() {
-            const a = prompt("Konbe Goud?");
-            if(Number(a) >= 100) {
-                const res = await fetch('/request-withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:myPhone, amount:Number(a)}) });
-                const d = await res.json();
-                if(d.success) { document.getElementById('bal').innerText = d.newBalance; alert("Voye!"); } else alert(d.msg);
+        function makeMove(i) {
+            boardData[i] = mySymbol;
+            myTurn = false;
+            updateStatus();
+            renderBoard();
+            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+            if(checkWin(i, mySymbol)) {
+                socket.emit('win', { room: currentRoom, phone: myPhone });
             }
         }
 
-        function copyRef() { const l = document.getElementById("ref-link"); l.select(); navigator.clipboard.writeText(l.value); alert("Kopye!"); }
-        socket.on('gameOver', d => { alert("Ganyan: " + d.winner); location.reload(); });
-        socket.on('errorMsg', m => alert(m));
+        socket.on('opponentMove', d => {
+            boardData[d.index] = d.symbol;
+            myTurn = true;
+            updateStatus();
+            renderBoard();
+        });
+
+        function updateStatus() {
+            document.getElementById('status').innerText = myTurn ? "Se tou pa w! ⚡" : "Atann lòt jwè a... ⏳";
+        }
+
+        // LOJIK 5 PWEN ALIGNÉ (VÈTIKAL, ORIZONTAL, DYAGONAL)
+        function checkWin(index, s) {
+            const size = 15;
+            const r = Math.floor(index / size), c = index % size;
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let [dr, dc] of dirs) {
+                let cnt = 1;
+                for (let i=1; i<5; i++) {
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break;
+                }
+                for (let i=1; i<5; i++) {
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break;
+                }
+                if(cnt>=5) return true;
+            }
+            return false;
+        }
+
+        socket.on('gameOver', d => {
+            alert("Match fini! Gayan: " + d.winner + " | Prize: " + d.prize + "G");
+            location.reload();
+        });
+
+        function copyRef() { const l = document.getElementById("ref-link"); l.select(); navigator.clipboard.writeText(l.value); alert("Lyen kopye!"); }
     </script>
 </body>
 </html>
