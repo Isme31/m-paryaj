@@ -7,16 +7,17 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
-        .screen { padding: 20px; }
+        .screen { padding: 15px; }
         .hidden { display: none !important; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: 20px auto; background: #333; }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: 15px auto; background: #333; }
         .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; }
         .X { color: #ff4757; } .O { color: #2ecc71; }
-        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; }
-        input, button { padding: 14px; margin: 8px 0; width: 90%; border-radius: 8px; border: none; font-size: 16px; }
+        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
+        input, button { padding: 12px; margin: 5px 0; width: 90%; border-radius: 8px; border: none; font-size: 16px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
-        .btn-digicel { background: #ed1c24 !important; width: 45% !important; }
-        .btn-natcom { background: #00a1e4 !important; width: 45% !important; }
+        .btn-digicel { background: #ed1c24 !important; width: 45% !important; font-size: 12px !important; }
+        .btn-natcom { background: #00a1e4 !important; width: 45% !important; font-size: 12px !important; }
+        .room-item { background: #222; padding: 10px; border-radius: 8px; margin: 5px 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -25,27 +26,33 @@
         <input type="text" id="phone" placeholder="Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE</button>
-        <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
-            <button class="btn-digicel" onclick="contactWA('50931594645')">Digicel 🔴</button>
-            <button class="btn-natcom" onclick="contactWA('50955110103')">Natcom 🔵</button>
+        <div style="margin-top:20px;">
+            <button class="btn-digicel" onclick="window.open('https://wa.me')">Digicel 🔴</button>
+            <button class="btn-natcom" onclick="window.open('https://wa.me')">Natcom 🔵</button>
         </div>
     </div>
 
     <div id="game-screen" class="screen hidden">
         <div class="bal-box">
-            <h2 id="bal">0.00</h2>
+            <h2 id="bal">0.00 G</h2>
             <button onclick="showDepo()" style="background:#2ecc71; width:45%;">DEPO</button>
-            <button onclick="requestWithdraw()" style="background:#ffa502; width:45%;">RETRÈ</button>
+            <button onclick="alert('Kontakte admin')" style="background:#ffa502; width:45%;">RETRÈ</button>
         </div>
+
         <div id="lobby">
-            <input type="number" id="bet" value="50">
-            <button id="btnFind" onclick="findMatch()">MATCH RAPID ⚡</button>
+            <div class="bal-box">
+                <input type="number" id="bet" value="50" min="50">
+                <button onclick="createRoom()" style="background:#6c5ce7;">KREYE YON CHANM +</button>
+            </div>
+            <h3>Match Disponib 🚪</h3>
+            <div id="room-list"></div>
         </div>
+
         <div id="board-container" class="hidden">
-            <h3 id="status">Tou pa w</h3>
+            <h3 id="status">Ap tann...</h3>
             <div id="board" class="grid"></div>
             <div id="end-ctrl" class="hidden">
-                <button onclick="rejoue()" style="background:#2ecc71;">REJOUE 🔥</button>
+                <button onclick="rejoue()" style="background:#2ecc71;">RETOUNEN NAN LOBBY</button>
                 <button onclick="location.reload()" style="background:#444;">KITE</button>
             </div>
         </div>
@@ -68,11 +75,29 @@
         }
 
         function updateBal(v) { document.getElementById('bal').innerText = parseFloat(v).toFixed(2) + " G"; }
-        function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: document.getElementById('bet').value }); }
+        function createRoom() { socket.emit('createRoom', { phone: myPhone, bet: document.getElementById('bet').value }); }
+        function joinRoom(id) { socket.emit('joinRoom', { roomID: id, phone: myPhone }); }
+
+        socket.on('updateRooms', rooms => {
+            const list = document.getElementById('room-list');
+            list.innerHTML = rooms.length ? "" : "<p>Pa gen chanm disponib</p>";
+            rooms.forEach(r => {
+                list.innerHTML += `<div class="room-item">
+                    <span>💰 ${r.bet}G | 👤 ${r.creator.slice(-4)}</span>
+                    <button onclick="joinRoom('${r.id}')" style="width:70px; padding:5px; background:#2ecc71;">Antre</button>
+                </div>`;
+            });
+        });
+
+        socket.on('roomCreated', () => {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('board-container').classList.remove('hidden');
+            document.getElementById('status').innerText = "Ap tann yon moun antre...";
+        });
 
         socket.on('gameStart', data => {
             currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
-            boardData = Array(225).fill(""); 
+            boardData = Array(225).fill("");
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board-container').classList.remove('hidden');
             document.getElementById('end-ctrl').classList.add('hidden');
@@ -84,21 +109,26 @@
             document.getElementById('status').innerText = myTurn ? "Se tou pa w! 🫵" : "Advèsè a ap jwe... ⏳";
             boardData.forEach((c, i) => {
                 const d = document.createElement('div'); d.className = `cell ${c}`; d.innerText = c;
-                d.onclick = () => { if(myTurn && !boardData[i]) { boardData[i] = mySymbol; myTurn = false; render(); socket.emit('move', { room: currentRoom, index: i }); } };
+                d.onclick = () => { if(myTurn && !boardData[i]) { 
+                    boardData[i] = mySymbol; myTurn = false; render(); 
+                    socket.emit('move', { room: currentRoom, index: i }); 
+                }};
                 b.appendChild(d);
             });
         }
 
         socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myTurn = true; render(); });
         socket.on('matchEnded', d => {
-            alert(d.winner === myPhone ? "OU GANYEN!" : "OU PÈDI!");
+            alert(d.winner === myPhone ? "OU GANYEN! 🔥" : "OU PÈDI! 💀");
             updateBal(d.newBalance);
             document.getElementById('end-ctrl').classList.remove('hidden');
+            document.getElementById('status').innerText = "Match Fini";
         });
+
         socket.on('balanceUpdate', d => updateBal(d.balance));
-        function rejoue() { document.getElementById('board-container').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden'); findMatch(); }
-        function contactWA(n) { window.open(`https://wa.me{n}`, '_blank'); }
-        function showDepo() { const c = confirm("OK: DIGICEL / ANNILE: NATCOM"); contactWA(c ? "50931594645" : "50955110103"); }
+        socket.on('msg', m => alert(m));
+        function rejoue() { document.getElementById('board-container').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden'); }
+        function showDepo() { const c = confirm("OK: DIGICEL / ANNILE: NATCOM"); window.open(c ? "https://wa.me" : "https://wa.me"); }
     </script>
 </body>
 </html>
