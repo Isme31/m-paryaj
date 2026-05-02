@@ -13,68 +13,69 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- KONEKSYON MONGODB ---
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyonDB?retryWrites=true&w=majority&appName=hugues";
-mongoose.connect(dbURI).then(() => console.log("MongoDB Konekte ✅"));
+mongoose.connect(dbURI).then(() => console.log("MongoDB Konekte ✅")).catch(err => console.log("Erè DB:", err));
 
-// --- MODEL DONE ---
+// --- MODEL ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: String,
     balance: { type: Number, default: 100 }
 }));
 
-let waitingPlayers = []; 
-let activeGames = {}; 
+// --- LOGIN ---
+app.post('/login', async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+        if(!phone || !password) return res.json({ success: false, msg: "Mete tout info yo" });
+
+        let user = await User.findOne({ phone });
+        if (!user) {
+            user = await User.create({ phone, password, balance: 100 });
+            console.log("Nouvo jwè: " + phone);
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon" });
+        }
+        res.json({ success: true, phone: user.phone, balance: user.balance });
+    } catch (e) { res.json({ success: false }); }
+});
+
+// --- SOCKET ---
+let waitingPlayers = [];
+let activeGames = {};
 
 io.on('connection', (socket) => {
-    
     socket.on('findMatch', async (data) => {
-        try {
-            const user = await User.findOne({ phone: data.phone });
-            if (!user || user.balance < data.bet) return socket.emit('error_msg', 'Kòb ou pa ase!');
-
+        const user = await User.findOne({ phone: data.phone });
+        if (user && user.balance >= data.bet) {
             await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
             socket.emit('balanceUpdate', { balance: user.balance - data.bet });
 
             let oppIdx = waitingPlayers.findIndex(p => p.bet === data.bet && p.phone !== data.phone);
-
             if (oppIdx > -1) {
                 const opponent = waitingPlayers.splice(oppIdx, 1)[0];
                 const room = `room_${Date.now()}`;
-                const prize = (data.bet * 2) * 0.9;
-
                 socket.join(room);
-                const oppSocket = io.sockets.sockets.get(opponent.socketId);
-                if (oppSocket) oppSocket.join(room);
+                const oppSock = io.sockets.sockets.get(opponent.socketId);
+                if (oppSock) oppSock.join(room);
 
-                activeGames[room] = { players: [socket.id, opponent.socketId], prize, phones: [data.phone, opponent.phone] };
-
-                io.to(room).emit('gameStart', {
-                    room, prize,
-                    firstTurn: Math.random() > 0.5 ? data.phone : opponent.phone
-                });
+                activeGames[room] = { prize: (data.bet * 2) * 0.9, players: [socket.id, opponent.socketId] };
+                io.to(room).emit('gameStart', { room, prize: activeGames[room].prize, firstTurn: data.phone });
             } else {
                 waitingPlayers.push({ ...data, socketId: socket.id });
-                socket.emit('waiting', 'Ap chache advèsè...');
             }
-        } catch (e) { console.error(e); }
+        }
     });
 
-    socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
+    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
     socket.on('win', async (data) => {
-        try {
-            const game = activeGames[data.room];
-            if (game) {
-                const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
-                io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize });
-                delete activeGames[data.room];
-            }
-        } catch (e) { console.error(e); }
-    });
-
-    socket.on('disconnect', () => {
-        waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
+        const game = activeGames[data.room];
+        if (game) {
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize });
+            delete activeGames[data.room];
+        }
     });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log(`Sèvè a Live 🚀`));
+server.listen(3000, () => console.log("Sèvè a pare sou port 3000"));
