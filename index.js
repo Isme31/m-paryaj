@@ -10,17 +10,17 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// --- KONFIGIRASYON ---
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "MOPYON2024";
 const PORT = process.env.PORT || 3000;
+const mongoURI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+
+mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅"));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- DB CONNECTION ---
-const mongoURI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
-mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅"));
-
-// --- MODELS ---
+// --- MODÈL YO ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -35,7 +35,7 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }));
 
-// --- ROUTES ---
+// --- ROUT YO (API) ---
 app.post('/login', async (req, res) => {
     try {
         const { phone, password } = req.body;
@@ -55,7 +55,6 @@ app.post('/login', async (req, res) => {
     } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
-// Admin Update Balance
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.status(403).json({ success: false });
@@ -63,7 +62,6 @@ app.post('/admin/update-balance', async (req, res) => {
     res.json({ success: true, newBalance: user ? user.balance : 0 });
 });
 
-// Request Withdraw
 app.post('/request-withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const amt = Number(amount);
@@ -74,12 +72,12 @@ app.post('/request-withdraw', async (req, res) => {
         const fee = amt * 0.05;
         await Withdraw.create({ phone: phone.trim(), amount: amt - fee });
         res.json({ success: true, newBalance: user.balance - amt });
-    } else { res.json({ success: false, msg: "Balans ensifizan!" }); }
+    } else { res.json({ success: false, msg: "Balans ou ensifizan!" }); }
 });
 
-// --- GAME LOGIC ---
-let waitingPlayers = []; // Pou Match Rapid
-let privateRooms = {};   // Pou Chanm Prive
+// --- LOJIK JWÈT (SOCKET.IO) ---
+let waitingPlayers = []; 
+let privateRooms = {};   
 let activeGames = {};
 
 io.on('connection', (socket) => {
@@ -95,34 +93,40 @@ io.on('connection', (socket) => {
             const opponent = waitingPlayers.splice(oppIdx, 1)[0];
             startGame(socket, opponent, bet);
         } else {
-            waitingPlayers.push({ ...data, bet, socketId: socket.id });
+            waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id });
             socket.emit('statusUpdate', "Ap chèche yon moun...");
         }
     });
 
-    // 2. JOIN PRIVATE ROOM
+    // 2. CHANM PRIVE (KORIJÉ)
     socket.on('joinPrivate', async (data) => {
         const { phone, bet, room } = data;
-        const user = await User.findOne({ phone: phone.trim() });
+        if (!room) return socket.emit('statusUpdate', "Mete yon kòd!");
+        
+        const cleanRoom = room.trim();
         const bAmount = Number(bet);
+        const user = await User.findOne({ phone: phone.trim() });
 
         if (!user || user.balance < bAmount) return socket.emit('gameOver', { msg: "Balans ou twò piti!" });
-        if (!room) return socket.emit('statusUpdate', "Mete yon kòd!");
 
-        if (privateRooms[room]) {
-            const opponent = privateRooms[room];
+        if (privateRooms[cleanRoom]) {
+            const opponent = privateRooms[cleanRoom];
             if (opponent.phone === phone) return socket.emit('statusUpdate', "W ap tann zanmi w...");
-            delete privateRooms[room];
-            startGame(socket, opponent, bAmount, room);
+            
+            delete privateRooms[cleanRoom];
+            startGame(socket, opponent, bAmount, cleanRoom);
         } else {
-            privateRooms[room] = { phone, bet: bAmount, socketId: socket.id };
-            socket.emit('statusUpdate', `Kòd: ${room}. Tann zanmi w...`);
+            privateRooms[cleanRoom] = { phone: phone, bet: bAmount, socketId: socket.id };
+            socket.join(cleanRoom);
+            socket.emit('statusUpdate', `Kòd: ${cleanRoom}. Tann zanmi w...`);
         }
     });
 
     async function startGame(s1, s2, bet, roomID = null) {
         const room = roomID || `room_${Date.now()}`;
-        await User.updateOne({ phone: s1.phone || s1.handshake.query.phone }, { $inc: { balance: -bet } });
+        const p1Phone = s1.phone || s1.handshake.query.phone; // Backup si phone pa la
+        
+        await User.updateOne({ phone: p1Phone }, { $inc: { balance: -bet } });
         await User.updateOne({ phone: s2.phone }, { $inc: { balance: -bet } });
 
         s1.join(room);
@@ -132,13 +136,7 @@ io.on('connection', (socket) => {
         const prize = (bet * 2) * 0.9;
         activeGames[room] = { prize, players: [s1.id, s2.socketId] };
 
-        io.to(room).emit('gameStart', { room, prize, firstTurn: s1.phone || "Jwè 1" });
-        
-        // Update Balans sou ekran yo
-        const u1 = await User.findOne({ phone: s1.phone });
-        const u2 = await User.findOne({ phone: s2.phone });
-        s1.emit('balanceUpdate', { balance: u1.balance });
-        if (s2Socket) s2Socket.emit('balanceUpdate', { balance: u2.balance });
+        io.in(room).emit('gameStart', { room, prize, firstTurn: p1Phone });
     }
 
     socket.on('move', (data) => {
@@ -156,7 +154,6 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
-        // Netwaye chanm prive si mèt la dekonekte
         for (let r in privateRooms) {
             if (privateRooms[r].socketId === socket.id) delete privateRooms[r];
         }
