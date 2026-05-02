@@ -1,20 +1,17 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Admin</title>
-    <style>body { font-family: sans-serif; padding: 20px; } input, button { display: block; margin: 10px 0; padding: 10px; }</style>
-</head>
-<body>
-    <h2>Admin Mopyon Blitz</h2>
-    <input type="password" id="key" placeholder="Kle Admin">
+<head><title>Admin Panel</title></head>
+<body style="font-family:sans-serif; padding:20px;">
+    <h2>Admin Mopyon Blitz ⚡</h2>
+    <input type="password" id="key" placeholder="Kle Sekrè">
     <hr>
-    <h3>Rechaje</h3>
-    <input type="text" id="p" placeholder="Telefòn">
-    <input type="number" id="a" placeholder="Montan">
-    <button onclick="up()">Rechaje ✅</button>
+    <h3>Depo (Ajoute Balans)</h3>
+    <input type="text" id="p" placeholder="Telefòn Jwè">
+    <input type="number" id="a" placeholder="Montan Goud">
+    <button onclick="up()">RECHAJE ✅</button>
     <hr>
     <h3>Retrè An Atant</h3>
-    <button onclick="getW()">Rafrechi Lis</button>
+    <button onclick="getW()">RAFRECHI LIS 🔄</button>
     <div id="list"></div>
 
     <script>
@@ -24,20 +21,16 @@
                 body: JSON.stringify({ phone: document.getElementById('p').value, amount: document.getElementById('a').value, secret: document.getElementById('key').value })
             });
             const d = await res.json();
-            alert(d.success ? "Siksè! Nouvo balans: "+d.newBalance : "Erè");
+            alert(d.success ? "Balans moute!" : "Erè nan kle a");
         }
-
         async function getW() {
-            const key = document.getElementById('key').value;
-            const res = await fetch(`/admin/withdraws?secret=${key}`);
+            const res = await fetch(`/admin/withdraws?secret=${document.getElementById('key').value}`);
             const data = await res.json();
-            const div = document.getElementById('list');
-            div.innerHTML = "";
+            const div = document.getElementById('list'); div.innerHTML = "";
             data.forEach(w => {
-                div.innerHTML += `<p>${w.phone} - ${w.amount}G <button onclick="conf('${w._id}')">Voye ✅</button></p>`;
+                div.innerHTML += `<p>${w.phone} mande ${w.amount}G <button onclick="conf('${w._id}')">Konfime ✅</button></p>`;
             });
         }
-
         async function conf(id) {
             await fetch('/admin/confirm-withdraw', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
