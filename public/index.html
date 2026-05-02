@@ -10,12 +10,11 @@
         .screen { padding: 20px; }
         .hidden { display: none !important; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 500px; margin: auto; background: #444; border: 2px solid #ff4757; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; border: 0.1px solid #222; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; }
         input, button { padding: 12px; margin: 5px 0; width: 90%; border-radius: 8px; border: none; font-size: 15px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
-        #timer { font-size: 24px; color: #ff4757; font-weight: bold; margin: 10px 0; }
-        #game-over-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        #game-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
 <body>
@@ -28,36 +27,29 @@
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div class="bal-box">
-            <h2 style="color: #0f0;"><span id="bal">0</span> G</h2>
-        </div>
-
+        <div class="bal-box"><h2><span id="bal">0</span> G</h2></div>
         <div id="lobby">
-            <h3>Kreye Chanm Privé 🔒</h3>
-            <input type="number" id="bet" value="100" style="width: 100px; text-align: center;">
-            <button onclick="createPrivate()" style="background: #2ecc71;">KREYE KÒD</button>
-            
-            <div id="display-code" class="hidden" style="margin-top:10px; border: 2px dashed #ff4757; padding: 10px;">
-                <p>Kòd pou zanmi an:</p>
+            <h3>Paryaj (G): <input type="number" id="bet" value="100" style="width:80px"></h3>
+            <button onclick="createPrivate()" style="background:#2ecc71">KREYE KÒD</button>
+            <div id="display-code" class="hidden" style="margin-top:10px; border:2px dashed #ff4757; padding:10px;">
                 <h1 id="room-code-val" style="color:#ff4757; letter-spacing:5px;">----</h1>
-                <button id="share-btn" style="background:#25d366;">Voye sou WhatsApp 📲</button>
+                <button id="share-btn" style="background:#25d366">Voye sou WhatsApp 📲</button>
             </div>
             <hr>
             <input type="text" id="join-code" placeholder="Mete kòd zanmi w">
-            <button onclick="joinPrivate()" style="background: #ffa502;">ANTRE NAN MATCH</button>
+            <button onclick="joinPrivate()" style="background:#ffa502">ANTRE NAN MATCH</button>
         </div>
-
         <div id="board-container" class="hidden">
-            <div id="timer">30s</div>
-            <div id="status">Atann tou pa w...</div>
+            <div id="timer" style="font-size:24px; color:#ff4757; font-weight:bold;">30s</div>
+            <div id="status" style="margin-bottom:10px;">Atann...</div>
             <div id="board" class="grid"></div>
         </div>
     </div>
 
-    <div id="game-over-modal" class="hidden">
-        <h1 id="result-text"></h1>
-        <p id="prize-text"></p>
-        <button onclick="location.reload()" style="background:#2ecc71;">REJWE 🎮</button>
+    <div id="game-modal" class="hidden">
+        <h1 id="res-txt" style="font-size:40px;"></h1>
+        <p id="prize-info" style="color:#0f0; font-size:20px;"></p>
+        <button onclick="location.reload()" style="width:200px;">REJWE 🎮</button>
     </div>
 
     <script>
@@ -69,18 +61,18 @@
             const phone = document.getElementById('phone').value.trim();
             const password = document.getElementById('pass').value;
             const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
-            const data = await res.json();
-            if (data.success) {
-                myPhone = data.phone; 
-                document.getElementById('bal').innerText = data.balance;
+            const d = await res.json();
+            if(d.success) {
+                myPhone = d.phone; 
+                document.getElementById('bal').innerText = d.balance;
                 document.getElementById('auth-screen').classList.add('hidden'); 
                 document.getElementById('game-screen').classList.remove('hidden');
-            } else alert(data.msg);
+            } else alert(d.msg);
         }
 
         function createPrivate() {
-            const bet = document.getElementById('bet').value;
-            socket.emit('createPrivate', { phone: myPhone, bet: bet });
+            const betVal = document.getElementById('bet').value;
+            socket.emit('createPrivate', { phone: myPhone, bet: betVal });
         }
 
         function joinPrivate() {
@@ -92,8 +84,8 @@
             document.getElementById('room-code-val').innerText = data.code;
             document.getElementById('display-code').classList.remove('hidden');
             document.getElementById('share-btn').onclick = () => {
-                const txt = encodeURIComponent(`Vini jwe mopyon pou ${data.bet}G. Kòd: ${data.code}`);
-                window.open(`https://wa.me{txt}`, '_blank');
+                const msg = encodeURIComponent(`Vini jwe mopyon Blitz avè m pou ${data.bet}G! Kòd: ${data.code}`);
+                window.open(`https://wa.me{msg}`, '_blank');
             };
         });
 
@@ -103,7 +95,7 @@
             myTurn = (data.firstTurn === myPhone);
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board-container').classList.remove('hidden');
-            document.getElementById('status').innerText = myTurn ? "Se tou pa w!" : "Atann advèsè a...";
+            document.getElementById('status').innerText = myTurn ? "Se tou pa w! ("+mySymbol+")" : "Atann advèsè a... ("+mySymbol+")";
             renderBoard();
             if(myTurn) startTimer();
         });
@@ -119,47 +111,69 @@
                     clearInterval(timerInterval);
                     renderBoard();
                     socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-                    if(checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
-                    else document.getElementById('status').innerText = "Atann advèsè a...";
+                    if(checkWin(i, mySymbol)) {
+                        socket.emit('win', { room: currentRoom, phone: myPhone });
+                    } else {
+                        document.getElementById('status').innerText = "Atann advèsè a...";
+                    }
                 };
                 b.appendChild(d);
             });
         }
 
-        function checkWin(index, s) {
-            const size = 15; const r = Math.floor(index / size), c = index % size;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+        function checkWin(idx, s) {
+            const size = 15; 
+            const r = Math.floor(idx / size); 
+            const c = idx % size;
+            const dirs = [[0,1], [1,0], [1,1], [1,-1]]; // Ranje nèt (Horizontal, Vertical, Diagonals)
+            
             for (let [dr, dc] of dirs) {
                 let cnt = 1;
-                for (let i=1; i<5; i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
-                for (let i=1; i<5; i++) { let nr=r-dr*i, nc=c-dc*i; if(nr>=0 && nr<15 && nc>=0 && nc<15 && boardData[nr*size+nc]===s) cnt++; else break; }
-                if(cnt>=5) return true;
+                // Tcheke yon sans
+                for (let i = 1; i < 5; i++) {
+                    let nr = r + dr * i, nc = c + dc * i;
+                    if (nr >= 0 && nr < size && nc >= 0 && nc < size && boardData[nr * size + nc] === s) cnt++;
+                    else break;
+                }
+                // Tcheke lòt sans lan
+                for (let i = 1; i < 5; i++) {
+                    let nr = r - dr * i, nc = c - dc * i;
+                    if (nr >= 0 && nr < size && nc >= 0 && nc < size && boardData[nr * size + nc] === s) cnt++;
+                    else break;
+                }
+                if (cnt >= 5) return true;
             }
             return false;
         }
 
         function startTimer() {
-            clearInterval(timerInterval); timeLeft = 30;
+            clearInterval(timerInterval);
+            timeLeft = 30;
+            document.getElementById('timer').innerText = timeLeft + "s";
             timerInterval = setInterval(() => {
-                timeLeft--; document.getElementById('timer').innerText = timeLeft + "s";
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft + "s";
                 if(timeLeft <= 0) clearInterval(timerInterval);
             }, 1000);
         }
 
         socket.on('opponentMove', data => {
             boardData[data.index] = data.symbol;
-            myTurn = true; renderBoard(); startTimer();
+            myTurn = true;
+            renderBoard();
+            startTimer();
             document.getElementById('status').innerText = "Se tou pa w!";
         });
 
         socket.on('gameOver', data => {
-            document.getElementById('result-text').innerText = data.winner === myPhone ? "OU GENYEN! 🎉" : "OU PÈDI! 💀";
-            document.getElementById('prize-text').innerText = "Pri: " + data.prize + "G";
+            clearInterval(timerInterval);
+            document.getElementById('res-txt').innerText = data.winner === myPhone ? "OU GENYEN! 🎉" : "OU PÈDI! 💀";
+            document.getElementById('prize-info').innerText = "Pri: " + data.prize + "G";
             document.getElementById('bal').innerText = data.newBalance;
-            document.getElementById('game-over-modal').classList.remove('hidden');
+            document.getElementById('game-modal').classList.remove('hidden');
         });
 
-        socket.on('errorMsg', msg => alert(msg));
+        socket.on('errorMsg', m => alert(m));
     </script>
 </body>
 </html>
