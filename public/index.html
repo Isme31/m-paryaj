@@ -9,11 +9,14 @@
         body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
         .screen { padding: 20px; }
         .hidden { display: none !important; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 500px; margin: auto; background: #444; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 500px; margin: auto; background: #444; border: 2px solid #ff4757; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; }
         input, button { padding: 12px; margin: 5px 0; width: 90%; border-radius: 8px; border: none; font-size: 15px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
-        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
+        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
+        #timer { font-size: 24px; color: #ff4757; font-weight: bold; margin: 10px 0; }
+        .social-links { margin-bottom: 15px; display: flex; justify-content: center; gap: 10px; }
+        .social-links a { background: #25d366; color: white; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -30,35 +33,45 @@
             <button onclick="showDepoMenu()" style="background:#2ecc71; width:45%;">DEPO 💰</button>
             <button onclick="requestWithdraw()" style="background:#ffa502; width:45%;">RETRÈ 💸</button>
         </div>
-        <div id="lobby">
-            <input type="number" id="bet" value="50" min="50" style="text-align:center;">
-            <button onclick="findMatch()">MATCH RAPID</button>
+
+        <div class="social-links">
+            <a href="https://whatsapp.com" target="_blank">📲 Gwoup WhatsApp</a>
+            <a href="https://wa.me" target="_blank" style="background:#3498db;">👨‍💻 Asistan</a>
         </div>
+
+        <div id="lobby">
+            <h3>Kreye Chanm Privé 🔒</h3>
+            <input type="number" id="bet" value="100" style="width: 80px;">
+            <button onclick="createPrivate()" style="background: #2ecc71;">KREYE KÒD</button>
+            <div id="display-code" class="hidden" style="margin-top:15px; border: 2px dashed #ff4757; padding: 10px;">
+                <p>Voye kòd sa a bay zanmi w:</p>
+                <h1 id="room-code-val" style="color: #ff4757;">----</h1>
+                <button id="share-btn" style="background:#25d366; width: auto;">WhatsApp 📲</button>
+            </div>
+            <hr>
+            <h3>Antre nan yon Chanm</h3>
+            <input type="text" id="join-code" placeholder="Mete kòd la">
+            <button onclick="joinPrivate()" style="background: #ffa502;">ANTRE NAN MATCH</button>
+        </div>
+
         <div id="board-container" class="hidden">
-            <div id="status" style="margin-bottom:10px;">Atann...</div>
+            <div id="timer">30s</div>
+            <div id="status">Atann...</div>
             <div id="board" class="grid"></div>
-            <button onclick="location.reload()" style="background:#333; margin-top:10px;">KITE MATCH LA</button>
         </div>
     </div>
 
     <script>
         const socket = io();
         let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(225).fill("");
+        let timerInterval, timeLeft = 30, currentPrize = 0;
 
         async function login() {
             const phone = document.getElementById('phone').value.trim();
             const password = document.getElementById('pass').value;
-            const res = await fetch('/login', { 
-                method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ phone, password }) 
-            });
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
             const data = await res.json();
-            if (data.success) {
-                myPhone = data.phone;
-                document.getElementById('bal').innerText = data.balance;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('game-screen').classList.remove('hidden');
-            } else alert(data.msg);
+            if (data.success) { myPhone = data.phone; document.getElementById('bal').innerText = data.balance; document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('game-screen').classList.remove('hidden'); } else alert(data.msg);
         }
 
         function showDepoMenu() {
@@ -70,55 +83,61 @@
         async function requestWithdraw() {
             const amt = prompt("Montan retrè (Min 100G):");
             if (!amt || amt < 100) return alert("Minimòm se 100G");
-            const res = await fetch('/request-withdraw', { 
-                method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ phone: myPhone, amount: parseFloat(amt) }) 
-            });
+            const res = await fetch('/request-withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, amount: parseFloat(amt) }) });
             const data = await res.json();
-            if(data.success) {
-                const ph = "50931594645"; 
-                const msg = `*RETRÈ MOPYON BLITZ*%0A👤 Jwè: ${myPhone}%0A💰 Montan: ${amt}G`;
-                window.open(`https://wa.me{ph}?text=${msg}`, '_blank');
-                document.getElementById('bal').innerText = data.newBalance;
-                alert("Demann voye!");
-            } else alert(data.msg);
+            if(data.success) { window.open(`https://wa.me?text=*RETRÈ*%0AJwè: ${myPhone}%0AMontan: ${amt}G`, '_blank'); document.getElementById('bal').innerText = data.newBalance; alert("Voye!"); } else alert(data.msg);
         }
 
-        function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: document.getElementById('bet').value }); }
+        function createPrivate() { socket.emit('createPrivate', { phone: myPhone, bet: document.getElementById('bet').value }); }
+        function joinPrivate() { socket.emit('joinPrivate', { code: document.getElementById('join-code').value.trim(), phone: myPhone }); }
+
+        socket.on('roomCreated', data => {
+            document.getElementById('room-code-val').innerText = data.code;
+            document.getElementById('display-code').classList.remove('hidden');
+            document.getElementById('share-btn').onclick = () => { window.open(`https://wa.me{data.code}*%20(${data.bet}G)`, '_blank'); };
+        });
+
+        function startTimer() {
+            clearInterval(timerInterval); timeLeft = 30;
+            timerInterval = setInterval(() => {
+                timeLeft--; document.getElementById('timer').innerText = timeLeft + "s";
+                if (timeLeft <= 0) { clearInterval(timerInterval); if (myTurn) socket.emit('win', { room: currentRoom, phone: "LÒT LA", prize: 0 }); }
+            }, 1000);
+        }
 
         socket.on('gameStart', data => {
-            currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
+            currentRoom = data.room; currentPrize = data.prize;
+            mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board-container').classList.remove('hidden');
             renderBoard();
-            document.getElementById('status').innerText = myTurn ? "Se tou pa w!" : "Atann lòt la...";
+            if(myTurn) startTimer();
         });
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((c, i) => {
                 const d = document.createElement('div'); d.className = 'cell'; d.innerText = c;
-                if(c === 'X') d.style.color = '#ff4757';
-                if(c === 'O') d.style.color = '#3498db';
+                if(c === 'X') d.style.color = '#ff4757'; else if(c === 'O') d.style.color = '#3498db';
                 d.onclick = () => {
                     if(!myTurn || boardData[i] !== "") return;
-                    boardData[i] = mySymbol; myTurn = false; renderBoard();
-                    document.getElementById('status').innerText = "Atann...";
+                    boardData[i] = mySymbol; myTurn = false; clearInterval(timerInterval); renderBoard();
                     socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                    checkWin();
                 };
                 b.appendChild(d);
             });
         }
 
-        socket.on('opponentMove', data => { 
-            boardData[data.index] = data.symbol; myTurn = true; renderBoard(); 
-            document.getElementById('status').innerText = "Se tou pa w!";
-        });
-        socket.on('gameOver', data => { 
-            if(data.msg) alert(data.msg);
-            else alert(data.winner === myPhone ? "🎉 OU GANYEN!" : "💀 OU PÈDI!"); 
-            location.reload(); 
-        });
+        socket.on('opponentMove', data => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); startTimer(); });
+
+        function checkWin() {
+            // Fonksyon pou tcheke si 5 mopyon aliye (senplifye pou egzanp lan)
+            // Si gen viktwa: socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
+        }
+
+        socket.on('gameOver', data => { clearInterval(timerInterval); alert(data.winner === myPhone ? "GANYEN " + data.prize + "G!" : "PÈDI!"); location.reload(); });
+        socket.on('errorMsg', msg => alert(msg));
         socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
     </script>
 </body>
