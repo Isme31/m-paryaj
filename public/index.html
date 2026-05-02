@@ -14,8 +14,7 @@
         input, button { padding: 12px; margin: 5px 0; width: 90%; max-width: 300px; border-radius: 8px; border: none; font-size: 15px; outline: none; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
         button:hover { opacity: 0.8; transform: scale(1.02); }
-        #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; font-size: 14px; }
-        #timer { color: #ffeb3b; }
+        #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; font-size: 14px; min-height: 20px; }
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
         .btn-row { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
         .support-link { margin-top: 20px; font-size: 13px; color: #888; display: block; }
@@ -27,15 +26,11 @@
     <!-- SCREEN LOGIN -->
     <div id="auth-screen" class="screen">
         <h1 style="color: #ff4757; font-size: 40px;">Mopyon Blitz ⚡</h1>
-        <p style="color: #bbb;">Antre nimewo w ak modpas ou pou n kòmanse.</p>
+        <p style="color: #bbb;">Antre nimewo w ak modpas ou.</p>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE / ENSRIPSYON</button>
-        
-        <span class="support-link">
-            Pwoblèm koneksyon oswa kont bloke? <br>
-            <a href="javascript:void(0)" onclick="contactSupport()">Kontakte Sipò (Asistan) 🛠️</a>
-        </span>
+        <span class="support-link">Pwoblèm? <a href="javascript:void(0)" onclick="contactSupport()">Sipò 🛠️</a></span>
     </div>
 
     <!-- SCREEN JWÈT -->
@@ -52,17 +47,17 @@
         </div>
         
         <div id="lobby">
-            <p>Konbe ou vle parye?</p>
+            <p>Paryaj ou:</p>
             <input type="number" id="bet" value="50" min="50" style="text-align: center;">
             <button onclick="findMatch()">⚡ MATCH RAPID</button>
-            <div style="margin: 20px 0; color: #444;">— OSWA —</div>
+            <div style="margin: 15px 0; color: #444;">— OSWA —</div>
             <input type="text" id="roomCode" placeholder="Kòd Chanm Prive">
             <button onclick="joinPrivate()" style="background: #3498db;">JWE AK ZANMI</button>
         </div>
 
         <div id="board-container" class="hidden">
             <div id="board" class="grid"></div>
-            <button onclick="location.reload()" style="background: #333; margin-top: 10px;">KITE MATCH LA</button>
+            <button id="leave-btn" onclick="tounenNanLobby()" style="background: #333; margin-top: 10px;">KITE MATCH LA</button>
         </div>
     </div>
 
@@ -70,11 +65,10 @@
         const socket = io();
         const SIZE = 15;
         let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(SIZE*SIZE).fill("");
-        let timerInterval, timeLeft = 30;
 
         // 1. KONEKSYON
         async function login() {
-            const phone = document.getElementById('phone').value;
+            const phone = document.getElementById('phone').value.trim();
             const password = document.getElementById('pass').value;
             if(!phone || !password) return alert("Ranpli tout bwat yo!");
 
@@ -92,120 +86,130 @@
             } else alert(data.msg);
         }
 
-        // 2. SIPÒ TEKNIK (ASISTAN)
-        function contactSupport() {
-            const chwa = confirm("Ki asistan ou vle kontakte?\n\nPeze [OK] pou Asistan 1 (3159-4645)\nPeze [ANNULER] pou Asistan 2 (5511-0103)");
-            const adminPhone = chwa ? "50931594645" : "50955110103";
-            const mesaj = encodeURIComponent("Bonjou, mwen bezwen èd. Kont Mopyon Blitz mwen bloke oswa mwen bliye modpas mwen.");
-            window.open(`https://wa.me{adminPhone}?text=${mesaj}`, '_blank');
-        }
-
-        // 3. RECHAJE (DEPO)
-        function showDepoMenu() {
-            const chwa = confirm("Chwazi metòd peman an:\n\nPeze [OK] pou MONCASH (3159-4645)\nPeze [ANNULER] pou NATCASH (5511-0103)");
-            const adminPhone = chwa ? "50931594645" : "50955110103";
-            const metòd = chwa ? "MONCASH" : "NATCASH";
-
-            alert(`ENSTRIKSYON:\n1. Voye kòb la sou ${metòd} nan nimewo ${adminPhone}.\n2. Apre sa, voye prèv la sou WhatsApp pou admin valide balans ou.`);
-
-            const mesaj = `*DEPO LAJAN - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💳 *Metòd:* ${metòd}\n✅ *Mwen fèk voye kòb la, tanpri moute balans mwen.*`;
-            window.open(`https://wa.me{adminPhone}?text=${encodeURIComponent(mesaj)}`, '_blank');
-        }
-
-        // 4. RETRÈ
-        async function requestWithdraw() {
-            const amount = prompt("Konbe ou vle retire? (Min 100G)");
-            if (!amount || amount < 100) return alert("Minimòm retrè se 100G");
-
-            const res = await fetch('/request-withdraw', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ phone: myPhone, amount: parseFloat(amount) }) 
-            });
-            const data = await res.json();
-
-            if(data.success) {
-                const netAmount = amount * 0.95; 
-                const chwa = confirm("Voye konfimasyon bay ki Admin?\n\nPeze [OK] pou Admin 1 (3159-4645)\nPeze [ANNULER] pou Admin 2 (5511-0103)");
-                const adminPhone = chwa ? "50931594645" : "50955110103";
-
-                const mesaj = `*DEMANN RETRÈ - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💰 *Mande:* ${amount}G\n💵 *Resevwa (apre 5%):* ${netAmount}G\n\n_Konfime demann mwen an sou sistèm nan._`;
-                window.open(`https://wa.me{adminPhone}?text=${encodeURIComponent(mesaj)}`, '_blank');
-                
-                alert("Demann voye! Balans ou mete ajou.");
-                document.getElementById('bal').innerText = data.newBalance;
-            } else alert(data.msg);
-        }
-
-        // 5. JWÈT (SOCKET)
+        // 2. JWÈT (SOCKET)
         function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value) }); }
-        function joinPrivate() { socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room: document.getElementById('roomCode').value }); }
+        
+        function joinPrivate() { 
+            const room = document.getElementById('roomCode').value.trim();
+            if(!room) return alert("Mete yon kòd!");
+            socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room: room }); 
+        }
 
         socket.on('statusUpdate', msg => { document.getElementById('status').innerText = msg; });
 
         socket.on('gameStart', data => {
-            currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
+            currentRoom = data.room; 
+            mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; 
+            myTurn = (data.firstTurn === myPhone);
             boardData.fill(""); 
             document.getElementById('lobby').classList.add('hidden'); 
             document.getElementById('board-container').classList.remove('hidden');
-            renderBoard(); updateStatus(); if(myTurn) startTimer();
+            renderBoard();
+            updateStatus();
         });
-
-        socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myTurn = true; renderBoard(); updateStatus(); startTimer(); });
-
-        socket.on('gameOver', d => {
-            clearInterval(timerInterval);
-            alert(d.msg || (d.winner === myPhone ? "OU GANYEN! 🎉" : "OU PÈDI! 💀"));
-            if(d.newBalance !== undefined) document.getElementById('bal').innerText = d.newBalance;
-            location.reload();
-        });
-
-        socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
-
-        function startTimer() {
-            clearInterval(timerInterval); timeLeft = 30;
-            timerInterval = setInterval(() => { 
-                timeLeft--; updateStatus(); 
-                if(timeLeft <= 0) clearInterval(timerInterval);
-            }, 1000);
-        }
-
-        function makeMove(i) {
-            if(!myTurn || boardData[i] !== "") return;
-            clearInterval(timerInterval); boardData[i] = mySymbol; myTurn = false; renderBoard(); updateStatus();
-            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            if (checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
-        }
-
-        function checkWin(index, s) {
-            const r = Math.floor(index / SIZE), c = index % SIZE;
-            const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
-            for (let [dr, dc] of dirs) {
-                let count = 1;
-                [1, -1].forEach(side => {
-                    for (let i = 1; i < 5; i++) {
-                        let nr = r + dr * i * side, nc = c + dc * i * side;
-                        if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && boardData[nr * SIZE + nc] === s) count++;
-                        else break;
-                    }
-                });
-                if (count >= 5) return true;
-            } return false;
-        }
 
         function renderBoard() {
-            const b = document.getElementById('board'); b.innerHTML = "";
-            boardData.forEach((val, i) => {
-                const cell = document.createElement('div'); cell.className = 'cell'; cell.innerText = val;
-                cell.style.color = val === 'X' ? '#ff4757' : '#2ecc71'; 
-                cell.onclick = () => makeMove(i); b.appendChild(cell);
+            const board = document.getElementById('board');
+            board.innerHTML = "";
+            boardData.forEach((cell, i) => {
+                const div = document.createElement('div');
+                div.className = 'cell';
+                div.innerText = cell;
+                if(cell === 'X') div.style.color = '#ff4757';
+                if(cell === 'O') div.style.color = '#3498db';
+                div.onclick = () => makeMove(i);
+                board.appendChild(div);
             });
         }
 
+        function makeMove(i) {
+            if (!myTurn || boardData[i] !== "" || !currentRoom) return;
+            boardData[i] = mySymbol;
+            myTurn = false;
+            renderBoard();
+            updateStatus();
+            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, phone: myPhone });
+            if (checkWin(i)) socket.emit('win', { room: currentRoom, phone: myPhone });
+        }
+
+        socket.on('opponentMove', data => {
+            boardData[data.index] = data.symbol;
+            myTurn = true;
+            renderBoard();
+            updateStatus();
+        });
+
         function updateStatus() {
-            const s = document.getElementById('status');
-            s.innerHTML = myTurn ? `Tou pa w (${mySymbol}) - <span id="timer">${timeLeft}s</span>` : "Tann advèsè a...";
-            s.style.background = myTurn ? "#28a745" : "#ffc107";
+            const status = document.getElementById('status');
+            status.innerText = myTurn ? `Se tou pa w (${mySymbol})` : "Atann lòt jwè a...";
+            status.style.background = myTurn ? "#28a745" : "#555";
+        }
+
+        socket.on('gameOver', data => {
+            const status = document.getElementById('status');
+            if (data.msg) { alert(data.msg); return tounenNanLobby(); }
+            
+            const isWinner = data.winner === myPhone;
+            status.innerText = isWinner ? `🎉 OU GANYEN ${data.prize}G!` : `💀 OU PÈDI!`;
+            status.style.background = isWinner ? "#28a745" : "#ff4757";
+            if (data.newBalance) document.getElementById('bal').innerText = data.newBalance;
+            currentRoom = null; // Jwèt la fini
+            alert(status.innerText);
+        });
+
+        socket.on('balanceUpdate', data => { document.getElementById('bal').innerText = data.balance; });
+
+        function tounenNanLobby() {
+            document.getElementById('board-container').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            document.getElementById('status').innerText = "Pare pou jwe!";
+            document.getElementById('status').style.background = "#28a745";
+            boardData.fill("");
+            currentRoom = null;
+        }
+
+        // 3. LOJIK VIKTWA (LOKAL)
+        function checkWin(idx) {
+            const s = mySymbol, r = Math.floor(idx/SIZE), c = idx%SIZE;
+            const check = (dr, dc) => {
+                let cnt = 1;
+                for(let i=1; i<5; i++) {
+                    let nr=r+dr*i, nc=c+dc*i;
+                    if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && boardData[nr*SIZE+nc]===s) cnt++; else break;
+                }
+                for(let i=1; i<5; i++) {
+                    let nr=r-dr*i, nc=c-dc*i;
+                    if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && boardData[nr*SIZE+nc]===s) cnt++; else break;
+                }
+                return cnt >= 5;
+            };
+            return check(0,1) || check(1,0) || check(1,1) || check(1,-1);
+        }
+
+        // 4. SIPÒ & PÈMAN (RANJÉ)
+        function contactSupport() {
+            const admin = confirm("OK: Asistan 1 (3159-4645)\nANNULER: Asistan 2 (5511-0103)");
+            const ph = admin ? "50931594645" : "50955110103";
+            window.open(`https://wa.me{ph}?text=Mwen%20bezwen%20èd`, '_blank');
+        }
+        function showDepoMenu() {
+            const admin = confirm("OK: MONCASH (3159-4645)\nANNULER: NATCASH (5511-0103)");
+            const ph = admin ? "50931594645" : "50955110103";
+            alert("Voye kòb la epi voye prèv la sou WhatsApp.");
+            window.open(`https://wa.me{ph}?text=Mwen%20fèk%20voye%20depo%20pou%20${myPhone}`, '_blank');
+        }
+        async function requestWithdraw() {
+            const amt = prompt("Montan (Min 100G):");
+            if (!amt || amt < 100) return;
+            const res = await fetch('/request-withdraw', { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ phone: myPhone, amount: parseFloat(amt) }) 
+            });
+            const data = await res.json();
+            if(data.success) {
+                document.getElementById('bal').innerText = data.newBalance;
+                alert("Demann voye!");
+            } else alert(data.msg);
         }
     </script>
 </body>
