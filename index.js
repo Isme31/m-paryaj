@@ -16,8 +16,7 @@ const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
     balance: { type: Number, default: 50 },
-    referralCount: { type: Number, default: 0 },
-    referredBy: { type: String, default: null }
+    referralCount: { type: Number, default: 0 }
 }));
 
 app.use(express.json());
@@ -29,7 +28,7 @@ app.post('/login', async (req, res) => {
     let user = await User.findOne({ phone: cleanPhone });
     if (!user) {
         if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-        user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
+        user = await User.create({ phone: cleanPhone, password, balance: 50 });
     } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
     res.json({ success: true, user });
 });
@@ -73,4 +72,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`Sèvè kouri sou ${PORT}`));
+server.listen(PORT, () => console.log(`Blitz Sèvè kouri sou ${PORT}`));
