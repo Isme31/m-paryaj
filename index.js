@@ -48,6 +48,7 @@ let waitingPlayers = [];
 let activeGames = {};
 
 io.on('connection', (socket) => {
+    // --- MATCH RAPID ---
     socket.on('findMatch', async (data) => {
         try {
             const user = await User.findOne({ phone: data.phone });
@@ -63,14 +64,33 @@ io.on('connection', (socket) => {
                     const oppSock = io.sockets.sockets.get(opponent.socketId);
                     if (oppSock) oppSock.join(room);
 
-                    activeGames[room] = { 
-                        prize: (data.bet * 2) * 0.9, 
-                        players: [socket.id, opponent.socketId],
-                        phones: [data.phone, opponent.phone]
-                    };
+                    activeGames[room] = { prize: (data.bet * 2) * 0.9, players: [socket.id, opponent.socketId] };
                     io.to(room).emit('gameStart', { room, prize: activeGames[room].prize, firstTurn: data.phone });
                 } else {
                     waitingPlayers.push({ ...data, socketId: socket.id });
+                }
+            }
+        } catch(e) { console.log(e); }
+    });
+
+    // --- JWÈT PRIVE (ZANMI) ---
+    socket.on('joinPrivate', async (data) => {
+        try {
+            const user = await User.findOne({ phone: data.phone });
+            if (user && user.balance >= data.bet) {
+                const roomName = `private_${data.room}`;
+                socket.join(roomName);
+                
+                const clients = io.sockets.adapter.rooms.get(roomName);
+                if (clients.size === 2) {
+                    await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+                    socket.emit('balanceUpdate', { balance: user.balance - data.bet });
+                    
+                    activeGames[roomName] = { prize: (data.bet * 2) * 0.9, players: Array.from(clients) };
+                    io.to(roomName).emit('gameStart', { room: roomName, prize: activeGames[roomName].prize, firstTurn: data.phone });
+                } else {
+                    await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+                    socket.emit('balanceUpdate', { balance: user.balance - data.bet });
                 }
             }
         } catch(e) { console.log(e); }
@@ -100,5 +120,4 @@ io.on('connection', (socket) => {
     });
 });
 
-process.on('uncaughtException', (err) => console.log('Erè evite ❌'));
 server.listen(process.env.PORT || 3000, () => console.log("Sèvè Live 🚀"));
