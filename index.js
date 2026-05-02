@@ -13,10 +13,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- KONEKSYON MONGODB ---
 const dbURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyonDB?retryWrites=true&w=majority&appName=hugues";
-
-mongoose.connect(dbURI)
-    .then(() => console.log("MongoDB Konekte ✅"))
-    .catch(err => console.error("Erè DB ❌:", err));
+mongoose.connect(dbURI).then(() => console.log("MongoDB Konekte ✅"));
 
 // --- MODEL DONE ---
 const User = mongoose.model('User', new mongoose.Schema({
@@ -25,94 +22,59 @@ const User = mongoose.model('User', new mongoose.Schema({
     balance: { type: Number, default: 100 }
 }));
 
-// --- ROUTES API ---
-app.post('/login', async (req, res) => {
-    const { phone, password } = req.body;
-    try {
-        let user = await User.findOne({ phone });
-        if (!user) {
-            user = await User.create({ phone, password, balance: 100 });
-        } else if (user.password !== password) {
-            return res.json({ success: false, msg: "Modpas pa bon" });
-        }
-        res.json({ success: true, phone: user.phone, balance: user.balance });
-    } catch (e) { res.status(500).json({ success: false }); }
-});
-
-// --- LOJIK JWÈT (SOCKET.IO) ---
 let waitingPlayers = []; 
+let activeGames = {}; 
 
 io.on('connection', (socket) => {
     
     socket.on('findMatch', async (data) => {
         try {
             const user = await User.findOne({ phone: data.phone });
-            
-            // 1. Tcheke si jwè a gen kòb li vle mize a
-            if (!user || user.balance < data.bet) {
-                return socket.emit('error_msg', 'Kòb ou pa ase pou mize sa!');
-            }
+            if (!user || user.balance < data.bet) return socket.emit('error_msg', 'Kòb ou pa ase!');
 
-            // 2. RETIRE KANTITE LI MIZE A SOU KONT LI TOUT SWIT
-            const updatedUser = await User.findOneAndUpdate(
-                { phone: data.phone }, 
-                { $inc: { balance: -data.bet } },
-                { new: true }
-            );
-            
-            // Voye nouvo balans lan bay jwè a pou l wè kòb la soti
-            socket.emit('balanceUpdate', { balance: updatedUser.balance });
-            console.log(`Mize ${data.bet}G soti sou kont ${data.phone}`);
+            await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
+            socket.emit('balanceUpdate', { balance: user.balance - data.bet });
 
-            // 3. CHACHE ADVÈSÈ KI MIZE MENM KANTITE A
-            let opponentIndex = waitingPlayers.findIndex(p => p.bet === data.bet && p.phone !== data.phone);
+            let oppIdx = waitingPlayers.findIndex(p => p.bet === data.bet && p.phone !== data.phone);
 
-            if (opponentIndex > -1) {
-                const opponent = waitingPlayers.splice(opponentIndex, 1)[0];
+            if (oppIdx > -1) {
+                const opponent = waitingPlayers.splice(oppIdx, 1)[0];
                 const room = `room_${Date.now()}`;
-                
+                const prize = (data.bet * 2) * 0.9;
+
                 socket.join(room);
                 const oppSocket = io.sockets.sockets.get(opponent.socketId);
                 if (oppSocket) oppSocket.join(room);
 
-                // Ganyan an ap touche mize pa l + mize lòt la (mwens 10% frais)
-                const prize = (data.bet * 2) * 0.9;
+                activeGames[room] = { players: [socket.id, opponent.socketId], prize, phones: [data.phone, opponent.phone] };
 
                 io.to(room).emit('gameStart', {
-                    room, 
-                    prize: prize,
+                    room, prize,
                     firstTurn: Math.random() > 0.5 ? data.phone : opponent.phone
                 });
             } else {
-                // Mete jwè a nan lis datant lan ak tout mize li
                 waitingPlayers.push({ ...data, socketId: socket.id });
-                socket.emit('waiting', 'Mize anrejistre. Ap chache advèsè...');
+                socket.emit('waiting', 'Ap chache advèsè...');
             }
         } catch (e) { console.error(e); }
     });
 
-    socket.on('move', (data) => {
-        socket.to(data.room).emit('opponentMove', data);
-    });
+    socket.on('move', (data) => { socket.to(data.room).emit('opponentMove', data); });
 
     socket.on('win', async (data) => {
         try {
-            // 4. BAY GANYAN AN TOUT KÒB PO A (Mize pa l + mize pèdan an)
-            const winner = await User.findOneAndUpdate(
-                { phone: data.phone }, 
-                { $inc: { balance: data.prize } },
-                { new: true }
-            );
-            console.log(`💰 ${data.phone} genyen po a: ${data.prize}G!`);
-            io.to(socket.id).emit('balanceUpdate', { balance: winner.balance });
+            const game = activeGames[data.room];
+            if (game) {
+                const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
+                io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize });
+                delete activeGames[data.room];
+            }
         } catch (e) { console.error(e); }
     });
 
     socket.on('disconnect', () => {
-        // Si yon moun dekonekte pandan l t ap tann, ou ka ajoute lojik pou rann li mize l la isit la
         waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Sèvè a Live sou port ${PORT} 🚀`));
+server.listen(process.env.PORT || 3000, () => console.log(`Sèvè a Live 🚀`));
