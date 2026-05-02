@@ -8,12 +8,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const ADMIN_SECRET = "MOPYON2024"; // Kle sekrè pou Admin
+const ADMIN_SECRET = "MOPYON2024"; 
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- DB CONNECTION ---
 mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyonDB?retryWrites=true&w=majority&appName=hugues")
     .then(() => console.log("MongoDB Konekte ✅"));
 
@@ -23,7 +22,7 @@ const User = mongoose.model('User', new mongoose.Schema({
     balance: { type: Number, default: 100 }
 }));
 
-// --- ADMIN API ---
+// API ADMIN
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.status(403).json({ success: false, msg: "Kle Admin pa bon!" });
@@ -33,7 +32,7 @@ app.post('/admin/update-balance', async (req, res) => {
     } catch (e) { res.json({ success: false, msg: "Erè nan baz done" }); }
 });
 
-// --- LOGIN ---
+// LOGIN
 app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     let user = await User.findOne({ phone });
@@ -43,12 +42,11 @@ app.post('/login', async (req, res) => {
 });
 
 let waitingPlayers = [];
-let privateRooms = {}; // Pou swiv chanm prive
+let privateRooms = {}; 
 let activeGames = {};
 
 io.on('connection', (socket) => {
 
-    // 1. MATCH RAPID
     socket.on('findMatch', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         if (!user || user.balance < 50) return socket.emit('gameOver', { msg: "Ou bezwen pi piti 50G!" });
@@ -57,16 +55,12 @@ io.on('connection', (socket) => {
         if (oppIdx > -1) {
             const opponent = waitingPlayers.splice(oppIdx, 1)[0];
             const room = `room_${Date.now()}`;
-            
             await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
             await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: -data.bet } });
-
             socket.join(room);
             io.sockets.sockets.get(opponent.socketId)?.join(room);
-
             activeGames[room] = { prize: (data.bet * 2) * 0.9, players: [socket.id, opponent.socketId] };
             io.to(room).emit('gameStart', { room, prize: activeGames[room].prize, firstTurn: data.phone });
-            
             socket.emit('balanceUpdate', { balance: user.balance - data.bet });
             io.to(opponent.socketId).emit('balanceUpdate', { balance: opponent.balance - data.bet });
         } else {
@@ -74,34 +68,25 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 2. CHANM PRIVE (KORIJE)
     socket.on('joinPrivate', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         if (!user || user.balance < 50) return socket.emit('gameOver', { msg: "Ou bezwen pi piti 50G!" });
-        
         const roomKey = `priv_${data.room}`;
-
         if (privateRooms[roomKey]) {
             const opponent = privateRooms[roomKey];
-            if (opponent.phone === data.phone) return; // Evite jwe kont tèt ou
-
             const room = `room_${Date.now()}`;
             socket.join(room);
             io.sockets.sockets.get(opponent.socketId)?.join(room);
-
             await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: -data.bet } });
             await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: -data.bet } });
-
             activeGames[room] = { prize: (data.bet * 2) * 0.9, players: [socket.id, opponent.socketId] };
             io.to(room).emit('gameStart', { room, prize: activeGames[room].prize, firstTurn: opponent.phone });
-            
             socket.emit('balanceUpdate', { balance: user.balance - data.bet });
             io.to(opponent.socketId).emit('balanceUpdate', { balance: opponent.balance - data.bet });
-            
             delete privateRooms[roomKey];
         } else {
             privateRooms[roomKey] = { socketId: socket.id, phone: data.phone, bet: data.bet, balance: user.balance };
-            socket.emit('statusUpdate', "Ap tann zanmi... Kòd: " + data.room);
+            socket.emit('statusUpdate', "Ap tann zanmi nan chanm: " + data.room);
         }
     });
 
@@ -118,7 +103,6 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
-        for(let key in privateRooms) if(privateRooms[key].socketId === socket.id) delete privateRooms[key];
     });
 });
 
