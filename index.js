@@ -14,108 +14,77 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- KONEKSYON BAZ DE DONE ---
-const mongoURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
-mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅"));
+mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority")
+    .then(() => console.log("MongoDB Konekte ✅"));
 
-// --- MODÈL YO ---
 const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    balance: { type: Number, default: 50 }, // KADO 50G LÈ ENSKRI
-    referralCount: { type: Number, default: 0 },
-    referredBy: { type: String, default: null }
+    phone: String, password: String, balance: { type: Number, default: 50 }, referralCount: { type: Number, default: 0 }
 }));
 
-const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
-    phone: String,
-    amount: Number,
-    fee: Number,
-    status: { type: String, default: 'Pending' },
-    date: { type: Date, default: Date.now }
-}));
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({ phone: String, amount: Number, fee: Number, status: { type: String, default: 'Pending' } }));
 
-// --- ROUTES ---
+// ROUTES
 app.post('/login', async (req, res) => {
-    try {
-        const { phone, password, ref } = req.body;
-        const cleanPhone = phone.trim();
-        let user = await User.findOne({ phone: cleanPhone });
-
-        if (!user) {
-            // Sistèm Referral: bay 5G komisyon si gen yon kòd
-            if (ref && ref !== cleanPhone) {
-                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-            }
-            user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
-        } else if (user.password !== password) {
-            return res.json({ success: false, msg: "Modpas pa bon!" });
-        }
-        res.json({ success: true, phone: user.phone, balance: user.balance });
-    } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
+    const { phone, password, ref } = req.body;
+    let user = await User.findOne({ phone: phone.trim() });
+    if (!user) {
+        if (ref) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+        user = await User.create({ phone: phone.trim(), password, balance: 50 });
+    }
+    res.json({ success: true, phone: user.phone, balance: user.balance });
 });
 
 app.post('/request-withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const amt = Number(amount);
-    
-    if (amt < 100) return res.json({ success: false, msg: "Limit retrè se 100G minimòm! 🛑" });
-
-    const user = await User.findOne({ phone: phone.trim() });
+    if (amt < 100) return res.json({ success: false, msg: "Minimòm 100G" });
+    const user = await User.findOne({ phone });
     if (user && user.balance >= amt) {
-        const adminFee = amt * 0.05; // 5% Komisyon Admin sou retrè
-        const finalAmount = amt - adminFee;
-
-        await User.updateOne({ phone: phone.trim() }, { $inc: { balance: -amt } });
-        await Withdraw.create({ phone: phone.trim(), amount: finalAmount, fee: adminFee });
-        
+        const fee = amt * 0.05;
+        await User.updateOne({ phone }, { $inc: { balance: -amt } });
+        await Withdraw.create({ phone, amount: amt - fee, fee });
         res.json({ success: true, newBalance: user.balance - amt });
-    } else { res.json({ success: false, msg: "Balans ensifizan!" }); }
+    } else res.json({ success: false, msg: "Balans ensifizan" });
 });
 
-// --- LOGIC JWÈT ---
-let privateRooms = {};
-let activeGames = {};
-
+// GAME LOGIC
+let rooms = {};
 io.on('connection', (socket) => {
-    socket.on('createPrivate', async (data) => {
+    socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans piti!");
-
+        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans piti");
         const code = Math.floor(1000 + Math.random() * 9000).toString();
-        privateRooms[code] = { host: data.phone, bet: Number(data.bet) };
+        rooms[code] = { host: data.phone, bet: Number(data.bet), type: data.type };
         socket.join(code);
         socket.emit('roomCreated', { code, bet: data.bet });
     });
 
-    socket.on('joinPrivate', async (data) => {
-        const room = privateRooms[data.code];
+    socket.on('joinRoom', async (data) => {
+        const room = rooms[data.code];
         const user = await User.findOne({ phone: data.phone });
-
         if (room && user && user.balance >= room.bet) {
             await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
             await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
-
-            const totalPot = room.bet * 2;
-            const prize = totalPot * 0.95; // 5% Komisyon Admin sou chak mise
+            const prize = (room.bet * 2) * 0.95;
             
-            activeGames[data.code] = { prize, players: [room.host, data.phone] };
-            socket.join(data.code);
-            io.to(data.code).emit('gameStart', { room: data.code, prize, firstTurn: room.host });
-            delete privateRooms[data.code];
-        } else { socket.emit('errorMsg', "Kòd la pa bon oswa balans ou piti!"); }
+            if (room.type === 'domino') {
+                let deck = []; for(let i=0; i<=6; i++) for(let j=i; j<=6; j++) deck.push([i,j]);
+                deck.sort(() => Math.random() - 0.5);
+                const h1 = deck.slice(0,7), h2 = deck.slice(7,14);
+                const getMaxD = (h) => Math.max(...h.filter(d => d[0] === d[1]).map(d => d[0]), -1);
+                const first = getMaxD(h1) > getMaxD(h2) ? room.host : data.phone;
+                io.to(data.code).emit('gameStart', { type: 'domino', room: data.code, hands: {[room.host]: h1, [data.phone]: h2}, prize, firstTurn: first });
+            } else {
+                io.to(data.code).emit('gameStart', { type: 'mopyon', room: data.code, prize, firstTurn: room.host });
+            }
+            delete rooms[data.code];
+        } else socket.emit('errorMsg', "Kòd erè oswa Balans piti");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-
     socket.on('win', async (data) => {
-        const game = activeGames[data.room];
-        if (game) {
-            delete activeGames[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, prize: game.prize.toFixed(2), newBalance: winner.balance });
-        }
+        const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: data.prize } }, { new: true });
+        io.to(data.room).emit('gameOver', { winner: data.phone, prize: data.prize, newBalance: winner.balance });
     });
 });
-
-server.listen(PORT, () => console.log(`🚀 Sèvè a ap kouri sou pòt ${PORT}`));
+server.listen(PORT, () => console.log("Sèvè LIVE 🚀"));
