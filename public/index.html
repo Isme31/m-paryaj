@@ -17,9 +17,12 @@
         #timer { font-size: 24px; color: #ff4757; font-weight: bold; margin: 10px 0; }
         .social-links { margin-bottom: 15px; display: flex; justify-content: center; gap: 10px; }
         .social-links a { background: #25d366; color: white; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-size: 12px; }
+        /* Style pou Modal Rejwe */
+        #game-over-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
 <body>
+
     <div id="auth-screen" class="screen">
         <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
@@ -45,7 +48,7 @@
             <button onclick="createPrivate()" style="background: #2ecc71;">KREYE KÒD</button>
             <div id="display-code" class="hidden" style="margin-top:15px; border: 2px dashed #ff4757; padding: 10px;">
                 <p>Voye kòd sa a bay zanmi w:</p>
-                <h1 id="room-code-val" style="color: #ff4757;">----</h1>
+                <h1 id="room-code-val" style="color: #ff4757; letter-spacing: 5px;">----</h1>
                 <button id="share-btn" style="background:#25d366; width: auto;">WhatsApp 📲</button>
             </div>
             <hr>
@@ -59,6 +62,14 @@
             <div id="status">Atann...</div>
             <div id="board" class="grid"></div>
         </div>
+    </div>
+
+    <!-- MODAL REJWE -->
+    <div id="game-over-modal" class="hidden">
+        <h1 id="result-text" style="font-size:40px;"></h1>
+        <p id="prize-text" style="color:#0f0; font-size:20px;"></p>
+        <button onclick="restartLobby()" style="background:#2ecc71; width:200px; padding:15px; margin-bottom:10px;">REJWE 🎮</button>
+        <button onclick="location.reload()" style="background:#333; width:200px; padding:10px;">SÒTI 🚪</button>
     </div>
 
     <script>
@@ -97,6 +108,23 @@
             document.getElementById('share-btn').onclick = () => { window.open(`https://wa.me{data.code}*%20(${data.bet}G)`, '_blank'); };
         });
 
+        function clearBoard() {
+            boardData = Array(225).fill("");
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => { cell.innerText = ""; cell.style.color = "white"; });
+        }
+
+        socket.on('gameStart', data => {
+            clearBoard(); // Netwaye tablo a chak fwa yon match kòmanse
+            currentRoom = data.room; currentPrize = data.prize;
+            mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('board-container').classList.remove('hidden');
+            renderBoard();
+            document.getElementById('status').innerText = myTurn ? "Tou pa w! (X)" : "Atann lòt la... (O)";
+            if(myTurn) startTimer();
+        });
+
         function startTimer() {
             clearInterval(timerInterval); timeLeft = 30;
             timerInterval = setInterval(() => {
@@ -104,15 +132,6 @@
                 if (timeLeft <= 0) { clearInterval(timerInterval); if (myTurn) socket.emit('win', { room: currentRoom, phone: "LÒT LA", prize: 0 }); }
             }, 1000);
         }
-
-        socket.on('gameStart', data => {
-            currentRoom = data.room; currentPrize = data.prize;
-            mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
-            document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('board-container').classList.remove('hidden');
-            renderBoard();
-            if(myTurn) startTimer();
-        });
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
@@ -123,7 +142,6 @@
                     if(!myTurn || boardData[i] !== "") return;
                     boardData[i] = mySymbol; myTurn = false; clearInterval(timerInterval); renderBoard();
                     socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-                    checkWin();
                 };
                 b.appendChild(d);
             });
@@ -131,12 +149,34 @@
 
         socket.on('opponentMove', data => { boardData[data.index] = data.symbol; myTurn = true; renderBoard(); startTimer(); });
 
-        function checkWin() {
-            // Fonksyon pou tcheke si 5 mopyon aliye (senplifye pou egzanp lan)
-            // Si gen viktwa: socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
+        socket.on('gameOver', data => {
+            clearInterval(timerInterval);
+            const modal = document.getElementById('game-over-modal');
+            const resText = document.getElementById('result-text');
+            const przText = document.getElementById('prize-text');
+            
+            modal.classList.remove('hidden');
+            if (data.winner === myPhone) {
+                resText.innerText = "🎉 OU GANYEN!";
+                resText.style.color = "#2ecc71";
+                przText.innerText = `+${data.prize} Goud`;
+            } else {
+                resText.innerText = "💀 OU PÈDI!";
+                resText.style.color = "#ff4757";
+                przText.innerText = "";
+            }
+            if(data.newBalance) document.getElementById('bal').innerText = data.newBalance;
+        });
+
+        function restartLobby() {
+            document.getElementById('game-over-modal').classList.add('hidden');
+            document.getElementById('board-container').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            document.getElementById('display-code').classList.add('hidden');
+            document.getElementById('join-code').value = "";
+            clearBoard(); // Netwaye tablo a pou sekirite
         }
 
-        socket.on('gameOver', data => { clearInterval(timerInterval); alert(data.winner === myPhone ? "GANYEN " + data.prize + "G!" : "PÈDI!"); location.reload(); });
         socket.on('errorMsg', msg => alert(msg));
         socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
     </script>
