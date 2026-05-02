@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blitz Games ⚡</title>
+    <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #ff4757; --bg: #0a0a0a; --card: #151515; }
@@ -12,72 +12,66 @@
         .hidden { display: none !important; }
         .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
-        
-        /* Mopyon */
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #444; border: 2px solid var(--primary); }
         .cell { aspect-ratio: 1/1; background: #111; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; font-weight: bold; }
         
-        /* Domino Realiste */
-        .domino-piece { background: #fdfdfd; color: #000; width: 35px; height: 70px; border-radius: 4px; border: 2px solid #333; display: flex; flex-direction: column; justify-content: space-around; align-items: center; cursor: pointer; position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
-        .domino-piece::after { content: ""; width: 80%; height: 2px; background: #333; position: absolute; top: 50%; }
-        .dot-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; height: 40%; width: 80%; justify-items: center; align-items: center; }
-        .dot { width: 6px; height: 6px; background: black; border-radius: 50%; }
-        #chain { min-height: 150px; display: flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap; padding: 20px; background: #0e3d0e; border-radius: 15px; border: 5px solid #5d4037; margin-bottom: 10px; }
+        /* Modal Resultat */
+        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
     </style>
 </head>
 <body>
 
+    <!-- SCREEN LOGIN -->
     <div id="auth-s" class="screen">
-        <h1 style="color:var(--primary)">Blitz Games ⚡</h1>
+        <h1 style="color:var(--primary)">Mopyon Blitz ⚡</h1>
         <div class="card">
-            <input type="text" id="phone" placeholder="Telefòn" style="width:90%; padding:10px;">
+            <input type="text" id="phone" placeholder="Nimewo Telefòn" style="width:90%; padding:10px;">
             <input type="password" id="pass" placeholder="Modpas" style="width:90%; padding:10px; margin-top:10px;">
             <button class="btn" style="margin-top:10px" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
+    <!-- SCREEN MENU -->
     <div id="menu-s" class="screen hidden">
         <div class="card">
             <h2 id="u-bal" style="color:#2ecc71">0 G</h2>
-            <div style="display:flex; gap:5px; justify-content:center; margin-bottom:10px">
-                <a href="https://whatsapp.com" target="_blank" style="background:#25d366; padding:8px; border-radius:5px; text-decoration:none; color:white; font-size:12px;">Gwoup WhatsApp</a>
-                <a href="https://wa.me" target="_blank" style="background:#3498db; padding:8px; border-radius:5px; text-decoration:none; color:white; font-size:12px;">Asistan 👨‍💻</a>
-            </div>
-            <p style="font-size:10px; color:#aaa">Depo MonCash: 31594645 | NatCash: 55110103</p>
+            <p style="font-size:12px">WhatsApp: 31594645 | 55110103</p>
         </div>
-
         <div class="card">
-            Miz: <input type="number" id="bet" value="100" style="width:60px">
-            <div style="display:flex; gap:5px; margin-top:10px">
-                <button class="btn" onclick="create('mopyon')">MOPYON ⚡</button>
-                <button class="btn" onclick="create('domino')" style="background:#3498db">DOMINO 🀄</button>
-            </div>
+            Miz Match (G): <input type="number" id="bet" value="100" style="width:60px">
+            <button class="btn" style="margin-top:10px" onclick="create()">KREYE KÒD</button>
             <div id="room-info" class="hidden" style="margin-top:10px; border:1px dashed var(--primary); padding:5px">
-                Kòd: <b id="c-val" style="color:var(--primary); font-size:20px"></b>
+                Kòd: <b id="c-val" style="color:var(--primary); font-size:25px"></b>
             </div>
         </div>
-
         <div class="card">
-            <input type="text" id="join-c" placeholder="Kòd match">
+            <input type="text" id="join-c" placeholder="Kòd zanmi w la">
             <button class="btn" onclick="join()" style="background:#ffa502; margin-top:5px">ANTRE</button>
         </div>
     </div>
 
+    <!-- SCREEN GAME -->
     <div id="game-s" class="screen hidden">
         <div id="timer" style="font-size:25px; color:var(--primary); font-weight:bold">30s</div>
         <div id="status" style="margin-bottom:10px">Atann...</div>
-        <div id="board-area"></div>
+        <div id="board" class="grid"></div>
+    </div>
+
+    <!-- MODAL FIN JWÈT -->
+    <div id="modal" class="hidden">
+        <h1 id="res-title"></h1>
+        <h2 id="res-prize" style="color:#2ecc71"></h2>
+        <button class="btn" style="width:200px" onclick="backToMenu()">RETOUNEN NAN MENI</button>
     </div>
 
     <script>
         const socket = io({ transports: ['websocket'] });
-        let myP, myS, curR, curPrize, myT = false, boardData = [], myHand = [], dominoChain = [], timerInt;
+        let myP, myS, curR, curPrize, myT = false, boardData = [], timerInt;
 
         async function login() {
-            const phone = document.getElementById('phone').value;
+            const phone = document.getElementById('phone').value.trim();
             const password = document.getElementById('pass').value;
-            const ref = new URLSearchParams(window.location.search).get('ref');
-            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password, ref }) });
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
             const d = await res.json();
             if(d.success) {
                 myP = d.user.phone; document.getElementById('u-bal').innerText = d.user.balance + " G";
@@ -85,74 +79,36 @@
             } else alert(d.msg);
         }
 
-        function create(type) { socket.emit('createRoom', { phone: myP, bet: document.getElementById('bet').value, type }); }
-        function join() { socket.emit('joinRoom', { code: document.getElementById('join-c').value, phone: myP }); }
+        function create() { socket.emit('createRoom', { phone: myP, bet: document.getElementById('bet').value }); }
+        function join() { socket.emit('joinRoom', { code: document.getElementById('join-c').value.trim(), phone: myP }); }
 
         socket.on('roomCreated', d => { document.getElementById('c-val').innerText = d.code; document.getElementById('room-info').classList.remove('hidden'); });
 
         socket.on('gameStart', d => {
-            curR = d.room; curPrize = d.prize; myT = (d.turn === myP);
-            document.getElementById('menu-s').classList.add('hidden'); document.getElementById('game-s').classList.remove('hidden');
-            if(d.type === 'mopyon') {
-                myS = (d.turn === myP) ? "X" : "O"; boardData = Array(225).fill(""); renderMopyon();
-            } else {
-                myHand = d.hands[myP]; dominoChain = []; renderDomino();
-            }
-            if(myT) startTimer();
+            curR = d.room; curPrize = d.prize; myS = (d.turn === myP) ? "X" : "O"; myT = (d.turn === myP);
+            boardData = Array(225).fill("");
+            document.getElementById('menu-s').classList.add('hidden');
+            document.getElementById('game-s').classList.remove('hidden');
+            document.getElementById('modal').classList.add('hidden');
+            renderBoard(); if(myT) startTimer();
         });
 
-        function getDots(n) {
-            let h = '<div class="dot-container">';
-            for(let i=0; i<n; i++) h += '<div class="dot"></div>';
-            return h + '</div>';
-        }
-
-        function renderDomino() {
-            const area = document.getElementById('board-area');
-            area.innerHTML = `<div id="chain"></div><div id="hand" style="display:flex; justify-content:center; gap:10px; overflow-x:auto;"></div>`;
-            const cDiv = document.getElementById('chain');
-            dominoChain.forEach(p => cDiv.innerHTML += `<div class="domino-piece" style="height:35px; width:70px; flex-direction:row;">${getDots(p[0])}${getDots(p[1])}</div>`);
-            const hDiv = document.getElementById('hand');
-            myHand.forEach((p, i) => {
-                const d = document.createElement('div'); d.className = 'domino-piece';
-                d.innerHTML = getDots(p[0]) + getDots(p[1]);
-                d.onclick = () => {
-                    if(!myT) return;
-                    if(dominoChain.length === 0) dominoChain.push(p);
-                    else {
-                        const L = dominoChain[0][0], R = dominoChain[dominoChain.length-1][1];
-                        if(p[0] === R) dominoChain.push(p);
-                        else if(p[1] === R) dominoChain.push([p[1], p[0]]);
-                        else if(p[1] === L) dominoChain.unshift(p);
-                        else if(p[0] === L) dominoChain.unshift([p[1], p[0]]);
-                        else return alert("Pa ka jwe!");
-                    }
-                    myHand.splice(i, 1); myT = false; renderDomino();
-                    socket.emit('move', { room: curR, chain: dominoChain, type: 'domino' });
-                    if(myHand.length === 0) socket.emit('win', { room: curR, phone: myP, prize: curPrize });
-                };
-                hDiv.appendChild(d);
-            });
-        }
-
-        function renderMopyon() {
-            const area = document.getElementById('board-area');
-            area.innerHTML = `<div class="grid"></div>`;
-            const grid = area.querySelector('.grid');
+        function renderBoard() {
+            const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
                 const c = document.createElement('div'); c.className = 'cell'; c.innerText = val;
                 if(val === 'X') c.style.color = 'red'; else if(val === 'O') c.style.color = 'cyan';
                 c.onclick = () => {
                     if(!myT || boardData[i] !== "") return;
-                    boardData[i] = myS; myT = false; renderMopyon();
-                    socket.emit('move', { room: curR, index: i, symbol: myS, type: 'mopyon' });
-                    if(checkMopyonWin(i, myS)) socket.emit('win', { room: curR, phone: myP, prize: curPrize });
+                    boardData[i] = myS; myT = false; renderBoard();
+                    socket.emit('move', { room: curR, index: i, symbol: myS });
+                    if(checkWin(i, myS)) socket.emit('win', { room: curR, phone: myP, prize: curPrize });
                 };
-                grid.appendChild(c);
+                b.appendChild(c);
             });
         }
 
-        function checkMopyonWin(idx, s) {
+        function checkWin(idx, s) {
             const size = 15; const r = Math.floor(idx/size), c = idx%size;
             const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for (let [dr, dc] of dirs) {
@@ -168,17 +124,27 @@
             let s = 30; clearInterval(timerInt);
             timerInt = setInterval(() => {
                 s--; document.getElementById('timer').innerText = s + "s";
-                if(s <= 0) { clearInterval(timerInt); document.getElementById('status').innerText = "Tan fini!"; }
+                if(s <= 0) { clearInterval(timerInt); alert("Tan fini, tou w pase!"); }
             }, 1000);
         }
 
-        socket.on('opponentMove', d => {
-            myT = true; if(d.type === 'mopyon') { boardData[d.index] = d.symbol; renderMopyon(); }
-            else { dominoChain = d.chain; renderDomino(); }
-            startTimer();
+        socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myT = true; renderBoard(); startTimer(); });
+
+        socket.on('gameOver', d => {
+            clearInterval(timerInt);
+            document.getElementById('u-bal').innerText = d.newBalance + " G";
+            document.getElementById('res-title').innerText = (d.winner === myP) ? "BRAVO OU GENYEN! 🎉" : "OU PÈDI MATCH LA! 💀";
+            document.getElementById('res-prize').innerText = (d.winner === myP) ? "+" + d.prize + " G" : "";
+            document.getElementById('modal').classList.remove('hidden');
         });
 
-        socket.on('gameOver', d => { alert(d.winner === myP ? "OU GENYEN!" : "OU PÈDI!"); location.reload(); });
+        function backToMenu() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('game-s').classList.add('hidden');
+            document.getElementById('menu-s').classList.remove('hidden');
+            document.getElementById('room-info').classList.add('hidden');
+        }
+
         socket.on('errorMsg', m => alert(m));
     </script>
 </body>
