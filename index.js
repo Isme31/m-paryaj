@@ -8,138 +8,123 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const ADMIN_SECRET = "MOPYON2024";
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// DB CONNECTION
-mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db").then(() => console.log("MongoDB Konekte ✅"));
+// --- DB CONNECTION ---
+const mongoURI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+mongoose.connect(mongoURI).then(() => console.log("MongoDB Konekte ✅"));
 
-// MODELS
+// --- MODELS ---
 const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true, required: true, index: true },
+    phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
-    balance: { type: Number, default: 0 }
+    balance: { type: Number, default: 100 }
 }));
 
-// GLOBALS
-let publicRooms = [];
-let activeGames = {};
-let gameTimers = {};
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
+    phone: String,
+    amount: Number,
+    fee: Number,
+    status: { type: String, default: 'Pending' },
+    date: { type: Date, default: Date.now }
+}));
 
-async function handleTimeout(roomID, loserSocketID) {
-    const game = activeGames[roomID];
-    if (!game) return;
-
-    const winnerSocketID = Object.keys(game.players).find(id => id !== loserSocketID);
-    const winnerPhone = game.players[winnerSocketID];
-    const prize = game.prize;
-
-    const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
-
-    io.to(roomID).emit('matchEnded', { 
-        winner: winnerPhone, 
-        prize: prize, 
-        newBalance: winner.balance,
-        reason: "Tan advèsè a fini! ⏱️" 
-    });
-
-    delete activeGames[roomID];
-    if (gameTimers[roomID]) clearTimeout(gameTimers[roomID]);
-    delete gameTimers[roomID];
-}
-
-function startTurnTimer(roomID, socketID) {
-    if (gameTimers[roomID]) clearTimeout(gameTimers[roomID]);
-    gameTimers[roomID] = setTimeout(() => { handleTimeout(roomID, socketID); }, 30000);
-}
-
-function checkWinner(board) {
-    const size = 15;
-    const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
-    for (let i = 0; i < board.length; i++) {
-        if (!board[i]) continue;
-        const s = board[i];
-        for (let [dx, dy] of directions) {
-            let count = 1;
-            for (let step = 1; step < 5; step++) {
-                let x = (i % size) + dx * step;
-                let y = Math.floor(i / size) + dy * step;
-                if (x >= 0 && x < size && y >= 0 && y < size && board[y * size + x] === s) count++;
-                else break;
-            }
-            if (count >= 5) return s;
+// --- ROUTES ---
+app.post('/login', async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+        let user = await User.findOne({ phone: phone.trim() });
+        if (!user) {
+            user = await User.create({ phone: phone.trim(), password, balance: 100 });
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon" });
         }
-    }
-    return null;
-}
+        res.json({ success: true, phone: user.phone, balance: user.balance });
+    } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
+});
+
+app.post('/admin/update-balance', async (req, res) => {
+    const { phone, amount, secret } = req.body;
+    if (secret !== ADMIN_SECRET) return res.status(403).json({ success: false });
+    const user = await User.findOneAndUpdate({ phone: phone.trim() }, { $inc: { balance: Number(amount) } }, { new: true });
+    res.json({ success: true, newBalance: user ? user.balance : 0 });
+});
+
+app.get('/admin/withdraws', async (req, res) => {
+    if (req.query.secret !== ADMIN_SECRET) return res.status(403).send("Refize");
+    const list = await Withdraw.find({ status: 'Pending' }).sort({date: -1});
+    res.json(list);
+});
+
+app.post('/admin/confirm-withdraw', async (req, res) => {
+    if (req.body.secret !== ADMIN_SECRET) return res.status(403).json({ success: false });
+    await Withdraw.findByIdAndUpdate(req.body.id, { status: 'Completed' });
+    res.json({ success: true });
+});
+
+app.post('/request-withdraw', async (req, res) => {
+    const { phone, amount } = req.body;
+    const amt = Number(amount);
+    const user = await User.findOne({ phone: phone.trim() });
+    if (user && user.balance >= amt && amt >= 100) {
+        await User.updateOne({ phone: phone.trim() }, { $inc: { balance: -amt } });
+        const fee = amt * 0.05;
+        await Withdraw.create({ phone: phone.trim(), amount: amt - fee, fee: fee });
+        res.json({ success: true, newBalance: user.balance - amt });
+    } else { res.json({ success: false, msg: "Balans ensifizan (Min 100G)!" }); }
+});
+
+// --- GAME LOGIC ---
+let waitingPlayers = [];
+let activeGames = {};
 
 io.on('connection', (socket) => {
-    socket.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
-
-    socket.on('createRoom', async (data) => {
+    socket.on('findMatch', async (data) => {
+        const user = await User.findOne({ phone: data.phone });
         const bet = Number(data.bet);
-        if (bet < 50) return socket.emit('msg', "Miz min 50G");
-        const user = await User.findOneAndUpdate({ phone: data.phone, balance: { $gte: bet } }, { $inc: { balance: -bet } }, { new: true });
-        if (!user) return socket.emit('msg', "Balans pa ase!");
+        if (!user || user.balance < bet) return socket.emit('gameOver', { msg: "Balans piti!" });
 
-        const roomID = `room_${Math.random().toString(36).substr(2, 5)}`;
-        socket.join(roomID);
-        publicRooms.push({ id: roomID, creator: data.phone, bet: bet, status: 'waiting', creatorSocket: socket.id });
-        activeGames[roomID] = { prize: (bet * 2) * 0.9, board: Array(225).fill(null), players: { [socket.id]: data.phone }, turn: null };
-        io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
-        socket.emit('roomCreated', roomID);
-        socket.emit('balanceUpdate', { balance: user.balance });
+        let oppIdx = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== data.phone);
+        if (oppIdx > -1) {
+            const opponent = waitingPlayers.splice(oppIdx, 1)[0];
+            const room = `room_${Date.now()}`;
+            await User.updateOne({ phone: data.phone }, { $inc: { balance: -bet } });
+            await User.updateOne({ phone: opponent.phone }, { $inc: { balance: -bet } });
+
+            socket.join(room);
+            const oppSoc = io.sockets.sockets.get(opponent.socketId);
+            if(oppSoc) oppSoc.join(room);
+
+            const prize = (bet * 2) * 0.9;
+            activeGames[room] = { prize, players: [socket.id, opponent.socketId] };
+            io.to(room).emit('gameStart', { room, prize, firstTurn: data.phone });
+            
+            socket.emit('balanceUpdate', { balance: user.balance - bet });
+            const oU = await User.findOne({ phone: opponent.phone });
+            if(oppSoc) oppSoc.emit('balanceUpdate', { balance: oU.balance });
+        } else { 
+            waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id }); 
+        }
     });
 
-    socket.on('joinRoom', async (data) => {
-        const room = publicRooms.find(r => r.id === data.roomID);
-        if (!room || room.status !== 'waiting') return socket.emit('msg', "Chanm pa disponib");
-        const user = await User.findOneAndUpdate({ phone: data.phone, balance: { $gte: room.bet } }, { $inc: { balance: -room.bet } }, { new: true });
-        if (!user) return socket.emit('msg', "Balans pa ase!");
+    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
-        socket.join(data.roomID);
-        room.status = 'playing';
-        const game = activeGames[data.roomID];
-        game.players[socket.id] = data.phone;
-        game.turn = room.creatorSocket;
-        io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
-        io.to(data.roomID).emit('gameStart', { room: data.roomID, prize: game.prize, firstTurn: room.creator });
-        startTurnTimer(data.roomID, game.turn);
-        socket.emit('balanceUpdate', { balance: user.balance });
-    });
-
-    socket.on('move', async (data) => {
+    socket.on('win', async (data) => {
         const game = activeGames[data.room];
-        if (!game || game.turn !== socket.id || game.board[data.index]) return;
-        const symbol = game.players[socket.id] === game.players[Object.keys(game.players)[0]] ? 'X' : 'O';
-        game.board[data.index] = symbol;
-        game.turn = Object.keys(game.players).find(id => id !== socket.id);
-        io.to(data.room).emit('opponentMove', { index: data.index, symbol });
-        const winSym = checkWinner(game.board);
-        if (winSym) {
-            if (gameTimers[data.room]) clearTimeout(gameTimers[data.room]);
-            const winnerPhone = game.players[socket.id];
-            const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: game.prize } }, { new: true });
-            io.to(data.room).emit('matchEnded', { winner: winnerPhone, prize: game.prize, newBalance: winner.balance });
-            publicRooms = publicRooms.filter(r => r.id !== data.room);
+        if (game) {
             delete activeGames[data.room];
-        } else { startTurnTimer(data.room, game.turn); }
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize.toFixed(2) });
+        }
     });
 
-    socket.on('disconnect', () => {
-        const room = publicRooms.find(r => r.creatorSocket === socket.id && r.status === 'waiting');
-        if(room) { publicRooms = publicRooms.filter(r => r.id !== room.id); io.emit('updateRooms', publicRooms); }
+    socket.on('disconnect', () => { 
+        waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id); 
     });
 });
 
-app.post('/login', async (req, res) => {
-    const { phone, password } = req.body;
-    let user = await User.findOne({ phone: phone.trim() });
-    if (!user) user = await User.create({ phone: phone.trim(), password, balance: 0 });
-    else if (user.password !== password) return res.json({ success: false, msg: "Modpas e" });
-    res.json({ success: true, phone: user.phone, balance: user.balance });
-});
-
-server.listen(PORT, () => console.log(`🚀 LIVE: ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 LIVE sou ${PORT}`));
