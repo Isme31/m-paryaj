@@ -3,33 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mopyon Blitz</title>
+    <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
+        .screen { padding: 20px; }
         .hidden { display: none !important; }
-        body { background: #121212; color: white; text-align: center; font-family: sans-serif; }
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 90%; max-width: 400px; margin: 20px auto; background: #444; }
-        .cell { aspect-ratio: 1/1; background: #222; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
-        input, button { padding: 12px; margin: 5px; width: 80%; max-width: 300px; border-radius: 8px; border: none; }
-        button { background: #ff4757; color: white; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; width: 95%; max-width: 400px; margin: 20px auto; background: #444; border: 2px solid #444; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; }
+        input, button { padding: 15px; margin: 10px 0; width: 90%; max-width: 300px; border-radius: 10px; border: none; font-size: 16px; }
+        button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
+        #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen">
+    <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE</button>
     </div>
 
-    <div id="game-screen" class="hidden">
-        <h3>Balans: <span id="bal">0</span>G</h3>
-        <div id="status">Chwazi mize w</div>
+    <div id="game-screen" class="screen hidden">
+        <div id="status">Pare pou jwe!</div>
+        <h3>Balans: <span id="bal" style="color:#00ff00;">0</span> G</h3>
         
-        <div id="menu">
-            <input type="number" id="bet" value="50">
-            <button onclick="findMatch()">JWENN MATCH</button>
+        <div id="lobby">
+            <label>Mize (G):</label><br>
+            <input type="number" id="bet" value="50" min="50">
+            <button onclick="findMatch()">⚡ JWENN MATCH</button>
         </div>
 
         <div id="board" class="grid hidden"></div>
@@ -53,48 +56,71 @@
                 document.getElementById('bal').innerText = data.balance;
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
-            } else { alert(data.msg || "Erè"); }
+            } else { alert(data.msg || "Erè koneksyon!"); }
         }
 
         function findMatch() {
             const bet = parseFloat(document.getElementById('bet').value);
             socket.emit('findMatch', { phone: myPhone, bet });
-            document.getElementById('status').innerText = "Ap chache...";
+            document.getElementById('status').innerText = "Ap chache advèsè...";
         }
 
         socket.on('gameStart', (data) => {
             currentRoom = data.room;
             mySymbol = data.firstTurn === myPhone ? 'X' : 'O';
             myTurn = (data.firstTurn === myPhone);
-            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board').classList.remove('hidden');
             renderBoard();
+            updateStatus();
         });
 
         socket.on('opponentMove', (data) => {
             boardData[data.index] = data.symbol;
-            myTurn = true; renderBoard();
+            myTurn = true; renderBoard(); updateStatus();
         });
 
         socket.on('gameOver', (data) => {
-            alert(data.winner === myPhone ? "OU GENYEN!" : "OU PÈDI!");
+            alert(data.winner === myPhone ? "OU GANYEN " + data.prize + "G!" : "OU PÈDI!");
             document.getElementById('bal').innerText = data.newBalance;
-            location.reload(); // Pou kounye a nou fè reload pou n wè si sa mache
+            resetUI();
         });
+
+        socket.on('balanceUpdate', (data) => {
+            document.getElementById('bal').innerText = data.balance;
+        });
+
+        function resetUI() {
+            boardData = Array(100).fill("");
+            currentRoom = null;
+            document.getElementById('board').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+            document.getElementById('status').innerText = "Pare!";
+        }
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            boardData[i] = mySymbol; myTurn = false; renderBoard();
+            boardData[i] = mySymbol; myTurn = false; renderBoard(); updateStatus();
             socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            // Ajoute lojik checkWin ou a isit la
+            // Isit la ou ka mete lojik checkWin ou a
         }
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((val, i) => {
-                const c = document.createElement('div'); c.className = 'cell'; c.innerText = val;
-                c.onclick = () => makeMove(i); b.appendChild(c);
+                const cell = document.createElement('div');
+                cell.className = 'cell'; cell.innerText = val;
+                if(val === 'X') cell.style.color = '#ff4757';
+                if(val === 'O') cell.style.color = '#2ecc71';
+                cell.onclick = () => makeMove(i);
+                b.appendChild(cell);
             });
+        }
+
+        function updateStatus() {
+            const s = document.getElementById('status');
+            s.innerText = myTurn ? `Tou pa w (${mySymbol})` : "Tann advèsè a...";
+            s.style.background = myTurn ? "#28a745" : "#ffc107";
         }
     </script>
 </body>
