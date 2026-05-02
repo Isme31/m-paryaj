@@ -2,18 +2,19 @@
 <html lang="ht">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blitz Jwèt ⚡</title>
+    <title>Mopyon & Domino Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
         .hidden { display: none !important; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 400px; margin: auto; background: #444; border: 1px solid #ff4757; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
-        .domino { background: white; color: black; padding: 10px; border-radius: 5px; margin: 5px; font-weight: bold; cursor: pointer; display: inline-block; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 400px; margin: auto; background: #444; border: 2px solid #ff4757; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
+        .domino-p { background: white; color: black; padding: 8px; border-radius: 4px; font-weight: bold; width: 35px; text-align: center; border: 1px solid #000; cursor: pointer; display: flex; flex-direction: column; }
+        .domino-p hr { width: 100%; border: 0.5px solid #000; margin: 2px 0; }
         input, button { padding: 12px; margin: 5px; border-radius: 8px; border: none; font-size: 14px; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
-        #timer { font-size: 24px; color: #ff4757; font-weight: bold; margin: 10px 0; }
+        #domino-table { background: #0a4d1e; min-height: 200px; margin: 15px auto; width: 90%; border: 4px solid #3d2b1f; border-radius: 15px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 5px; padding: 10px; box-shadow: inset 0 0 30px #000; }
     </style>
 </head>
 <body>
@@ -32,51 +33,53 @@
         </div>
 
         <div id="lobby">
-            <p>Mise (Min 50G):</p>
             <input type="number" id="bet" value="50" min="50" style="width:80px; text-align:center;">
             <div id="display-code" class="hidden">
                 <p>Kòd Chanm:</p>
-                <h2 id="room-code" style="color:#ff4757; letter-spacing:3px;"></h2>
+                <h2 id="room-code" style="color:#ff4757;"></h2>
                 <button onclick="shareWS()" style="background:#25d366">Voye sou WhatsApp 📲</button>
             </div>
             <hr>
-            <input type="text" id="join-code" placeholder="Mete kòd zanmi w">
-            <button onclick="joinRoom()" style="background:#ffa502">ANTRE NAN MATCH</button>
-            <hr>
-            <p style="font-size:12px;">Referral: <span id="ref-link" style="color:#0f0;"></span></p>
+            <input type="text" id="join-code" placeholder="Mete kòd la">
+            <button onclick="joinRoom()" style="background:#ffa502">ANTRE</button>
+            <p style="font-size:10px; color:#aaa;">Referral: <span id="ref-link"></span></p>
         </div>
 
         <div id="game-area" class="hidden">
-            <div id="timer">30s</div>
-            <div id="status" style="margin-bottom:10px;">Atann...</div>
+            <div id="timer" style="font-size:24px; color:red; font-weight:bold;">30s</div>
+            <div id="status">Atann...</div>
+            
+            <!-- Tablo Mopyon -->
             <div id="mopyon-board" class="grid hidden"></div>
+            
+            <!-- Tablo Domino -->
             <div id="domino-board" class="hidden">
-                <div id="table" style="background:#0a4d1e; min-height:120px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; padding:10px;"></div>
-                <div id="my-hand" style="margin-top:20px;"></div>
+                <div id="domino-table"></div>
+                <p style="font-size:11px;">MEN OU (Klike pou poze):</p>
+                <div id="my-hand" style="display:flex; justify-content:center; flex-wrap:wrap; gap:5px;"></div>
             </div>
         </div>
     </div>
 
     <div id="game-over-modal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;">
-        <h1 id="res-txt" style="font-size:40px;"></h1>
-        <p id="prz-txt" style="color:#0f0; font-size:24px;"></p>
-        <button onclick="location.reload()" style="background:#2ecc71; padding:15px 40px;">REJWE 🎮</button>
+        <h1 id="res-txt"></h1>
+        <h2 id="prz-txt" style="color:#0f0;"></h2>
+        <button onclick="location.reload()">REJWE 🎮</button>
     </div>
 
     <script>
         const socket = io();
         let myPhone, myTurn = false, boardData = Array(225).fill(""), timerInterval, currentRoom, currentPrize, myType;
-        const ref = new URLSearchParams(window.location.search).get('ref');
 
         async function login() {
             const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
-            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password, ref}) });
+            const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, password, ref:new URLSearchParams(window.location.search).get('ref')}) });
             const data = await res.json();
             if(data.success) {
                 myPhone = data.phone; document.getElementById('bal').innerText = data.balance + " G";
                 document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('game-screen').classList.remove('hidden');
                 document.getElementById('ref-link').innerText = window.location.origin + "?ref=" + myPhone;
-            } else alert(data.msg || "Erè");
+            }
         }
 
         function createRoom(type) { socket.emit('createRoom', { phone: myPhone, bet: document.getElementById('bet').value, type }); }
@@ -90,7 +93,7 @@
             document.getElementById('lobby').classList.add('hidden'); document.getElementById('game-area').classList.remove('hidden');
             if(d.type === 'mopyon') { document.getElementById('mopyon-board').classList.remove('hidden'); renderMopyon(); }
             else { document.getElementById('domino-board').classList.remove('hidden'); renderDomino(d.hands[myPhone]); }
-            updateStatus(); startTimer();
+            startTimer(); updateStatus();
         });
 
         function startTimer() {
@@ -107,48 +110,40 @@
             const b = document.getElementById('mopyon-board'); b.innerHTML = "";
             boardData.forEach((c, i) => {
                 const d = document.createElement('div'); d.className = 'cell'; d.innerText = c;
-                if(c==='X') d.style.color='#ff4757'; else if(c==='O') d.style.color='#3498db';
-                d.onclick = () => {
-                    if(myTurn && !boardData[i]) {
-                        boardData[i] = 'X'; myTurn = false; socket.emit('move', {room: currentRoom, index: i, symbol: 'X'});
-                        renderMopyon(); updateStatus(); if(checkWin(i, 'X')) socket.emit('win', {room: currentRoom, phone: myPhone});
-                    }
-                };
+                d.onclick = () => { if(myTurn && !boardData[i]) { boardData[i] = 'X'; myTurn = false; socket.emit('move', {room:currentRoom, index:i, symbol:'X'}); renderMopyon(); updateStatus(); } };
                 b.appendChild(d);
             });
-        }
-
-        function checkWin(idx, s) {
-            const size=15; const r=Math.floor(idx/size), c=idx%size; const dirs=[,,,[1,-1]];
-            for(let [dr,dc] of dirs) {
-                let cnt=1;
-                for(let i=1;i<5;i++) { let nr=r+dr*i, nc=c+dc*i; if(nr>=0&&nr<15&&nc>=0&&nc<15&&boardData[nr*size+nc]===s) cnt++; else break; }
-                for(let i=1;i<5;i++) { let nr=r-dr*i, nc=c-dc*i; if(nr>=0&&nr<15&&nc>=0&&nc<15&&boardData[nr*size+nc]===s) cnt++; else break; }
-                if(cnt>=5) return true;
-            } return false;
         }
 
         function renderDomino(hand) {
             const h = document.getElementById('my-hand'); h.innerHTML = "";
             hand.forEach((d, i) => {
-                const c = document.createElement('div'); c.className = 'domino'; c.innerText = `${d[0]}|${d[1]}`;
-                c.onclick = () => { if(myTurn) { 
-                    socket.emit('move', {room: currentRoom, domino: d}); 
+                const c = document.createElement('div'); c.className = 'domino-p';
+                c.innerHTML = `<span>${d[0]}</span><hr><span>${d[1]}</span>`;
+                c.onclick = () => { if(myTurn) {
+                    socket.emit('move', {room: currentRoom, domino: d});
                     hand.splice(i,1); renderDomino(hand); myTurn = false; updateStatus();
-                    document.getElementById('table').innerHTML += `<div class="domino">${d[0]}|${d[1]}</div>`;
-                    if(hand.length === 0) socket.emit('win', {room: currentRoom, phone: myPhone});
+                    addDominoToTable(d);
+                    if(hand.length === 0) socket.emit('win', {room:currentRoom, phone:myPhone});
                 }};
                 h.appendChild(c);
             });
         }
 
-        socket.on('opponentMove', d => { 
-            myTurn = true; updateStatus(); startTimer(); 
+        function addDominoToTable(d) {
+            const t = document.getElementById('domino-table');
+            const p = document.createElement('div'); p.className = 'domino-p'; p.style.cursor = "default";
+            p.innerHTML = `<span>${d[0]}</span><hr><span>${d[1]}</span>`;
+            t.appendChild(p);
+        }
+
+        socket.on('opponentMove', d => {
+            myTurn = true; startTimer(); updateStatus();
             if(myType === 'mopyon') { boardData[d.index] = 'O'; renderMopyon(); }
-            else { document.getElementById('table').innerHTML += `<div class="domino">${d.domino[0]}|${d.domino[1]}</div>`; }
+            else { addDominoToTable(d.domino); }
         });
 
-        socket.on('gameOver', d => { 
+        socket.on('gameOver', d => {
             clearInterval(timerInterval); document.getElementById('game-over-modal').classList.remove('hidden');
             document.getElementById('res-txt').innerText = d.winner === myPhone ? "🎉 OU GANYEN!" : "💀 OU PÈDI!";
             document.getElementById('prz-txt').innerText = d.winner === myPhone ? "+" + d.prize + "G" : "";
