@@ -8,7 +8,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const ADMIN_SECRET = "MOPYON2024";
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -27,9 +26,8 @@ const User = mongoose.model('User', new mongoose.Schema({
 // GLOBALS
 let publicRooms = [];
 let activeGames = {};
-let gameTimers = {}; // Pou kontwole 30 segonn yo
+let gameTimers = {};
 
-// FONKSYON VIKTWA OTOMATIK (TIMER)
 async function handleTimeout(roomID, loserSocketID) {
     const game = activeGames[roomID];
     if (!game) return;
@@ -54,9 +52,7 @@ async function handleTimeout(roomID, loserSocketID) {
 
 function startTurnTimer(roomID, socketID) {
     if (gameTimers[roomID]) clearTimeout(gameTimers[roomID]);
-    gameTimers[roomID] = setTimeout(() => {
-        handleTimeout(roomID, socketID);
-    }, 30000); // 30 segonn presi
+    gameTimers[roomID] = setTimeout(() => { handleTimeout(roomID, socketID); }, 30000);
 }
 
 function checkWinner(board) {
@@ -84,27 +80,14 @@ io.on('connection', (socket) => {
 
     socket.on('createRoom', async (data) => {
         const bet = Number(data.bet);
-        if (bet < 50) return socket.emit('msg', "Miz minimòm se 50G");
-
-        const user = await User.findOneAndUpdate(
-            { phone: data.phone, balance: { $gte: bet } },
-            { $inc: { balance: -bet } }, { new: true }
-        );
-
+        if (bet < 50) return socket.emit('msg', "Miz min 50G");
+        const user = await User.findOneAndUpdate({ phone: data.phone, balance: { $gte: bet } }, { $inc: { balance: -bet } }, { new: true });
         if (!user) return socket.emit('msg', "Balans pa ase!");
 
         const roomID = `room_${Math.random().toString(36).substr(2, 5)}`;
         socket.join(roomID);
-
         publicRooms.push({ id: roomID, creator: data.phone, bet: bet, status: 'waiting', creatorSocket: socket.id });
-        
-        activeGames[roomID] = { 
-            prize: (bet * 2) * 0.9, 
-            board: Array(225).fill(null), 
-            players: { [socket.id]: data.phone },
-            turn: null 
-        };
-
+        activeGames[roomID] = { prize: (bet * 2) * 0.9, board: Array(225).fill(null), players: { [socket.id]: data.phone }, turn: null };
         io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
         socket.emit('roomCreated', roomID);
         socket.emit('balanceUpdate', { balance: user.balance });
@@ -113,40 +96,27 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', async (data) => {
         const room = publicRooms.find(r => r.id === data.roomID);
         if (!room || room.status !== 'waiting') return socket.emit('msg', "Chanm pa disponib");
-
-        const user = await User.findOneAndUpdate(
-            { phone: data.phone, balance: { $gte: room.bet } },
-            { $inc: { balance: -room.bet } }, { new: true }
-        );
-
+        const user = await User.findOneAndUpdate({ phone: data.phone, balance: { $gte: room.bet } }, { $inc: { balance: -room.bet } }, { new: true });
         if (!user) return socket.emit('msg', "Balans pa ase!");
 
         socket.join(data.roomID);
         room.status = 'playing';
-        
         const game = activeGames[data.roomID];
         game.players[socket.id] = data.phone;
-        game.turn = room.creatorSocket; // Kreyatè a kòmanse
-
+        game.turn = room.creatorSocket;
         io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
         io.to(data.roomID).emit('gameStart', { room: data.roomID, prize: game.prize, firstTurn: room.creator });
-        
-        startTurnTimer(data.roomID, game.turn); // Kòmanse TIMER
+        startTurnTimer(data.roomID, game.turn);
         socket.emit('balanceUpdate', { balance: user.balance });
     });
 
     socket.on('move', async (data) => {
         const game = activeGames[data.room];
         if (!game || game.turn !== socket.id || game.board[data.index]) return;
-
         const symbol = game.players[socket.id] === game.players[Object.keys(game.players)[0]] ? 'X' : 'O';
         game.board[data.index] = symbol;
-        
-        // Chanje tou a
         game.turn = Object.keys(game.players).find(id => id !== socket.id);
-
         io.to(data.room).emit('opponentMove', { index: data.index, symbol });
-
         const winSym = checkWinner(game.board);
         if (winSym) {
             if (gameTimers[data.room]) clearTimeout(gameTimers[data.room]);
@@ -155,18 +125,12 @@ io.on('connection', (socket) => {
             io.to(data.room).emit('matchEnded', { winner: winnerPhone, prize: game.prize, newBalance: winner.balance });
             publicRooms = publicRooms.filter(r => r.id !== data.room);
             delete activeGames[data.room];
-        } else {
-            // Si jwèt la pa fini, kòmanse timer pou lòt jwè a
-            startTurnTimer(data.room, game.turn);
-        }
+        } else { startTurnTimer(data.room, game.turn); }
     });
 
     socket.on('disconnect', () => {
-        const roomToClean = publicRooms.find(r => r.creatorSocket === socket.id && r.status === 'waiting');
-        if(roomToClean) {
-            publicRooms = publicRooms.filter(r => r.id !== roomToClean.id);
-            io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
-        }
+        const room = publicRooms.find(r => r.creatorSocket === socket.id && r.status === 'waiting');
+        if(room) { publicRooms = publicRooms.filter(r => r.id !== room.id); io.emit('updateRooms', publicRooms); }
     });
 });
 
@@ -174,8 +138,8 @@ app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     let user = await User.findOne({ phone: phone.trim() });
     if (!user) user = await User.create({ phone: phone.trim(), password, balance: 0 });
-    else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
+    else if (user.password !== password) return res.json({ success: false, msg: "Modpas e" });
     res.json({ success: true, phone: user.phone, balance: user.balance });
 });
 
-server.listen(PORT, () => console.log(`🚀 LIVE SOU PÒT ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 LIVE: ${PORT}`));
