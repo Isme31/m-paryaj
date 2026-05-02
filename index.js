@@ -78,53 +78,47 @@ app.post('/request-withdraw', async (req, res) => {
     } else { res.json({ success: false, msg: "Balans ensifizan (Min 100G)!" }); }
 });
 
-// --- GAME LOGIC ---
-let waitingPlayers = [];
-let activeGames = {};
+// --- GAME LOGIC (SYSTEM CHANM OTOMATIK) ---
+let privateRooms = {}; 
 
 io.on('connection', (socket) => {
-    socket.on('findMatch', async (data) => {
+    socket.on('createPrivate', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        const bet = Number(data.bet);
-        if (!user || user.balance < bet) return socket.emit('gameOver', { msg: "Balans piti!" });
+        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans ou ensifizan!");
 
-        let oppIdx = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== data.phone);
-        if (oppIdx > -1) {
-            const opponent = waitingPlayers.splice(oppIdx, 1)[0];
-            const room = `room_${Date.now()}`;
-            await User.updateOne({ phone: data.phone }, { $inc: { balance: -bet } });
-            await User.updateOne({ phone: opponent.phone }, { $inc: { balance: -bet } });
+        const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+        privateRooms[roomCode] = { host: data.phone, bet: Number(data.bet), socketId: socket.id };
+        
+        socket.join(roomCode);
+        socket.emit('roomCreated', { code: roomCode, bet: data.bet });
+    });
 
-            socket.join(room);
-            const oppSoc = io.sockets.sockets.get(opponent.socketId);
-            if(oppSoc) oppSoc.join(room);
+    socket.on('joinPrivate', async (data) => {
+        const room = privateRooms[data.code];
+        const user = await User.findOne({ phone: data.phone });
 
-            const prize = (bet * 2) * 0.9;
-            activeGames[room] = { prize, players: [socket.id, opponent.socketId] };
-            io.to(room).emit('gameStart', { room, prize, firstTurn: data.phone });
-            
-            socket.emit('balanceUpdate', { balance: user.balance - bet });
-            const oU = await User.findOne({ phone: opponent.phone });
-            if(oppSoc) oppSoc.emit('balanceUpdate', { balance: oU.balance });
-        } else { 
-            waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id }); 
-        }
+        if (!room) return socket.emit('errorMsg', "Kòd sa a pa bon!");
+        if (room.host === data.phone) return socket.emit('errorMsg', "Ou pa ka jwe kont tèt ou!");
+        if (!user || user.balance < room.bet) return socket.emit('errorMsg', "Balans ou ensifizan!");
+
+        await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
+        await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
+
+        socket.join(data.code);
+        const prize = (room.bet * 2) * 0.9;
+        
+        io.to(data.code).emit('gameStart', { room: data.code, prize, firstTurn: room.host });
+        delete privateRooms[data.code];
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
     socket.on('win', async (data) => {
-        const game = activeGames[data.room];
-        if (game) {
-            delete activeGames[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: game.prize.toFixed(2) });
-        }
+        const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: data.prize } }, { new: true });
+        io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: winner.balance, prize: data.prize });
     });
 
-    socket.on('disconnect', () => { 
-        waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id); 
-    });
+    socket.on('disconnect', () => { /* Netwayaj chanm si sa nesesè */ });
 });
 
 server.listen(PORT, () => console.log(`🚀 LIVE sou ${PORT}`));
