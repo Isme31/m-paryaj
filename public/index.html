@@ -2,55 +2,65 @@
 <html lang="ht">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mopyon Blitz ⚡</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Nou fòse itilizasyon socket.io ki pi estab -->
+    <script src="https://socket.io"></script>
     <style>
-        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; }
-        .screen { padding: 20px; }
+        body { background: #0f0f0f; color: white; text-align: center; font-family: sans-serif; margin: 0; touch-action: manipulation; }
+        .screen { padding: 15px; }
         .hidden { display: none !important; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 500px; margin: auto; background: #444; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
-        input, button { padding: 12px; margin: 5px 0; width: 90%; max-width: 300px; border-radius: 8px; border: none; }
-        button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
-        #timer { color: #ffeb3b; font-size: 20px; font-weight: bold; }
-        .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 450px; margin: 10px auto; background: #444; border: 1px solid #444; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; }
+        input, button { padding: 12px; margin: 5px 0; width: 90%; max-width: 300px; border-radius: 8px; border: none; font-size: 16px; }
+        button { background: #ff4757; color: white; font-weight: bold; }
+        .bal-box { background: #1e1e1e; padding: 10px; border-radius: 10px; border: 1px solid #333; margin-bottom: 10px; }
+        #timer { color: #ffeb3b; font-size: 22px; font-weight: bold; margin: 5px; }
+        #status { background: #28a745; padding: 8px; border-radius: 5px; font-size: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen" class="screen">
-        <h1>Mopyon Blitz ⚡</h1>
-        <input type="text" id="phone" placeholder="Nimewo Telefòn">
+        <h1 style="color:#ff4757">Mopyon Blitz ⚡</h1>
+        <input type="text" id="phone" placeholder="Nimewo Telefòn" inputmode="tel">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE</button>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div id="status">Pare!</div>
+        <div id="status">Pare pou jwe!</div>
         <div id="timer">30</div>
         
         <div class="bal-box">
-            <h2><span id="bal">0</span> G</h2>
-            <p style="font-size:11px;">🎁 Envite yon moun (5G): <br> 
-            <input type="text" id="ref-link" readonly style="font-size:9px; width:70%;"> <button onclick="copyRef()" style="width:auto; padding:5px;">KOPYE</button></p>
+            <h2 style="margin:0; color:#0f0;"><span id="bal">0</span> G</h2>
+            <div style="font-size:10px; margin-top:5px;">
+                🎁 Lyen Paraj: <input type="text" id="ref-link" readonly style="width:50%; font-size:9px; padding:5px;"> 
+                <button onclick="copyRef()" style="width:auto; padding:5px; font-size:9px;">KOPYE</button>
+            </div>
         </div>
 
         <div id="lobby">
-            <input type="number" id="bet" value="50" min="50">
-            <button onclick="findMatch()">MATCH RAPID</button>
+            <p>Miz: <input type="number" id="bet" value="50" style="width:60px; text-align:center;"></p>
+            <button onclick="findMatch()">⚡ MATCH RAPID</button>
+            <div style="margin:10px">-- OSWA --</div>
             <input type="text" id="roomCode" placeholder="Kòd Chanm">
             <button onclick="joinPrivate()" style="background:#3498db;">JWE AK ZANMI</button>
         </div>
 
         <div id="board-container" class="hidden">
             <div id="board" class="grid"></div>
-            <button onclick="tounenNanLobby()">KITE MATCH LA</button>
+            <button onclick="tounenNanLobby()" style="background:#333;">KITE MATCH LA</button>
         </div>
     </div>
 
     <script>
-        const socket = io();
+        // FIX POU TELEFÒN: Nou fòse transports yo
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            upgrade: true
+        });
+
         let myPhone, mySymbol, currentRoom, myTurn = false, boardData = Array(225).fill(""), timerInt;
 
         async function login() {
@@ -87,46 +97,77 @@
         }
 
         socket.on('gameStart', data => {
-            currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
+            console.log("Jwèt lanse!", data);
+            currentRoom = data.room; 
+            mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; 
+            myTurn = (data.firstTurn === myPhone);
+            boardData.fill("");
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board-container').classList.remove('hidden');
-            renderBoard(); startTimer();
+            renderBoard(); 
+            startTimer();
+            document.getElementById('status').innerText = myTurn ? "Se tou pa w!" : "Atann lòt la...";
         });
 
         function renderBoard() {
             const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((c, i) => {
                 const d = document.createElement('div'); d.className = 'cell'; d.innerText = c;
+                if(c === 'X') d.style.color = '#ff4757';
+                if(c === 'O') d.style.color = '#3498db';
                 d.onclick = () => {
-                    if(!myTurn || boardData[i] !== "") return;
-                    boardData[i] = mySymbol; myTurn = false; renderBoard();
+                    if(!myTurn || boardData[i] !== "" || !currentRoom) return;
+                    boardData[i] = mySymbol; 
+                    myTurn = false; 
+                    renderBoard();
+                    document.getElementById('status').innerText = "Atann lòt la...";
                     socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol, phone: myPhone });
-                    startTimer(); // Reset timer pou lòt la
                 };
                 b.appendChild(d);
             });
         }
 
         socket.on('opponentMove', data => {
-            boardData[data.index] = data.symbol; myTurn = true; renderBoard(); startTimer();
+            boardData[data.index] = data.symbol; 
+            myTurn = true; 
+            renderBoard(); 
+            startTimer();
+            document.getElementById('status').innerText = "Se tou pa w!";
         });
 
         socket.on('gameOver', data => {
             clearInterval(timerInt);
-            alert(data.winner === myPhone ? "OU GANYEN!" : "OU PÈDI! " + (data.msg || ""));
-            document.getElementById('bal').innerText = data.newBalance || document.getElementById('bal').innerText;
+            alert(data.winner === myPhone ? "OU GANYEN 🎉" : "OU PÈDI 💀 " + (data.msg || ""));
+            if(data.newBalance) document.getElementById('bal').innerText = data.newBalance;
             tounenNanLobby();
         });
+
+        socket.on('statusUpdate', msg => { document.getElementById('status').innerText = msg; });
+
+        function findMatch() { 
+            socket.emit('findMatch', { phone: myPhone, bet: document.getElementById('bet').value }); 
+        }
+
+        function joinPrivate() {
+            const room = document.getElementById('roomCode').value.trim();
+            if(!room) return alert("Mete yon kòd!");
+            socket.emit('joinPrivate', { phone: myPhone, bet: document.getElementById('bet').value, room: room });
+        }
 
         function tounenNanLobby() {
             document.getElementById('board-container').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
-            boardData.fill(""); clearInterval(timerInt);
+            document.getElementById('status').innerText = "Pare!";
+            boardData.fill(""); 
+            currentRoom = null;
+            clearInterval(timerInt);
         }
 
         function copyRef() {
-            document.getElementById('ref-link').select();
-            document.execCommand('copy'); alert("Lyen kopye!");
+            const el = document.getElementById('ref-link');
+            el.select(); el.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(el.value);
+            alert("Lyen kopye!");
         }
     </script>
 </body>
