@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const path = require('path');
+const bcrypt = require('bcryptjs'); // Nou kite sa pou ansyen modpas yo
 
 const app = express();
 const server = http.createServer(app);
@@ -31,7 +32,7 @@ const User = mongoose.model('User', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- API ---
+// --- API LOGIN (RANJÉ NÈT) ---
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
@@ -39,7 +40,7 @@ app.post('/login', async (req, res) => {
         let user = await User.findOne({ phone: cleanPhone });
 
         if (!user) {
-            // Kreye kont san bcrypt pou evite erè login
+            // Pou nouvo kont: n ap sere modpas la nòmalman (san ankripte)
             user = await User.create({ 
                 phone: cleanPhone, 
                 password: password, 
@@ -50,12 +51,23 @@ app.post('/login', async (req, res) => {
             return res.json({ success: true, phone: user.phone, balance: user.balance });
         }
 
-        if (user.password !== password) {
+        // Tcheke si modpas la match (Nou tcheke vèsyon nòmal AK vèsyon ankripte)
+        let isMatch = (password === user.password); // Tcheke tèks nòmal
+        
+        if (!isMatch && user.password.startsWith('$2')) { 
+            // Si modpas nan DB a ankripte (kòmanse ak $2), nou sèvi ak bcrypt
+            isMatch = await bcrypt.compare(password, user.password);
+        }
+
+        if (!isMatch) {
             return res.json({ success: false, msg: "Modpas pa bon" });
         }
 
         res.json({ success: true, phone: user.phone, balance: user.balance });
-    } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
+    } catch (err) { 
+        console.log("Erè login:", err);
+        res.json({ success: false, msg: "Erè sèvè" }); 
+    }
 });
 
 app.post('/admin/update-balance', async (req, res) => {
