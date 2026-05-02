@@ -10,21 +10,22 @@
         .screen { padding: 20px; }
         .hidden { display: none !important; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 98%; max-width: 500px; margin: 15px auto; background: #444; border: 1px solid #444; }
-        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: clamp(10px, 3vw, 16px); font-weight: bold; cursor: pointer; }
+        .cell { aspect-ratio: 1/1; background: #181818; display: flex; align-items: center; justify-content: center; font-size: clamp(10px, 3vw, 16px); font-weight: bold; cursor: pointer; border-radius: 2px; }
         input, button { padding: 12px; margin: 5px 0; width: 90%; max-width: 300px; border-radius: 8px; border: none; font-size: 15px; outline: none; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { opacity: 0.8; }
+        button:hover { opacity: 0.8; transform: scale(1.02); }
         #status { background: #28a745; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-weight: bold; font-size: 14px; }
         #timer { color: #ffeb3b; }
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
+        .btn-row { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <!-- SCREEN LOGIN -->
     <div id="auth-screen" class="screen">
-        <h1 style="color: #ff4757;">Mopyon Blitz ⚡</h1>
-        <p>Antre nimewo w ak yon modpas pou w jwe.</p>
+        <h1 style="color: #ff4757; font-size: 40px;">Mopyon Blitz ⚡</h1>
+        <p style="color: #bbb;">Antre nimewo w ak modpas ou pou n kòmanse.</p>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE / ENSRIPSYON</button>
@@ -37,21 +38,24 @@
         <div class="bal-box">
             <small style="color: #bbb;">Balans ou:</small>
             <h2 style="margin: 5px 0; color: #00ff00;"><span id="bal">0</span> G</h2>
-            <button onclick="requestWithdraw()" style="background:#ffa502; width:auto; padding:8px 20px; font-size:13px;">MANDE RETRÈ 💸</button>
+            <div class="btn-row">
+                <button onclick="showDepoMenu()" style="background:#2ecc71; width:auto; padding:8px 15px; font-size:12px;">RECHAJE 💰</button>
+                <button onclick="requestWithdraw()" style="background:#ffa502; width:auto; padding:8px 15px; font-size:12px;">RETRÈ 💸</button>
+            </div>
         </div>
         
         <div id="lobby">
-            <p>Konbe ou vle parye?</p>
+            <p>Konbe ou vle parye nan match la?</p>
             <input type="number" id="bet" value="50" min="50" style="text-align: center;">
             <button onclick="findMatch()">⚡ MATCH RAPID</button>
             <div style="margin: 20px 0; color: #444;">— OSWA —</div>
             <input type="text" id="roomCode" placeholder="Kòd Chanm Prive">
-            <button onclick="joinPrivate()" style="background: #2ecc71;">JWE AK ZANMI</button>
+            <button onclick="joinPrivate()" style="background: #3498db;">JWE AK ZANMI</button>
         </div>
 
         <div id="board-container" class="hidden">
             <div id="board" class="grid"></div>
-            <button onclick="leaveGame()" style="background: #333; margin-top: 10px;">KITE MATCH LA</button>
+            <button onclick="location.reload()" style="background: #333; margin-top: 10px;">KITE MATCH LA</button>
         </div>
     </div>
 
@@ -65,7 +69,7 @@
         async function login() {
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('pass').value;
-            if(!phone || !password) return alert("Ranpli bwat yo!");
+            if(!phone || !password) return alert("Ranpli tout bwat yo!");
 
             const res = await fetch('/login', { 
                 method: 'POST', 
@@ -81,10 +85,22 @@
             } else alert(data.msg);
         }
 
-        // 2. RETRÈ AK WHATSAPP
+        // 2. RECHAJE (DEPO)
+        function showDepoMenu() {
+            const chwa = confirm("Ki metòd ou vle itilize?\n\nPeze [OK] pou MONCASH (3159-4645)\nPeze [ANNULER] pou NATCASH (5511-0103)");
+            const adminPhone = chwa ? "50931594645" : "50955110103";
+            const metòd = chwa ? "MONCASH" : "NATCASH";
+
+            alert(`ENSTRIKSYON:\n1. Voye kòb la sou ${metòd} nan nimewo ${adminPhone}.\n2. Apre sa, voye prèv la sou WhatsApp pou admin aktive balans ou.`);
+
+            const mesaj = `*DEPO LAJAN - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💳 *Metòd:* ${metòd}\n✅ *Mwen fèk voye kòb la, tanpri aktive balans mwen.*`;
+            window.open(`https://wa.me{adminPhone}?text=${encodeURIComponent(mesaj)}`, '_blank');
+        }
+
+        // 3. RETRÈ
         async function requestWithdraw() {
             const amount = prompt("Konbe ou vle retire? (Min 100G)");
-            if (!amount || amount < 100) return alert("Minimòm se 100G");
+            if (!amount || amount < 100) return alert("Minimòm retrè se 100G");
 
             const res = await fetch('/request-withdraw', { 
                 method: 'POST', 
@@ -94,48 +110,39 @@
             const data = await res.json();
 
             if(data.success) {
-                const admin1 = "50931594645";
-                const admin2 = "50955110103";
                 const netAmount = amount * 0.95; 
+                const chwa = confirm("Ki Admin ou vle kontakte pou retrè a?\n\nPeze [OK] pou Admin 1 (3159-4645)\nPeze [ANNULER] pou Admin 2 (5511-0103)");
+                const adminPhone = chwa ? "50931594645" : "50955110103";
 
-                const mesaj = `*DEMANN RETRÈ - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💰 *Montan mande:* ${amount}G\n💵 *Sa m dwe resevwa:* ${netAmount}G\n\n_Tanpri konfime demann mwen an._`;
+                const mesaj = `*DEMANN RETRÈ - MOPYON BLITZ* ⚡\n\n👤 *Jwè:* ${myPhone}\n💰 *Montan mande:* ${amount}G\n💵 *Sa m dwe resevwa (apre 5%):* ${netAmount}G\n\n_Tanpri valide demann mwen an._`;
+                window.open(`https://wa.me{adminPhone}?text=${encodeURIComponent(mesaj)}`, '_blank');
                 
-                const chwa = confirm("Peze OK pou Admin 1 (3159-4645)\nANNULER pou Admin 2 (5511-0103)");
-                const nimewoChwazi = chwa ? admin1 : admin2;
-
-                window.open(`https://wa.me{nimewoChwazi}?text=${encodeURIComponent(mesaj)}`, '_blank');
-                
-                alert("Demann voye! Balans ou mete ajou.");
+                alert("Demann anrejistre! Balans ou mete ajou.");
                 document.getElementById('bal').innerText = data.newBalance;
             } else alert(data.msg);
         }
 
-        // 3. JWÈT LA
+        // 4. JWÈT (SOCKET)
         function findMatch() { socket.emit('findMatch', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value) }); }
         function joinPrivate() { socket.emit('joinPrivate', { phone: myPhone, bet: parseFloat(document.getElementById('bet').value), room: document.getElementById('roomCode').value }); }
 
         socket.on('statusUpdate', msg => { document.getElementById('status').innerText = msg; });
 
         socket.on('gameStart', data => {
-            currentRoom = data.room; 
-            mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; 
-            myTurn = (data.firstTurn === myPhone);
+            currentRoom = data.room; mySymbol = data.firstTurn === myPhone ? 'X' : 'O'; myTurn = (data.firstTurn === myPhone);
             boardData.fill(""); 
             document.getElementById('lobby').classList.add('hidden'); 
             document.getElementById('board-container').classList.remove('hidden');
             renderBoard(); updateStatus(); if(myTurn) startTimer();
         });
 
-        socket.on('opponentMove', data => { 
-            boardData[data.index] = data.symbol; 
-            myTurn = true; renderBoard(); updateStatus(); startTimer(); 
-        });
+        socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myTurn = true; renderBoard(); updateStatus(); startTimer(); });
 
-        socket.on('gameOver', data => {
+        socket.on('gameOver', d => {
             clearInterval(timerInterval);
-            alert(data.msg || (data.winner === myPhone ? "OU GANYEN! 🎉" : "OU PÈDI! 💀"));
-            if(data.newBalance !== undefined) document.getElementById('bal').innerText = data.newBalance;
-            resetLobby();
+            alert(d.msg || (d.winner === myPhone ? "OU GANYEN! 🎉" : "OU PÈDI! 💀"));
+            if(d.newBalance !== undefined) document.getElementById('bal').innerText = d.newBalance;
+            location.reload();
         });
 
         socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
@@ -144,15 +151,13 @@
             clearInterval(timerInterval); timeLeft = 30;
             timerInterval = setInterval(() => { 
                 timeLeft--; updateStatus(); 
-                if(timeLeft <= 0) { clearInterval(timerInterval); }
+                if(timeLeft <= 0) clearInterval(timerInterval);
             }, 1000);
         }
 
         function makeMove(i) {
             if(!myTurn || boardData[i] !== "") return;
-            clearInterval(timerInterval); 
-            boardData[i] = mySymbol; 
-            myTurn = false; renderBoard(); updateStatus();
+            clearInterval(timerInterval); boardData[i] = mySymbol; myTurn = false; renderBoard(); updateStatus();
             socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
             if (checkWin(i, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone });
         }
@@ -186,13 +191,6 @@
             const s = document.getElementById('status');
             s.innerHTML = myTurn ? `Tou pa w (${mySymbol}) - <span id="timer">${timeLeft}s</span>` : "Tann advèsè a...";
             s.style.background = myTurn ? "#28a745" : "#ffc107";
-        }
-
-        function resetLobby() {
-            document.getElementById('board-container').classList.add('hidden');
-            document.getElementById('lobby').classList.remove('hidden');
-            document.getElementById('status').innerText = "Pare pou jwe!";
-            document.getElementById('status').style.background = "#28a745";
         }
     </script>
 </body>
