@@ -14,19 +14,18 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// DB CONNECTION
 mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db").then(() => console.log("MongoDB Konekte ✅"));
 
+// MODELS
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true, index: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0 }
 }));
 
-const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
-    phone: String, amount: Number, status: { type: String, default: 'Pending' }, date: { type: Date, default: Date.now }
-}));
-
-let waitingPlayers = [];
+// GAME LOGIC
+let publicRooms = [];
 let activeGames = {};
 
 function checkWinner(board) {
@@ -50,44 +49,70 @@ function checkWinner(board) {
 }
 
 io.on('connection', (socket) => {
-    socket.on('findMatch', async (data) => {
+    socket.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
+
+    socket.on('createRoom', async (data) => {
         const bet = Number(data.bet);
-        if (bet < 50) return;
+        if (bet < 50) return socket.emit('msg', "Miz minimòm se 50G");
 
         const user = await User.findOneAndUpdate(
             { phone: data.phone, balance: { $gte: bet } },
-            { $inc: { balance: -bet } },
-            { new: true }
+            { $inc: { balance: -bet } }, { new: true }
         );
 
         if (!user) return socket.emit('msg', "Balans pa ase!");
 
-        let oppIdx = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== data.phone);
-        if (oppIdx > -1) {
-            const opponent = waitingPlayers.splice(oppIdx, 1)[0];
-            const room = `room_${Date.now()}`;
-            socket.join(room);
-            const oppSocket = io.sockets.sockets.get(opponent.socketId);
-            if (oppSocket) oppSocket.join(room);
+        const roomID = `room_${Math.random().toString(36).substr(2, 5)}`;
+        socket.join(roomID);
 
-            const prize = (bet * 2) * 0.9;
-            activeGames[room] = {
-                prize, board: Array(225).fill(null),
-                players: { [socket.id]: data.phone, [opponent.socketId]: opponent.phone },
-                turn: socket.id
-            };
-            io.to(room).emit('gameStart', { room, prize, firstTurn: data.phone });
-            socket.emit('balanceUpdate', { balance: user.balance });
-        } else {
-            waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id });
-        }
+        const newRoom = { id: roomID, creator: data.phone, bet: bet, status: 'waiting' };
+        publicRooms.push(newRoom);
+        
+        activeGames[roomID] = { 
+            prize: (bet * 2) * 0.9, 
+            board: Array(225).fill(null), 
+            players: { [socket.id]: data.phone },
+            turn: null 
+        };
+
+        io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
+        socket.emit('roomCreated', roomID);
+        socket.emit('balanceUpdate', { balance: user.balance });
+    });
+
+    socket.on('joinRoom', async (data) => {
+        const room = publicRooms.find(r => r.id === data.roomID);
+        if (!room || room.status !== 'waiting') return socket.emit('msg', "Chanm sa a pa disponib");
+
+        const user = await User.findOneAndUpdate(
+            { phone: data.phone, balance: { $gte: room.bet } },
+            { $inc: { balance: -room.bet } }, { new: true }
+        );
+
+        if (!user) return socket.emit('msg', "Balans pa ase!");
+
+        socket.join(data.roomID);
+        room.status = 'playing';
+        
+        const game = activeGames[data.roomID];
+        game.players[socket.id] = data.phone;
+        const playerIds = Object.keys(game.players);
+        game.turn = playerIds[0]; 
+
+        io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
+        io.to(data.roomID).emit('gameStart', { 
+            room: data.roomID, 
+            prize: game.prize, 
+            firstTurn: room.creator 
+        });
+        socket.emit('balanceUpdate', { balance: user.balance });
     });
 
     socket.on('move', async (data) => {
         const game = activeGames[data.room];
         if (!game || game.turn !== socket.id || game.board[data.index]) return;
 
-        const symbol = game.players[socket.id] === Object.values(game.players)[0] && socket.id === Object.keys(game.players)[0] ? 'X' : 'O';
+        const symbol = game.players[socket.id] === Object.values(game.players)[0] ? 'X' : 'O';
         game.board[data.index] = symbol;
         game.turn = Object.keys(game.players).find(id => id !== socket.id);
 
@@ -98,12 +123,18 @@ io.on('connection', (socket) => {
             const winnerPhone = game.players[socket.id];
             const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: game.prize } }, { new: true });
             io.to(data.room).emit('matchEnded', { winner: winnerPhone, prize: game.prize, newBalance: winner.balance });
+            publicRooms = publicRooms.filter(r => r.id !== data.room);
             delete activeGames[data.room];
         }
     });
 
     socket.on('disconnect', () => {
-        waitingPlayers = waitingPlayers.filter(p => p.socketId !== socket.id);
+        // Netwayaj si yon moun kite anvan match kòmanse
+        const roomToClean = publicRooms.find(r => r.creatorSocket === socket.id && r.status === 'waiting');
+        if(roomToClean) {
+            publicRooms = publicRooms.filter(r => r.id !== roomToClean.id);
+            io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
+        }
     });
 });
 
@@ -111,7 +142,7 @@ app.post('/login', async (req, res) => {
     const { phone, password } = req.body;
     let user = await User.findOne({ phone: phone.trim() });
     if (!user) user = await User.create({ phone: phone.trim(), password, balance: 0 });
-    else if (user.password !== password) return res.json({ success: false, msg: "Modpas e" });
+    else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
     res.json({ success: true, phone: user.phone, balance: user.balance });
 });
 
