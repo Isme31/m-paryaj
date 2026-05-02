@@ -24,9 +24,40 @@ const User = mongoose.model('User', new mongoose.Schema({
     balance: { type: Number, default: 0 }
 }));
 
-// GAME LOGIC
+// GLOBALS
 let publicRooms = [];
 let activeGames = {};
+let gameTimers = {}; // Pou kontwole 30 segonn yo
+
+// FONKSYON VIKTWA OTOMATIK (TIMER)
+async function handleTimeout(roomID, loserSocketID) {
+    const game = activeGames[roomID];
+    if (!game) return;
+
+    const winnerSocketID = Object.keys(game.players).find(id => id !== loserSocketID);
+    const winnerPhone = game.players[winnerSocketID];
+    const prize = game.prize;
+
+    const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
+
+    io.to(roomID).emit('matchEnded', { 
+        winner: winnerPhone, 
+        prize: prize, 
+        newBalance: winner.balance,
+        reason: "Tan advèsè a fini! ⏱️" 
+    });
+
+    delete activeGames[roomID];
+    if (gameTimers[roomID]) clearTimeout(gameTimers[roomID]);
+    delete gameTimers[roomID];
+}
+
+function startTurnTimer(roomID, socketID) {
+    if (gameTimers[roomID]) clearTimeout(gameTimers[roomID]);
+    gameTimers[roomID] = setTimeout(() => {
+        handleTimeout(roomID, socketID);
+    }, 30000); // 30 segonn presi
+}
 
 function checkWinner(board) {
     const size = 15;
@@ -65,8 +96,7 @@ io.on('connection', (socket) => {
         const roomID = `room_${Math.random().toString(36).substr(2, 5)}`;
         socket.join(roomID);
 
-        const newRoom = { id: roomID, creator: data.phone, bet: bet, status: 'waiting' };
-        publicRooms.push(newRoom);
+        publicRooms.push({ id: roomID, creator: data.phone, bet: bet, status: 'waiting', creatorSocket: socket.id });
         
         activeGames[roomID] = { 
             prize: (bet * 2) * 0.9, 
@@ -82,7 +112,7 @@ io.on('connection', (socket) => {
 
     socket.on('joinRoom', async (data) => {
         const room = publicRooms.find(r => r.id === data.roomID);
-        if (!room || room.status !== 'waiting') return socket.emit('msg', "Chanm sa a pa disponib");
+        if (!room || room.status !== 'waiting') return socket.emit('msg', "Chanm pa disponib");
 
         const user = await User.findOneAndUpdate(
             { phone: data.phone, balance: { $gte: room.bet } },
@@ -96,15 +126,12 @@ io.on('connection', (socket) => {
         
         const game = activeGames[data.roomID];
         game.players[socket.id] = data.phone;
-        const playerIds = Object.keys(game.players);
-        game.turn = playerIds[0]; 
+        game.turn = room.creatorSocket; // Kreyatè a kòmanse
 
         io.emit('updateRooms', publicRooms.filter(r => r.status === 'waiting'));
-        io.to(data.roomID).emit('gameStart', { 
-            room: data.roomID, 
-            prize: game.prize, 
-            firstTurn: room.creator 
-        });
+        io.to(data.roomID).emit('gameStart', { room: data.roomID, prize: game.prize, firstTurn: room.creator });
+        
+        startTurnTimer(data.roomID, game.turn); // Kòmanse TIMER
         socket.emit('balanceUpdate', { balance: user.balance });
     });
 
@@ -112,24 +139,29 @@ io.on('connection', (socket) => {
         const game = activeGames[data.room];
         if (!game || game.turn !== socket.id || game.board[data.index]) return;
 
-        const symbol = game.players[socket.id] === Object.values(game.players)[0] ? 'X' : 'O';
+        const symbol = game.players[socket.id] === game.players[Object.keys(game.players)[0]] ? 'X' : 'O';
         game.board[data.index] = symbol;
+        
+        // Chanje tou a
         game.turn = Object.keys(game.players).find(id => id !== socket.id);
 
         io.to(data.room).emit('opponentMove', { index: data.index, symbol });
 
         const winSym = checkWinner(game.board);
         if (winSym) {
+            if (gameTimers[data.room]) clearTimeout(gameTimers[data.room]);
             const winnerPhone = game.players[socket.id];
             const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: game.prize } }, { new: true });
             io.to(data.room).emit('matchEnded', { winner: winnerPhone, prize: game.prize, newBalance: winner.balance });
             publicRooms = publicRooms.filter(r => r.id !== data.room);
             delete activeGames[data.room];
+        } else {
+            // Si jwèt la pa fini, kòmanse timer pou lòt jwè a
+            startTurnTimer(data.room, game.turn);
         }
     });
 
     socket.on('disconnect', () => {
-        // Netwayaj si yon moun kite anvan match kòmanse
         const roomToClean = publicRooms.find(r => r.creatorSocket === socket.id && r.status === 'waiting');
         if(roomToClean) {
             publicRooms = publicRooms.filter(r => r.id !== roomToClean.id);
@@ -146,4 +178,4 @@ app.post('/login', async (req, res) => {
     res.json({ success: true, phone: user.phone, balance: user.balance });
 });
 
-server.listen(PORT, () => console.log(`🚀 LIVE: ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 LIVE SOU PÒT ${PORT}`));
