@@ -76,7 +76,7 @@
             });
             const data = await res.json();
             if(data.success) {
-                const ph = "50931594645"; // Nimewo Admin
+                const ph = "50931594645"; 
                 const msg = `*RETRÈ MOPYON BLITZ*%0A👤 Jwè: ${myPhone}%0A💰 Montan: ${amt}G`;
                 window.open(`https://wa.me{ph}?text=${msg}`, '_blank');
                 document.getElementById('bal').innerText = data.newBalance;
@@ -114,7 +114,11 @@
             boardData[data.index] = data.symbol; myTurn = true; renderBoard(); 
             document.getElementById('status').innerText = "Se tou pa w!";
         });
-        socket.on('gameOver', data => { alert(data.winner === myPhone ? "🎉 OU GANYEN!" : "💀 OU PÈDI!"); location.reload(); });
+        socket.on('gameOver', data => { 
+            if(data.msg) alert(data.msg);
+            else alert(data.winner === myPhone ? "🎉 OU GANYEN!" : "💀 OU PÈDI!"); 
+            location.reload(); 
+        });
         socket.on('balanceUpdate', d => { document.getElementById('bal').innerText = d.balance; });
     </script>
 </body>
