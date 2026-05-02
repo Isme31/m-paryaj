@@ -10,54 +10,51 @@
         .screen { padding: 20px; transition: 0.3s; }
         .hidden { display: none !important; }
         
-        /* Kadriyaj Mopyon an */
+        /* Kadriyaj Mopyon */
         .grid { 
-            display: grid; 
-            grid-template-columns: repeat(15, 1fr); 
-            gap: 1px; 
-            width: 100%; 
-            max-width: 450px; 
-            margin: 20px auto; 
-            background: #333; 
-            border: 2px solid #444;
+            display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; 
+            width: 100%; max-width: 450px; margin: 20px auto; 
+            background: #333; border: 2px solid #444;
         }
         .cell { 
-            aspect-ratio: 1/1; 
-            background: #181818; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 14px; 
-            font-weight: bold; 
-            cursor: pointer; 
+            aspect-ratio: 1/1; background: #181818; display: flex; 
+            align-items: center; justify-content: center; font-size: 14px; 
+            font-weight: bold; cursor: pointer; 
         }
-        .cell:hover { background: #222; }
-        .cell.taken { cursor: not-allowed; }
         .X { color: #ff4757; }
         .O { color: #2ecc71; }
 
-        /* Estil Bouton ak Input */
+        /* Box Balans ak Bouton */
         .bal-box { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
         input, button { padding: 14px; margin: 8px 0; width: 90%; border-radius: 8px; border: none; font-size: 16px; }
         input { background: #222; color: white; border: 1px solid #444; }
         button { background: #ff4757; color: white; font-weight: bold; cursor: pointer; }
-        button:disabled { background: #555; cursor: not-allowed; }
         
-        #status { margin: 10px; font-weight: bold; color: #ffa502; }
+        /* Stil Asistan ak Rezo */
+        .asistan-box { margin-top: 25px; padding-top: 15px; border-top: 1px solid #333; }
+        .btn-digicel { background: #ed1c24 !important; width: 45% !important; display: inline-block; margin: 5px !important; font-size: 12px !important; }
+        .btn-natcom { background: #00a1e4 !important; width: 45% !important; display: inline-block; margin: 5px !important; font-size: 12px !important; }
+        .status-msg { margin: 10px; font-weight: bold; color: #ffa502; }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN KONEKSYON -->
+    <!-- PAJ AKEY / KONEKSYON -->
     <div id="auth-screen" class="screen">
         <h1>Mopyon Blitz ⚡</h1>
         <p>Mize. Jwe. Ganyen.</p>
         <input type="text" id="phone" placeholder="Nimewo Telefòn">
         <input type="password" id="pass" placeholder="Modpas">
         <button onclick="login()">KONEKTE</button>
+
+        <div class="asistan-box">
+            <p style="font-size: 14px; color: #bbb;">Bezwen asistans?</p>
+            <button class="btn-digicel" onclick="contactWA('50931594645')">Digicel Asistan 🔴</button>
+            <button class="btn-natcom" onclick="contactWA('50955110103')">Natcom Asistan 🔵</button>
+        </div>
     </div>
 
-    <!-- SCREEN JWÈT LA -->
+    <!-- PAJ JWÈT LA -->
     <div id="game-screen" class="screen hidden">
         <div class="bal-box">
             <small>Balans ou:</small>
@@ -71,13 +68,13 @@
         <div id="lobby">
             <p>Chwazi miz ou (Min 50G):</p>
             <input type="number" id="bet" value="50" min="50">
-            <button id="btnFind" onclick="findMatch()">CHACHE YON MATCH</button>
+            <button id="btnFind" onclick="findMatch()">MATCH RAPID ⚡</button>
         </div>
 
         <div id="board-container" class="hidden">
-            <div id="status">Ap tann advèsè...</div>
+            <div id="status" class="status-msg">Ap tann advèsè...</div>
             <div id="board" class="grid"></div>
-            <button onclick="location.reload()" style="background:#444;">ABANDONE</button>
+            <button onclick="location.reload()" style="background:#444;">KITE MATCH LA</button>
         </div>
     </div>
 
@@ -89,7 +86,7 @@
         async function login() {
             const phone = document.getElementById('phone').value.trim();
             const password = document.getElementById('pass').value;
-            if(!phone || !password) return alert("Ranpli tout chan yo");
+            if(!phone || !password) return alert("Antre enfòmasyon yo");
 
             const res = await fetch('/login', { 
                 method: 'POST', headers: {'Content-Type': 'application/json'}, 
@@ -98,19 +95,17 @@
             const data = await res.json();
             if (data.success) {
                 myPhone = data.phone;
-                updateBalanceUI(data.balance);
+                updateUI(data.balance);
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
             } else alert(data.msg);
         }
 
-        function updateBalanceUI(val) {
-            document.getElementById('bal').innerText = parseFloat(val).toFixed(2);
-        }
+        function updateUI(val) { document.getElementById('bal').innerText = parseFloat(val).toFixed(2); }
 
         function findMatch() {
             const bet = document.getElementById('bet').value;
-            document.getElementById('btnFind').innerText = "Rechèch an kous...";
+            document.getElementById('btnFind').innerText = "Chache match...";
             document.getElementById('btnFind').disabled = true;
             socket.emit('findMatch', { phone: myPhone, bet });
         }
@@ -119,70 +114,64 @@
             currentRoom = data.room;
             mySymbol = (data.firstTurn === myPhone) ? 'X' : 'O';
             myTurn = (data.firstTurn === myPhone);
-            
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('board-container').classList.remove('hidden');
-            document.getElementById('status').innerText = myTurn ? "Se tou pa w!" : "Advèsè a ap jwe...";
-            
+            updateStatus();
             renderBoard();
         });
 
         function renderBoard() {
-            const b = document.getElementById('board');
-            b.innerHTML = "";
+            const b = document.getElementById('board'); b.innerHTML = "";
             boardData.forEach((cell, i) => {
                 const d = document.createElement('div');
                 d.className = `cell ${cell}`;
                 d.innerText = cell;
-                d.onclick = () => makeMove(i);
+                d.onclick = () => {
+                    if (!myTurn || boardData[i] !== "") return;
+                    boardData[i] = mySymbol; myTurn = false;
+                    updateStatus(); renderBoard();
+                    socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
+                };
                 b.appendChild(d);
             });
         }
 
-        function makeMove(index) {
-            if (!myTurn || boardData[index] !== "") return;
-
-            boardData[index] = mySymbol;
-            myTurn = false;
-            document.getElementById('status').innerText = "Advèsè a ap jwe...";
-            renderBoard();
-            
-            socket.emit('move', { room: currentRoom, index, symbol: mySymbol });
+        function updateStatus() {
+            document.getElementById('status').innerText = myTurn ? "Se tou pa w! 🫵" : "Advèsè a ap jwe... ⏳";
         }
 
         socket.on('opponentMove', data => {
             boardData[data.index] = (mySymbol === 'X' ? 'O' : 'X');
-            myTurn = true;
-            document.getElementById('status').innerText = "Se tou pa w!";
-            renderBoard();
+            myTurn = true; updateStatus(); renderBoard();
         });
 
         socket.on('gameOver', data => {
-            if(data.msg) alert(data.msg);
-            else alert(data.winner === myPhone ? `BRAVO! Ou ganyen ${data.prize || ''}G` : "DOMAJ! Ou pèdi.");
+            alert(data.winner === myPhone ? "OU GANYEN! 🔥" : "OU PÈDI! 💀");
             location.reload();
         });
 
-        socket.on('balanceUpdate', d => { updateBalanceUI(d.balance); });
+        socket.on('balanceUpdate', d => { updateUI(d.balance); });
 
-        // Fonksyon Depo/Retrè
+        function contactWA(num) {
+            window.open(`https://wa.me{num}?text=Bonjou%20mwen%20bezwen%20asistans`, '_blank');
+        }
+
         function showDepoMenu() {
-            const msg = `Bonjou, mwen vle fè yon depo pou kont Mopyon Blitz mwen (${myPhone})`;
-            window.open(`https://wa.me{encodeURIComponent(msg)}`, '_blank');
+            const chwa = confirm("Klike OK pou DIGICEL (3159-4645)\nKlike ANNILE pou NATCOM (5511-0103)");
+            const num = chwa ? "50931594645" : "50955110103";
+            window.open(`https://wa.me{num}?text=Mwen%20vle%20fè%20yon%20depo%20pou%20${myPhone}`, '_blank');
         }
 
         async function requestWithdraw() {
-            const amt = prompt("Konbe ou vle retire? (Min 100G)");
+            const amt = prompt("Montan retrè (Min 100G):");
             if (!amt || amt < 100) return;
             const res = await fetch('/request-withdraw', { 
                 method: 'POST', headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify({ phone: myPhone, amount: parseFloat(amt) }) 
             });
             const data = await res.json();
-            if(data.success) {
-                updateBalanceUI(data.newBalance);
-                alert("Demann retrè w la voye bay admin!");
-            } else alert(data.msg);
+            if(data.success) { updateUI(data.newBalance); alert("Demann voye!"); } 
+            else alert(data.msg);
         }
     </script>
 </body>
