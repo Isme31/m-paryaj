@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Admin - Mopyon</title>
-    <style>body { background: #f0f0f0; padding: 20px; font-family: sans-serif; }</style>
-</head>
+<head><title>Admin Panel</title></head>
 <body>
-    <h2>Depoze Kòb sou Kont Jwè</h2>
-    <input type="text" id="p" placeholder="Telefòn Jwè">
-    <input type="number" id="a" placeholder="Montan">
-    <button onclick="add()">AJOUTE KÒB ✅</button>
+    <h2>Rechaje Kont Jwè</h2>
+    <input type="password" id="key" placeholder="Kòd Sekrè Admin (MOPYON2024)"><br>
+    <input type="text" id="tel" placeholder="Telefòn Jwè"><br>
+    <input type="number" id="kob" placeholder="Montan"><br>
+    <button onclick="rechaje()">RECHAJE ✅</button>
 
     <script>
-        async function add() {
-            const phone = document.getElementById('p').value;
-            const amount = document.getElementById('a').value;
-            await fetch('/admin/update-balance', {
+        async function rechaje() {
+            const res = await fetch('/admin/update-balance', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone, amount: parseFloat(amount) })
+                body: JSON.stringify({ 
+                    phone: document.getElementById('tel').value, 
+                    amount: parseFloat(document.getElementById('kob').value),
+                    secret: document.getElementById('key').value 
+                })
             });
-            alert("Kòb la ajoute!");
+            const data = await res.json();
+            alert(data.success ? "Siksè! Nouvo balans: " + data.newBalance : "Erè: " + data.msg);
         }
     </script>
 </body>
