@@ -35,7 +35,9 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }));
 
-// --- ROUT YO (API) ---
+// --- API ROUTES ---
+
+// Login & Signup
 app.post('/login', async (req, res) => {
     try {
         const { phone, password } = req.body;
@@ -55,66 +57,73 @@ app.post('/login', async (req, res) => {
     } catch (err) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
+// Admin Update Balance (KORIJÉ POU 1000 GOUD)
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.status(403).json({ success: false });
-    const user = await User.findOneAndUpdate({ phone: phone.trim() }, { $inc: { balance: Number(amount) } }, { new: true });
+
+    const val = parseFloat(amount); // Fòse l tounen chif nèt
+    if (isNaN(val)) return res.json({ success: false, msg: "Montan invalid" });
+
+    const user = await User.findOneAndUpdate(
+        { phone: phone.trim() }, 
+        { $inc: { balance: val } }, 
+        { new: true }
+    );
     res.json({ success: true, newBalance: user ? user.balance : 0 });
 });
 
+// Withdraw
 app.post('/request-withdraw', async (req, res) => {
     const { phone, amount } = req.body;
-    const amt = Number(amount);
+    const amt = parseFloat(amount);
     const user = await User.findOne({ phone: phone.trim() });
 
     if (user && user.balance >= amt && amt >= 100) {
         await User.updateOne({ phone: phone.trim() }, { $inc: { balance: -amt } });
         const fee = amt * 0.05;
-        await Withdraw.create({ phone: phone.trim(), amount: amt - fee });
+        await Withdraw.create({ phone: phone.trim(), amount: amt - fee, fee: fee });
         res.json({ success: true, newBalance: user.balance - amt });
-    } else { res.json({ success: false, msg: "Balans ou ensifizan!" }); }
+    } else { res.json({ success: false, msg: "Balans ensifizan!" }); }
 });
 
-// --- LOJIK JWÈT (SOCKET.IO) ---
+// --- GAME LOGIC (SOCKET.IO) ---
 let waitingPlayers = []; 
 let privateRooms = {};   
 let activeGames = {};
 
 io.on('connection', (socket) => {
 
-    // 1. MATCH RAPID
     socket.on('findMatch', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        const bet = Number(data.bet);
-        if (!user || user.balance < bet) return socket.emit('gameOver', { msg: "Balans ou twò piti!" });
+        const bet = parseFloat(data.bet);
+        if (!user || user.balance < bet) return socket.emit('gameOver', { msg: "Balans piti!" });
 
         let oppIdx = waitingPlayers.findIndex(p => p.bet === bet && p.phone !== data.phone);
         if (oppIdx > -1) {
             const opponent = waitingPlayers.splice(oppIdx, 1)[0];
-            startGame(socket, opponent, bet);
+            startGame(socket, opponent, bet, data.phone);
         } else {
             waitingPlayers.push({ phone: data.phone, bet, socketId: socket.id });
-            socket.emit('statusUpdate', "Ap chèche yon moun...");
+            socket.emit('statusUpdate', "Ap chèche moun...");
         }
     });
 
-    // 2. CHANM PRIVE (KORIJÉ)
     socket.on('joinPrivate', async (data) => {
         const { phone, bet, room } = data;
         if (!room) return socket.emit('statusUpdate', "Mete yon kòd!");
         
         const cleanRoom = room.trim();
-        const bAmount = Number(bet);
+        const bAmount = parseFloat(bet);
         const user = await User.findOne({ phone: phone.trim() });
 
-        if (!user || user.balance < bAmount) return socket.emit('gameOver', { msg: "Balans ou twò piti!" });
+        if (!user || user.balance < bAmount) return socket.emit('gameOver', { msg: "Balans piti!" });
 
         if (privateRooms[cleanRoom]) {
             const opponent = privateRooms[cleanRoom];
             if (opponent.phone === phone) return socket.emit('statusUpdate', "W ap tann zanmi w...");
-            
             delete privateRooms[cleanRoom];
-            startGame(socket, opponent, bAmount, cleanRoom);
+            startGame(socket, opponent, bAmount, phone, cleanRoom);
         } else {
             privateRooms[cleanRoom] = { phone: phone, bet: bAmount, socketId: socket.id };
             socket.join(cleanRoom);
@@ -122,9 +131,8 @@ io.on('connection', (socket) => {
         }
     });
 
-    async function startGame(s1, s2, bet, roomID = null) {
+    async function startGame(s1, s2, bet, p1Phone, roomID = null) {
         const room = roomID || `room_${Date.now()}`;
-        const p1Phone = s1.phone || s1.handshake.query.phone; // Backup si phone pa la
         
         await User.updateOne({ phone: p1Phone }, { $inc: { balance: -bet } });
         await User.updateOne({ phone: s2.phone }, { $inc: { balance: -bet } });
@@ -160,4 +168,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`🚀 Sèvè a moute sou pòt ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 LIVE sou pòt ${PORT}`));
