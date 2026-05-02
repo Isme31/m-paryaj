@@ -28,22 +28,19 @@ app.post('/login', async (req, res) => {
     const cleanPhone = phone.trim();
     let user = await User.findOne({ phone: cleanPhone });
     if (!user) {
-        if (ref && ref !== cleanPhone) {
-            await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-        }
+        if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
         user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
     } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
     res.json({ success: true, user });
 });
 
-// LOGIK JWÈT
 let rooms = {};
 io.on('connection', (socket) => {
     socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans ou piti!");
         const code = Math.floor(1000 + Math.random() * 9000).toString();
-        rooms[code] = { host: data.phone, bet: Number(data.bet), type: data.type, players: [socket.id] };
+        rooms[code] = { host: data.phone, bet: Number(data.bet), type: data.type, players: [socket.id], phones: [data.phone] };
         socket.join(code);
         socket.emit('roomCreated', { code, bet: data.bet });
     });
@@ -52,20 +49,27 @@ io.on('connection', (socket) => {
         const room = rooms[data.code];
         const user = await User.findOne({ phone: data.phone });
         if (room && user && user.balance >= room.bet && room.players.length < 2) {
-            await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
-            await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
+            socket.join(data.code);
             room.players.push(socket.id);
-            const prize = (room.bet * 2) * 0.95; // 5% Komisyon
-            io.to(data.code).emit('gameStart', { room: data.code, type: room.type, prize, players: [room.host, data.phone], turn: room.host });
+            room.phones.push(data.phone);
+            await User.updateMany({ phone: { $in: room.phones } }, { $inc: { balance: -room.bet } });
+            const prize = (room.bet * 2) * 0.95;
+            let startData = { room: data.code, type: room.type, prize, turn: room.host };
+            if (room.type === 'domino') {
+                let deck = [];
+                for (let i = 0; i <= 6; i++) for (let j = i; j <= 6; j++) deck.push([i, j]);
+                deck.sort(() => Math.random() - 0.5);
+                startData.hands = { [room.host]: deck.splice(0, 7), [data.phone]: deck.splice(0, 7) };
+            }
+            io.to(data.code).emit('gameStart', startData);
         } else { socket.emit('errorMsg', "Kòd erè oswa Balans piti!"); }
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-    socket.on('chat', (data) => io.to(data.room).emit('chatMsg', data));
-    
     socket.on('win', async (data) => {
-        const user = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: data.prize } }, { new: true });
+        const user = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: Number(data.prize) } }, { new: true });
         io.to(data.room).emit('gameOver', { winner: data.phone, prize: data.prize, newBalance: user.balance });
+        delete rooms[data.room];
     });
 });
 
