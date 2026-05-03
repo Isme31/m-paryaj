@@ -29,14 +29,20 @@ const User = mongoose.model('User', new mongoose.Schema({
 
 app.use(express.json());
 
-// --- KOREKSYON NOT FOUND ---
-// Li di sèvè a sèvi fichiye ki nan menm folder ak index.js la
-app.use(express.static(__dirname));
+// --- KOREKSYON "NOT FOUND" POU DOSYE PUBLIC ---
+// Sa di sèvè a tout fichiye (HTML, CSS, JS) yo anndan katab "public" la
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    // Li pral louvri index.html ki anndan folder public la
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-// ---------------------------
+
+// Si ou gen yon paj admin anndan public tou:
+app.get('/admin-blitz', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+// ----------------------------------------------
 
 app.post('/login', async (req, res) => {
     try {
@@ -104,7 +110,7 @@ io.on('connection', (socket) => {
     socket.on('leaveRoom', (room) => socket.leave(room));
 });
 
-// KOREKSYON PORT POU RENDER
+// KOREKSYON PORT POU RENDER (Fòse koute sou 0.0.0.0)
 server.listen(PORT, "0.0.0.0", () => {
     console.log(`Sèvè kouri sou pò ${PORT} ⚡`);
 });
