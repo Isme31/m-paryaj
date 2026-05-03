@@ -6,11 +6,20 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { transports: ['websocket'], cors: { origin: "*" } });
+const io = new Server(server, { 
+    transports: ['websocket', 'polling'], // Ajoute polling pou pi bon koneksyon
+    cors: { origin: "*" } 
+});
 
+// 1. RANJE PORT POU RENDER
 const PORT = process.env.PORT || 3000;
 
-mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority").then(() => console.log("Mopyon Blitz Estab ✅"));
+// 2. RANJE KONEKSYON MONGODB (Mwen mete process.env pou sekirite)
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("Mopyon Blitz Estab ✅"))
+    .catch(err => console.log("Erè MongoDB: ", err));
 
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
@@ -20,17 +29,27 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// 3. RANJE "NOT FOUND" (Sèvi fichiye nan rasin pwojè a)
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 app.post('/login', async (req, res) => {
-    const { phone, password, ref } = req.body;
-    const cleanPhone = phone.trim();
-    let user = await User.findOne({ phone: cleanPhone });
-    if (!user) {
-        if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-        user = await User.create({ phone: cleanPhone, password, balance: 50 });
-    } else if (user.password !== password) return res.json({ success: false });
-    res.json({ success: true, user });
+    try {
+        const { phone, password, ref } = req.body;
+        const cleanPhone = phone.trim();
+        let user = await User.findOne({ phone: cleanPhone });
+        if (!user) {
+            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            user = await User.create({ phone: cleanPhone, password, balance: 50 });
+        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
+        res.json({ success: true, user });
+    } catch (e) {
+        res.json({ success: false, msg: "Erè sèvè" });
+    }
 });
 
 let rooms = {};
@@ -53,10 +72,8 @@ io.on('connection', (socket) => {
             socket.join(data.code);
             room.players.push({id: socket.id, phone: data.phone});
 
-            // RETIRE KÒB LA SOU DE JWÈ YO DEPI MATCH LA KÒMANSE
             for (let p of room.players) {
                 const updatedUser = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -room.bet } }, { new: true });
-                // Voye nouvo balans lan bay chak jwè separeman
                 io.to(p.id).emit('updateBalance', updatedUser.balance);
             }
 
@@ -73,7 +90,6 @@ io.on('connection', (socket) => {
         const winnerPhone = data.phone;
         delete rooms[data.room];
 
-        // SÈLMAN GANYAN AN KI JWENN PRI A (95G SI MIZ TE 50G)
         const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
         io.to(data.room).emit('gameOver', { winner: winnerPhone, prize: prize, winnerBalance: winner.balance });
     });
@@ -81,4 +97,7 @@ io.on('connection', (socket) => {
     socket.on('leaveRoom', (room) => socket.leave(room));
 });
 
-server.listen(PORT, () => console.log(`Sèvè kouri sou ${PORT}`));
+// 4. FÒSE SÈVÈ A KOUTE SOU 0.0.0.0 POU RENDER
+server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Sèvè kouri sou pò ${PORT} ⚡`);
+});
