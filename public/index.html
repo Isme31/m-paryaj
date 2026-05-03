@@ -13,9 +13,9 @@
         .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #444; border: 2px solid var(--primary); }
-        .cell { aspect-ratio: 1/1; background: #111; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; border: 0.1px solid #222; }
+        .cell { aspect-ratio: 1/1; background: #111; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; font-weight: bold; }
         input { padding: 12px; border-radius: 8px; background: #000; color: white; border: 1px solid #333; width: 85%; }
-        #modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        #modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
 <body>
@@ -34,28 +34,22 @@
             <h2 id="u-bal" style="color:#2ecc71">0 G</h2>
             <p style="font-size:11px; color:#aaa">Depo Digicel: <b>31594645</b> | Depo Natcom: <b>55110103</b></p>
             <div style="display:flex; gap:10px; margin-top:10px">
-                <button class="btn" style="background:#25d366" onclick="window.open('https://whatsapp.com')">Gwoup WhatsApp</button>
+                <button class="btn" style="background:#25d366" onclick="window.open('https://whatsapp.com')">Gwoup</button>
                 <button class="btn" style="background:#ffa502" onclick="showS('withdraw-s')">RETRÈ</button>
             </div>
         </div>
-
         <div class="card">
-            <h3 style="margin:0; color:var(--primary)">KREYE MATCH</h3>
-            Miz: <input type="number" id="bet" value="100" style="width:60px">
+            <h3 style="margin:0; color:var(--primary)">MOPYON BLITZ</h3>
+            Miz: <input type="number" id="bet" value="50" style="width:60px">
             <button class="btn" onclick="create()">KREYE KÒD</button>
-            <div id="room-info" class="hidden" style="margin-top:10px; color:var(--primary)">Kòd Match: <b id="c-val" style="letter-spacing:3px"></b></div>
+            <div id="room-info" class="hidden" style="margin-top:10px; color:var(--primary)">Kòd: <b id="c-val" style="letter-spacing:3px"></b></div>
         </div>
-
         <div class="card">
-            <input type="text" id="join-c" placeholder="Mete Kòd Zanmi w">
+            <input type="text" id="join-c" placeholder="Kòd Match">
             <button class="btn" onclick="join()" style="background:#ffa502">ANTRE NAN MATCH</button>
         </div>
-
-        <!-- SEKSYON REFERRAL -->
         <div class="card">
-            <p style="font-size:12px; margin-bottom:5px;">Fè kòb! Kopye lyen sa voye bay zanmi w (W ap jwenn 5G):</p>
-            <input type="text" id="ref-link" readonly style="font-size:10px; color:#2ecc71;">
-            <button class="btn" style="background:#3498db; padding:5px; font-size:11px;" onclick="copyRef()">KOPYE LYEN</button>
+            <p style="font-size:10px; margin:0">Referral: <input type="text" id="ref-link" readonly style="width:70%; font-size:9px; border:none; background:none; color:#2ecc71;"></p>
         </div>
     </div>
 
@@ -63,22 +57,22 @@
         <div class="card">
             <h3>Paj Retrè (Min 100G)</h3>
             <input type="number" id="w-amt" placeholder="Montan">
-            <button class="btn" onclick="alert('Demann ou anrejistre, kontakte asistan an!')">VOYE DEMANN</button>
+            <button class="btn" onclick="alert('Demann anrejistre!')">VOYE DEMANN</button>
             <button class="btn" style="background:#444" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
     </div>
 
     <div id="game-s" class="screen hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px;">
-            <button onclick="leaveGame()" style="background:red; color:white; border:none; padding:5px 15px; border-radius:5px; font-weight:bold;">SOTI 🚪</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px">
+            <button onclick="leaveGame()" style="background:red; color:white; border:none; padding:5px 15px; border-radius:5px;">SOTI</button>
             <b id="timer" style="color:red; font-size:22px">30s</b>
         </div>
-        <div id="status" style="font-size:13px; margin:5px; color:#aaa;">Atann tou pa w...</div>
+        <div id="status" style="margin-bottom:10px">Atann tou pa w...</div>
         <div id="board" class="grid"></div>
     </div>
 
     <div id="modal" class="hidden">
-        <h1 id="res-t" style="font-size:40px"></h1>
+        <h1 id="res-t"></h1>
         <h2 id="res-p" style="color:#2ecc71"></h2>
         <button class="btn" style="width:200px" onclick="rejwe()">REJWE 🎮</button>
         <button class="btn" style="width:200px; background:#444" onclick="leaveGame()">MENI PWENSIPAL 🏠</button>
@@ -87,14 +81,14 @@
     <script>
         const socket = io({ transports: ['websocket'] });
         let myP, myS, curR, curP, curB, myT = false, boardData = [], timerInt;
-        const refUrl = new URLSearchParams(window.location.search).get('ref');
+        const refParam = new URLSearchParams(window.location.search).get('ref');
 
         function showS(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
         
         async function login() {
             const phone = document.getElementById('phone').value.trim();
             const password = document.getElementById('pass').value;
-            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password, ref: refUrl }) });
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password, ref: refParam }) });
             const d = await res.json();
             if(d.success) { 
                 myP = d.user.phone; 
@@ -102,13 +96,6 @@
                 document.getElementById('ref-link').value = window.location.origin + "?ref=" + myP;
                 showS('menu-s'); 
             }
-        }
-
-        function copyRef() {
-            const copyText = document.getElementById("ref-link");
-            copyText.select();
-            document.execCommand("copy");
-            alert("Lyen kopye!");
         }
 
         function create() { socket.emit('createRoom', { phone: myP, bet: document.getElementById('bet').value }); }
@@ -122,6 +109,7 @@
             boardData = Array(225).fill("");
             showS('game-s'); document.getElementById('modal').classList.add('hidden');
             renderBoard(); if(myT) startTimer();
+            document.getElementById('status').innerText = myT ? "Se tou pa w! ("+myS+")" : "Atann advèsè a...";
         });
 
         function renderBoard() {
@@ -160,15 +148,23 @@
         }
 
         socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myT = true; renderBoard(); startTimer(); });
+
         socket.on('gameOver', d => {
-            clearInterval(timerInt); document.getElementById('u-bal').innerText = d.newBalance + " G";
-            document.getElementById('res-t').innerText = (d.winner === myP) ? "OU GENYEN! 🎉" : "OU PÈDI! 💀";
-            document.getElementById('res-p').innerText = (d.winner === myP) ? "+" + d.prize + " G" : "";
+            clearInterval(timerInt);
+            if(d.winner === myP) {
+                document.getElementById('res-t').innerText = "OU GENYEN! 🎉";
+                document.getElementById('res-p').innerText = "+" + d.prize + " G";
+                document.getElementById('u-bal').innerText = d.winnerBalance + " G";
+            } else {
+                document.getElementById('res-t').innerText = "OU PÈDI! 💀";
+                document.getElementById('res-p').innerText = "";
+                // Loser a wè balans li ki te deja rale 50G a
+            }
             document.getElementById('modal').classList.remove('hidden');
         });
 
         function leaveGame() { socket.emit('leaveRoom', curR); showS('menu-s'); document.getElementById('modal').classList.add('hidden'); }
-        function rejwe() { create(); alert("Kòd rejwe ap prepare..."); }
+        function rejwe() { create(); alert("Kòd ap prepare..."); }
         socket.on('errorMsg', m => alert(m));
     </script>
 </body>
