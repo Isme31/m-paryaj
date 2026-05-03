@@ -16,8 +16,7 @@ const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
     balance: { type: Number, default: 50 },
-    referralCount: { type: Number, default: 0 },
-    referredBy: { type: String, default: null }
+    referralCount: { type: Number, default: 0 }
 }));
 
 app.use(express.json());
@@ -27,16 +26,10 @@ app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     const cleanPhone = phone.trim();
     let user = await User.findOne({ phone: cleanPhone });
-
     if (!user) {
-        // SI SE YON NOUVO MOUN AK YON KÒD REFERRAL
-        if (ref && ref !== cleanPhone) {
-            await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-        }
-        user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
-    } else if (user.password !== password) {
-        return res.json({ success: false });
-    }
+        if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+        user = await User.create({ phone: cleanPhone, password, balance: 50 });
+    } else if (user.password !== password) return res.json({ success: false });
     res.json({ success: true, user });
 });
 
@@ -60,20 +53,35 @@ io.on('connection', (socket) => {
             socket.join(data.code);
             room.players.push(socket.id);
             room.phones.push(data.phone);
+
+            // RETIRE MIZ LA SOU TOULÈDE JWÈ YO (50G chak)
             await User.updateMany({ phone: { $in: room.phones } }, { $inc: { balance: -room.bet } });
-            const prize = (room.bet * 2) * 0.95;
+
+            const prize = (room.bet * 2) * 0.95; // 5% Komisyon (95G si miz se 50G)
             io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
         } else socket.emit('errorMsg', "Kòd pa bon!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+
     socket.on('win', async (data) => {
         if (!rooms[data.room]) return;
+        const prize = Number(data.prize);
+        const winnerPhone = data.phone;
         delete rooms[data.room];
-        const user = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: Number(data.prize) } }, { new: true });
-        io.to(data.room).emit('gameOver', { winner: data.phone, prize: data.prize, newBalance: user.balance });
+
+        // SÈLMAN GANYAN AN KI JWENN PRI A (95G)
+        const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
+        
+        // Voye rezilta a bay tout moun nan chanm nan
+        io.to(data.room).emit('gameOver', { 
+            winner: winnerPhone, 
+            prize: prize, 
+            winnerBalance: winner.balance 
+        });
     });
-    socket.on('leaveRoom', (room) => { socket.leave(room); });
+
+    socket.on('leaveRoom', (room) => socket.leave(room));
 });
 
-server.listen(PORT, () => console.log(`Blitz Sèvè sou ${PORT}`));
+server.listen(PORT, () => console.log(`Sèvè kouri sou ${PORT}`));
