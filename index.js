@@ -15,17 +15,28 @@ mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
-    balance: { type: Number, default: 50 }
+    balance: { type: Number, default: 50 },
+    referralCount: { type: Number, default: 0 },
+    referredBy: { type: String, default: null }
 }));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/login', async (req, res) => {
-    const { phone, password } = req.body;
-    let user = await User.findOne({ phone: phone.trim() });
-    if (!user) user = await User.create({ phone: phone.trim(), password, balance: 50 });
-    else if (user.password !== password) return res.json({ success: false });
+    const { phone, password, ref } = req.body;
+    const cleanPhone = phone.trim();
+    let user = await User.findOne({ phone: cleanPhone });
+
+    if (!user) {
+        // SI SE YON NOUVO MOUN AK YON KÒD REFERRAL
+        if (ref && ref !== cleanPhone) {
+            await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+        }
+        user = await User.create({ phone: cleanPhone, password, balance: 50, referredBy: ref });
+    } else if (user.password !== password) {
+        return res.json({ success: false });
+    }
     res.json({ success: true, user });
 });
 
@@ -36,7 +47,6 @@ io.on('connection', (socket) => {
         const user = await User.findOne({ phone: data.phone });
         const bet = Number(data.bet);
         if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
-        
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         rooms[code] = { host: data.phone, bet, players: [socket.id], phones: [data.phone] };
         socket.join(code);
@@ -50,25 +60,19 @@ io.on('connection', (socket) => {
             socket.join(data.code);
             room.players.push(socket.id);
             room.phones.push(data.phone);
-
-            // --- LOJIK SEKIRITE: RETIRE KÒB LA SOU DE JWÈ YO DEPI MATCH LA KÒMANSE ---
             await User.updateMany({ phone: { $in: room.phones } }, { $inc: { balance: -room.bet } });
-
             const prize = (room.bet * 2) * 0.95;
             io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
+        } else socket.emit('errorMsg', "Kòd pa bon!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-
     socket.on('win', async (data) => {
         if (!rooms[data.room]) return;
         delete rooms[data.room];
-        // Bay gayan an kòb la (Lòt la pèdi pa l la deja depi nan kòmansman)
         const user = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: Number(data.prize) } }, { new: true });
         io.to(data.room).emit('gameOver', { winner: data.phone, prize: data.prize, newBalance: user.balance });
     });
-
     socket.on('leaveRoom', (room) => { socket.leave(room); });
 });
 
