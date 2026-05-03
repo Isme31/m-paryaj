@@ -13,7 +13,7 @@
         .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #444; border: 2px solid var(--primary); }
-        .cell { aspect-ratio: 1/1; background: #111; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; font-weight: bold; }
+        .cell { aspect-ratio: 1/1; background: #111; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; font-weight: bold; border: 0.1px solid #222; }
         input { padding: 12px; border-radius: 8px; background: #000; color: white; border: 1px solid #333; width: 85%; }
         #modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     </style>
@@ -49,7 +49,7 @@
             <button class="btn" onclick="join()" style="background:#ffa502">ANTRE NAN MATCH</button>
         </div>
         <div class="card">
-            <p style="font-size:10px; margin:0">Referral: <input type="text" id="ref-link" readonly style="width:70%; font-size:9px; border:none; background:none; color:#2ecc71;"></p>
+            <p style="font-size:10px; margin:0">Referral: <input type="text" id="ref-link" readonly style="width:75%; font-size:9px; border:none; background:none; color:#2ecc71;"></p>
         </div>
     </div>
 
@@ -103,13 +103,17 @@
 
         socket.on('roomCreated', d => { document.getElementById('c-val').innerText = d.code; document.getElementById('room-info').classList.remove('hidden'); });
 
+        // NOUVO: Resevwa balans lan depi match la kòmanse
+        socket.on('updateBalance', (newBal) => {
+            document.getElementById('u-bal').innerText = newBal + " G";
+        });
+
         socket.on('gameStart', d => {
             curR = d.room; curP = d.prize; curB = d.bet;
             myS = (d.turn === myP) ? "X" : "O"; myT = (d.turn === myP);
             boardData = Array(225).fill("");
             showS('game-s'); document.getElementById('modal').classList.add('hidden');
             renderBoard(); if(myT) startTimer();
-            document.getElementById('status').innerText = myT ? "Se tou pa w! ("+myS+")" : "Atann advèsè a...";
         });
 
         function renderBoard() {
@@ -158,7 +162,6 @@
             } else {
                 document.getElementById('res-t').innerText = "OU PÈDI! 💀";
                 document.getElementById('res-p').innerText = "";
-                // Loser a wè balans li ki te deja rale 50G a
             }
             document.getElementById('modal').classList.remove('hidden');
         });
