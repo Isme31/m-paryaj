@@ -7,14 +7,13 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { 
-    transports: ['websocket', 'polling'], // Ajoute polling pou pi bon koneksyon
+    transports: ['websocket', 'polling'], 
     cors: { origin: "*" } 
 });
 
-// 1. RANJE PORT POU RENDER
 const PORT = process.env.PORT || 3000;
 
-// 2. RANJE KONEKSYON MONGODB (Mwen mete process.env pou sekirite)
+// Sèvi ak MONGO_URI ki nan Render Settings la si li la
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
@@ -30,12 +29,14 @@ const User = mongoose.model('User', new mongoose.Schema({
 
 app.use(express.json());
 
-// 3. RANJE "NOT FOUND" (Sèvi fichiye nan rasin pwojè a)
+// --- KOREKSYON NOT FOUND ---
+// Li di sèvè a sèvi fichiye ki nan menm folder ak index.js la
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
+// ---------------------------
 
 app.post('/login', async (req, res) => {
     try {
@@ -56,48 +57,54 @@ let rooms = {};
 
 io.on('connection', (socket) => {
     socket.on('createRoom', async (data) => {
-        const user = await User.findOne({ phone: data.phone });
-        const bet = Number(data.bet);
-        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
-        const code = Math.floor(1000 + Math.random() * 9000).toString();
-        rooms[code] = { host: data.phone, bet, players: [{id: socket.id, phone: data.phone}] };
-        socket.join(code);
-        socket.emit('roomCreated', { code, bet });
+        try {
+            const user = await User.findOne({ phone: data.phone });
+            const bet = Number(data.bet);
+            if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
+            const code = Math.floor(1000 + Math.random() * 9000).toString();
+            rooms[code] = { host: data.phone, bet, players: [{id: socket.id, phone: data.phone}] };
+            socket.join(code);
+            socket.emit('roomCreated', { code, bet });
+        } catch (e) { console.log(e); }
     });
 
     socket.on('joinRoom', async (data) => {
-        const room = rooms[data.code];
-        const user = await User.findOne({ phone: data.phone });
-        if (room && user && user.balance >= room.bet && room.players.length === 1) {
-            socket.join(data.code);
-            room.players.push({id: socket.id, phone: data.phone});
+        try {
+            const room = rooms[data.code];
+            const user = await User.findOne({ phone: data.phone });
+            if (room && user && user.balance >= room.bet && room.players.length === 1) {
+                socket.join(data.code);
+                room.players.push({id: socket.id, phone: data.phone});
 
-            for (let p of room.players) {
-                const updatedUser = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -room.bet } }, { new: true });
-                io.to(p.id).emit('updateBalance', updatedUser.balance);
-            }
+                for (let p of room.players) {
+                    const updatedUser = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -room.bet } }, { new: true });
+                    io.to(p.id).emit('updateBalance', updatedUser.balance);
+                }
 
-            const prize = (room.bet * 2) * 0.95;
-            io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
+                const prize = (room.bet * 2) * 0.95;
+                io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
+            } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
+        } catch (e) { console.log(e); }
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
     socket.on('win', async (data) => {
-        if (!rooms[data.room]) return;
-        const prize = Number(data.prize);
-        const winnerPhone = data.phone;
-        delete rooms[data.room];
+        try {
+            if (!rooms[data.room]) return;
+            const prize = Number(data.prize);
+            const winnerPhone = data.phone;
+            delete rooms[data.room];
 
-        const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
-        io.to(data.room).emit('gameOver', { winner: winnerPhone, prize: prize, winnerBalance: winner.balance });
+            const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: winnerPhone, prize: prize, winnerBalance: winner.balance });
+        } catch (e) { console.log(e); }
     });
 
     socket.on('leaveRoom', (room) => socket.leave(room));
 });
 
-// 4. FÒSE SÈVÈ A KOUTE SOU 0.0.0.0 POU RENDER
+// KOREKSYON PORT POU RENDER
 server.listen(PORT, "0.0.0.0", () => {
     console.log(`Sèvè kouri sou pò ${PORT} ⚡`);
 });
