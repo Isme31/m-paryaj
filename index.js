@@ -34,11 +34,13 @@ let rooms = {};
 io.on('connection', (socket) => {
     socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans ou piti!");
+        const bet = Number(data.bet);
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
+        
         const code = Math.floor(1000 + Math.random() * 9000).toString();
-        rooms[code] = { host: data.phone, bet: Number(data.bet), players: [socket.id], phones: [data.phone] };
+        rooms[code] = { host: data.phone, bet, players: [socket.id], phones: [data.phone] };
         socket.join(code);
-        socket.emit('roomCreated', { code, bet: data.bet });
+        socket.emit('roomCreated', { code, bet });
     });
 
     socket.on('joinRoom', async (data) => {
@@ -48,9 +50,13 @@ io.on('connection', (socket) => {
             socket.join(data.code);
             room.players.push(socket.id);
             room.phones.push(data.phone);
+
+            // --- LOJIK SEKIRITE: RETIRE KÒB LA SOU DE JWÈ YO DEPI MATCH LA KÒMANSE ---
             await User.updateMany({ phone: { $in: room.phones } }, { $inc: { balance: -room.bet } });
-            io.to(data.code).emit('gameStart', { room: data.code, prize: (room.bet * 2) * 0.95, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon!");
+
+            const prize = (room.bet * 2) * 0.95;
+            io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
+        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
@@ -58,11 +64,12 @@ io.on('connection', (socket) => {
     socket.on('win', async (data) => {
         if (!rooms[data.room]) return;
         delete rooms[data.room];
+        // Bay gayan an kòb la (Lòt la pèdi pa l la deja depi nan kòmansman)
         const user = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: Number(data.prize) } }, { new: true });
-        io.to(data.room).emit('gameOver', { winner: data.phone, newBalance: user.balance });
+        io.to(data.room).emit('gameOver', { winner: data.phone, prize: data.prize, newBalance: user.balance });
     });
 
     socket.on('leaveRoom', (room) => { socket.leave(room); });
 });
 
-server.listen(PORT, () => console.log(`Sèvè Blitz sou ${PORT}`));
+server.listen(PORT, () => console.log(`Blitz Sèvè sou ${PORT}`));
