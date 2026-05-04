@@ -12,8 +12,6 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-
-// Sèvi ak MONGO_URI ki nan Render Settings la si li la
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
@@ -28,21 +26,11 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 app.use(express.json());
-
-// --- KOREKSYON "NOT FOUND" POU DOSYE PUBLIC ---
-// Sa di sèvè a tout fichiye (HTML, CSS, JS) yo anndan katab "public" la
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-    // Li pral louvri index.html ki anndan folder public la
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Si ou gen yon paj admin anndan public tou:
-app.get('/admin-blitz', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-// ----------------------------------------------
 
 app.post('/login', async (req, res) => {
     try {
@@ -54,63 +42,81 @@ app.post('/login', async (req, res) => {
             user = await User.create({ phone: cleanPhone, password, balance: 50 });
         } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
         res.json({ success: true, user });
-    } catch (e) {
-        res.json({ success: false, msg: "Erè sèvè" });
-    }
+    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
 let rooms = {};
+let waitingPlayers = {}; // Matchmaking memory
 
 io.on('connection', (socket) => {
-    socket.on('createRoom', async (data) => {
-        try {
-            const user = await User.findOne({ phone: data.phone });
-            const bet = Number(data.bet);
-            if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
-            const code = Math.floor(1000 + Math.random() * 9000).toString();
-            rooms[code] = { host: data.phone, bet, players: [{id: socket.id, phone: data.phone}] };
+    // Matchmaking Otomatik
+    socket.on('startMatchmaking', async (data) => {
+        const bet = Number(data.bet);
+        const user = await User.findOne({ phone: data.phone });
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
+
+        if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
+            const opponent = waitingPlayers[bet];
+            delete waitingPlayers[bet];
+            const code = `auto_${Date.now()}`;
+            rooms[code] = { host: opponent.phone, bet, players: [{id: opponent.id, phone: opponent.phone}, {id: socket.id, phone: data.phone}] };
+            
             socket.join(code);
-            socket.emit('roomCreated', { code, bet });
-        } catch (e) { console.log(e); }
+            const oppSocket = io.sockets.sockets.get(opponent.id);
+            if(oppSocket) oppSocket.join(code);
+
+            for (let p of rooms[code].players) {
+                const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -bet } }, { new: true });
+                io.to(p.id).emit('updateBalance', up.balance);
+            }
+            const prize = (bet * 2) * 0.95;
+            io.to(code).emit('gameStart', { room: code, prize, turn: opponent.phone, bet });
+        } else {
+            waitingPlayers[bet] = { id: socket.id, phone: data.phone };
+        }
+    });
+
+    socket.on('cancelMatchmaking', (bet) => {
+        if (waitingPlayers[bet] && waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
+    });
+
+    // Chanm Privé
+    socket.on('createRoom', async (data) => {
+        const user = await User.findOne({ phone: data.phone });
+        const bet = Number(data.bet);
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+        rooms[code] = { host: data.phone, bet, players: [{id: socket.id, phone: data.phone}] };
+        socket.join(code);
+        socket.emit('roomCreated', { code, bet });
     });
 
     socket.on('joinRoom', async (data) => {
-        try {
-            const room = rooms[data.code];
-            const user = await User.findOne({ phone: data.phone });
-            if (room && user && user.balance >= room.bet && room.players.length === 1) {
-                socket.join(data.code);
-                room.players.push({id: socket.id, phone: data.phone});
-
-                for (let p of room.players) {
-                    const updatedUser = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -room.bet } }, { new: true });
-                    io.to(p.id).emit('updateBalance', updatedUser.balance);
-                }
-
-                const prize = (room.bet * 2) * 0.95;
-                io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
-            } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
-        } catch (e) { console.log(e); }
+        const room = rooms[data.code];
+        const user = await User.findOne({ phone: data.phone });
+        if (room && user && user.balance >= room.bet && room.players.length === 1) {
+            socket.join(data.code);
+            room.players.push({id: socket.id, phone: data.phone});
+            for (let p of room.players) {
+                const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -room.bet } }, { new: true });
+                io.to(p.id).emit('updateBalance', up.balance);
+            }
+            const prize = (room.bet * 2) * 0.95;
+            io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
+        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
     socket.on('win', async (data) => {
-        try {
-            if (!rooms[data.room]) return;
-            const prize = Number(data.prize);
-            const winnerPhone = data.phone;
-            delete rooms[data.room];
-
-            const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: winnerPhone, prize: prize, winnerBalance: winner.balance });
-        } catch (e) { console.log(e); }
+        if (!rooms[data.room]) return;
+        const prize = Number(data.prize);
+        delete rooms[data.room];
+        const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
+        io.to(data.room).emit('gameOver', { winner: data.phone, prize, winnerBalance: winner.balance });
     });
 
     socket.on('leaveRoom', (room) => socket.leave(room));
 });
 
-// KOREKSYON PORT POU RENDER (Fòse koute sou 0.0.0.0)
-server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Sèvè kouri sou pò ${PORT} ⚡`);
-});
+server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè kouri sou pò ${PORT} ⚡`));
