@@ -15,48 +15,63 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 const ADMIN_SECRET = "hugues";
 
+// 1. KONEKSYON BAZ DONE
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
-    .catch(err => console.log("Erè MongoDB: ", err));
+    .catch(err => console.error("Erè MongoDB: ", err));
 
-// --- MODÈL DONE ---
-const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true },
-    password: { type: String },
+// 2. MODÈL DONE (Deklaré anvan wout yo)
+const UserSchema = new mongoose.Schema({
+    phone: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
     balance: { type: Number, default: 0 },
     referralCount: { type: Number, default: 0 }
-}));
+});
+const User = mongoose.model('User', UserSchema);
 
-const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
+const WithdrawSchema = new mongoose.Schema({
     phone: String,
     amount: Number,
     date: { type: Date, default: Date.now },
     status: { type: String, default: 'pending' }
-}));
+});
+const Withdraw = mongoose.model('Withdraw', WithdrawSchema);
 
+// 3. MIDDLEWARES
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 4. WOUT API (ROUTES)
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// --- LOGIN + SEKIRITE ---
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
+        if (!phone || !password) return res.json({ success: false, msg: "Ranpli tout bwat yo!" });
+
         const cleanPhone = phone.trim().replace(/\s+/g, ''); 
-        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) return res.json({ success: false, msg: "Nimewo Ayiti 8 chif sèlman!" });
+        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) {
+            return res.json({ success: false, msg: "Nimewo Ayiti 8 chif sèlman (3, 4, 5)!" });
+        }
 
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            if (ref && ref !== cleanPhone) {
+                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } }).catch(e => console.log("Ref Err:", e));
+            }
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
             return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
-        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
+        }
+
+        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         res.json({ success: true, user });
-    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
+
+    } catch (e) { 
+        console.error("Erè nan Login:", e);
+        res.json({ success: false, msg: "Erè Sèvè: " + e.message }); 
+    }
 });
 
-// --- RETRÈ ---
 app.post('/withdraw', async (req, res) => {
     try {
         const { phone, amount } = req.body;
@@ -66,7 +81,7 @@ app.post('/withdraw', async (req, res) => {
             await Withdraw.create({ phone, amount });
             res.json({ success: true, msg: "Demann voye!" });
         } else res.json({ success: false, msg: "Balans ou piti (Min 100G)." });
-    } catch (e) { res.json({ success: false, msg: "Erè" }); }
+    } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
 });
 
 // --- ADMIN ---
@@ -82,7 +97,7 @@ app.get('/admin/withdraws', async (req, res) => {
     res.json(await Withdraw.find({ status: 'pending' }));
 });
 
-// --- SOCKET.IO ---
+// 5. SOCKET.IO (MATCHMAKING & GAME)
 let rooms = {};
 let waitingPlayers = {}; 
 
@@ -98,7 +113,7 @@ io.on('connection', (socket) => {
             const code = `auto_${Date.now()}`;
             rooms[code] = { host: opponent.phone, bet, players: [{id: opponent.id, phone: opponent.phone}, {id: socket.id, phone: data.phone}] };
             socket.join(code);
-            if(io.sockets.sockets.get(opponent.id)) io.sockets.sockets.get(opponent.id).join(code);
+            if (io.sockets.sockets.get(opponent.id)) io.sockets.sockets.get(opponent.id).join(code);
 
             for (let p of rooms[code].players) {
                 const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -bet } }, { new: true });
@@ -128,7 +143,7 @@ io.on('connection', (socket) => {
                 io.to(p.id).emit('updateBalance', up.balance);
             }
             io.to(data.code).emit('gameStart', { room: data.code, prize: (room.bet * 2) * 0.95, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon!");
+        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
@@ -152,10 +167,10 @@ io.on('connection', (socket) => {
                     if (opponent) {
                         const winner = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
                         io.to(opponent.id).emit('updateBalance', winner.balance);
-                        io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Abandone!" });
+                        io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Adversè a abandone!" });
                     }
                 } else if (reason !== "client namespace disconnect") {
-                    await User.findOneAndUpdate({ phone: room.players[0].phone }, { $inc: { balance: room.bet } });
+                     await User.findOneAndUpdate({ phone: room.players[0].phone }, { $inc: { balance: room.bet } });
                 }
                 delete rooms[code]; break;
             }
@@ -164,4 +179,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Blitz Sèvè ⚡`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Blitz Sèvè Estab sou pò ${PORT} ⚡`));
