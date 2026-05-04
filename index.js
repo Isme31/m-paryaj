@@ -34,7 +34,22 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 }));
 
 app.use(express.json());
+// Sa ap fè tout CSS ak JS nan dossier public la mache
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- DE TI ROUTE OU TE MANKE YO ---
+
+// 1. Voye moun sou paj jwèt la lè yo louvri sit la
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 2. Paj Admin lan (eg: ://sit-ou.com)
+app.get('/admin-panel', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// --- FIN ROUTE YO ---
 
 app.post('/login', async (req, res) => {
     try {
