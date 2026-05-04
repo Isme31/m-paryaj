@@ -1,32 +1,54 @@
 <!DOCTYPE html>
-<html>
-<head><title>Admin Panel</title></head>
-<body style="font-family:sans-serif; padding:20px; background:#eee;">
-    <h2>Admin Blitz ⚡</h2>
-    <input type="password" id="key" placeholder="Kle Sekrè">
-    <hr>
-    <h3>Ajoute Balans</h3>
-    <input type="text" id="p" placeholder="Telefòn Jwè">
-    <input type="number" id="a" placeholder="Montan">
-    <button onclick="up()">RECHAJE ✅</button>
-    <hr>
-    <h3>Retrè an Atant (5% deja dekonpte)</h3>
-    <button onclick="getW()">LIS RETRÈ 🔄</button>
-    <div id="list"></div>
+<html lang="ht">
+<head>
+    <meta charset="UTF-8">
+    <title>PANÈL ADMIN ⚡</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-update { background: #1b5e20; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        input { padding: 8px; width: 80px; border: 1px solid #ccc; border-radius: 5px; }
+        h1 { color: #1b5e20; border-bottom: 2px solid #1b5e20; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>ADMINISTRASYON BLITZ ⚡</h1>
+    <div id="users-list">Chaje itilizatè yo...</div>
+
     <script>
-        async function up() {
-            const res = await fetch('/admin/update-balance', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: document.getElementById('p').value, amount: document.getElementById('a').value, secret: document.getElementById('key').value }) });
-            const d = await res.json(); alert(d.success ? "Rechaj fèt!" : "Erè!");
-        }
-        async function getW() {
-            const res = await fetch(`/admin/withdraws?secret=${document.getElementById('key').value}`);
-            const data = await res.json();
-            const div = document.getElementById('list'); div.innerHTML = "";
-            data.forEach(w => { div.innerHTML += `<p>${w.phone}: <b>${w.amount}G</b> <button onclick="conf('${w._id}')">Konfime ✅</button></p>`; });
-        }
-        async function conf(id) {
-            await fetch('/admin/confirm-withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, secret: document.getElementById('key').value }) });
-            getW();
+        const socket = io();
+
+        // Mande lis la depi paj la louvri
+        socket.emit('get-all-users');
+
+        socket.on('admin-users-list', (users) => {
+            const container = document.getElementById('users-list');
+            container.innerHTML = '';
+
+            for (let phone in users) {
+                const user = users[phone];
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `
+                    <div>
+                        <strong>Nimewo:</strong> ${user.phone} <br>
+                        <strong>Balans:</strong> <span id="bal-${user.phone}">${user.bal}</span> HTG
+                    </div>
+                    <div>
+                        <input type="number" id="input-${user.phone}" placeholder="Nouvo Bal">
+                        <button class="btn-update" onclick="updateBal('${user.phone}')">OK</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        });
+
+        function updateBal(phone) {
+            const newBal = document.getElementById(`input-${phone}`).value;
+            if (newBal !== "") {
+                socket.emit('update-balance', { phone, newBal });
+            }
         }
     </script>
 </body>
