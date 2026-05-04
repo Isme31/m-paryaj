@@ -1,111 +1,132 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { cors: { origin: "*" } });
 
-const ADMIN_SECRET = "MOPYON2024";
-const PORT = process.env.PORT || 3000;
+// Sèvi fichye yo (asire w index.html nan menm katab la)
+app.use(express.static(__dirname));
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority")
-    .then(() => console.log("MongoDB Konekte ✅"));
-
-const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true },
-    password: String,
-    balance: { type: Number, default: 50 }, // 50G Kado
-    referralCount: { type: Number, default: 0 }
-}));
-
-const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({ phone: String, amount: Number, fee: Number, status: { type: String, default: 'Pending' } }));
-
-// ROUTES
-app.post('/login', async (req, res) => {
-    const { phone, password, ref } = req.body;
-    const cleanPhone = phone.trim();
-    let user = await User.findOne({ phone: cleanPhone });
-    if (!user) {
-        if (ref) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-        user = await User.create({ phone: cleanPhone, password, balance: 50 });
-    }
-    res.json({ success: true, phone: user.phone, balance: user.balance });
-});
-
-app.post('/request-withdraw', async (req, res) => {
-    const { phone, amount } = req.body;
-    const amt = Number(amount);
-    if (amt < 100) return res.json({ success: false, msg: "Minimòm 100G" });
-    const user = await User.findOne({ phone });
-    if (user && user.balance >= amt) {
-        const fee = amt * 0.05; // 5% Admin
-        await User.updateOne({ phone }, { $inc: { balance: -amt } });
-        await Withdraw.create({ phone, amount: amt - fee, fee });
-        res.json({ success: true, newBalance: user.balance - amt });
-    } else res.json({ success: false, msg: "Balans piti" });
-});
-
-// GAME LOGIC
-let rooms = {};
-let activeGames = {};
+// --- DATA ---
+let chanmPrive = {}; 
 
 io.on('connection', (socket) => {
-    socket.on('createRoom', async (data) => {
-        const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans piti");
-        const code = (data.type === 'domino' ? 'DOM-' : 'MOP-') + Math.floor(1000 + Math.random() * 9000);
-        rooms[code] = { host: data.phone, bet: Number(data.bet), type: data.type };
-        socket.join(code);
-        socket.emit('roomCreated', { code, bet: data.bet });
+    console.log(`Itilizatè konekte: ${socket.id}`);
+
+    // 1. LOGIN
+    socket.on('login', (data) => {
+        // simulation yon koneksyon reyisi
+        socket.emit('login-success', { 
+            phone: data.phone, 
+            balance: "250" 
+        });
     });
 
-    socket.on('joinRoom', async (data) => {
-        const room = rooms[data.code];
-        const user = await User.findOne({ phone: data.phone });
-        if (room && user && user.balance >= room.bet) {
-            await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
-            await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
-            const prize = (room.bet * 2) * 0.95; // 5% Admin
+    // 2. KREYE MATCH PRIVE (MOPYON)
+    socket.on('create-room', (data) => {
+        const kod = Math.random().toString(36).substring(2, 7).toUpperCase();
+        socket.join(kod);
+        
+        chanmPrive[kod] = {
+            players: [socket.id],
+            bet: data.bet,
+            board: Array(225).fill(null), // 15x15
+            turn: socket.id,
+            status: 'waiting'
+        };
+
+        socket.emit('room-created', kod);
+    });
+
+    // 3. ANTRE NAN MATCH
+    socket.on('join-room', (kod) => {
+        const r = chanmPrive[kod];
+        
+        if (r && r.players.length === 1) {
+            socket.join(kod);
+            r.players.push(socket.id);
+            r.status = 'playing';
+
+            // Notifye tou de jwè yo
+            io.to(kod).emit('match-found', {
+                room: kod,
+                bet: r.bet,
+                startTurn: r.turn
+            });
+        } else {
+            socket.emit('error-msg', 'Kòd sa pa valid oswa match la plen');
+        }
+    });
+
+    // 4. JERE MOUVMAN SOU TABLO A
+    socket.on('make-move', (data) => {
+        const r = chanmPrive[data.room];
+        
+        // Tcheke si se tou pa l epi kare a vid
+        if (r && r.turn === socket.id && r.board[data.index] === null) {
+            r.board[data.index] = socket.id;
             
-            if (room.type === 'domino') {
-                let deck = []; for(let i=0; i<=6; i++) for(let j=i; j<=6; j++) deck.push([i,j]);
-                deck.sort(() => Math.random() - 0.5);
-                const h1 = deck.slice(0, 7), h2 = deck.slice(7, 14);
-                
-                const getMaxD = (hand) => {
-                    let doubles = hand.filter(d => d[0] === d[1]).map(d => d[0]);
-                    return doubles.length > 0 ? Math.max(...doubles) : -1;
-                };
+            // Chwazi senbòl la (X pou kreyatè a, O pou dezyèm nan)
+            const symbol = (socket.id === r.players[0]) ? 'X' : 'O';
+            
+            // Chanje tou a
+            r.turn = r.players.find(id => id !== socket.id);
 
-                const d1 = getMaxD(h1), d2 = getMaxD(h2);
-                const first = d1 > d2 ? room.host : data.phone;
+            // Voye mouvman an bay tout moun nan room nan
+            io.to(data.room).emit('update-board', {
+                index: data.index,
+                symbol: symbol,
+                nextTurn: r.turn
+            });
 
-                activeGames[data.code] = { prize, players: [room.host, data.phone] };
-                io.to(data.code).emit('gameStart', { type:'domino', room:data.code, hands:{[room.host]:h1, [data.phone]:h2}, prize, firstTurn:first });
-            } else {
-                activeGames[data.code] = { prize, players: [room.host, data.phone] };
-                io.to(data.code).emit('gameStart', { type:'mopyon', room:data.code, prize, firstTurn:room.host });
+            // Tcheke si jwè a genyen
+            if (checkWin(r.board, data.index, socket.id)) {
+                io.to(data.room).emit('game-over', { winner: socket.id });
+                delete chanmPrive[data.room];
             }
-            delete rooms[data.code];
-        } else socket.emit('errorMsg', "Kòd erè!");
+        }
     });
 
-    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-    
-    socket.on('win', async (data) => {
-        const game = activeGames[data.room];
-        if (game) {
-            delete activeGames[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, prize: game.prize.toFixed(2), newBalance: winner.balance });
+    // 5. DEKONEKSYON
+    socket.on('disconnect', () => {
+        for (let kod in chanmPrive) {
+            if (chanmPrive[kod].players.includes(socket.id)) {
+                io.to(kod).emit('player-left');
+                delete chanmPrive[kod];
+            }
         }
     });
 });
 
-server.listen(PORT, () => console.log("Sèvè LIVE 🚀"));
+// LOJIK POU TCHEKE 5 NAN LIY (15x15)
+function checkWin(board, index, player) {
+    const size = 15;
+    const r = Math.floor(index / size);
+    const c = index % size;
+    const directions = [[0,1], [1,0], [1,1], [1,-1]]; // orizontal, vètikal, dyagonal
+
+    for (let [dr, dc] of directions) {
+        let count = 1;
+        // Tcheke yon bò
+        for (let i = 1; i < 5; i++) {
+            let nr = r + dr * i, nc = c + dc * i;
+            if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr * size + nc] === player) count++;
+            else break;
+        }
+        // Tcheke lòt bò a
+        for (let i = 1; i < 5; i++) {
+            let nr = r - dr * i, nc = c - dc * i;
+            if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr * size + nc] === player) count++;
+            else break;
+        }
+        if (count >= 5) return true;
+    }
+    return false;
+}
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`BLITZ ⚡ Sèvè ap kouri sou http://localhost:${PORT}`);
+});
