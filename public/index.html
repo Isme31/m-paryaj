@@ -105,46 +105,26 @@
 
     <script>
         const socket = io();
-        let myPhone = "";
-        let isMyTurn = false;
-        let mySymbol = "";
-        let currentRoom = "";
-        let currentPrize = 0;
+        let myPhone = "", isMyTurn = false, mySymbol = "", currentRoom = "", currentPrize = 0;
         let boardState = Array(225).fill(null);
 
-        function showS(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
+        function showS(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 
         async function login() {
-            const phone = document.getElementById('phone').value;
-            const password = document.getElementById('pass').value;
-            const res = await fetch('/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone, password })
-            });
+            const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.user.phone;
-                localStorage.setItem('mopyon_phone', myPhone);
+                myPhone = data.user.phone; localStorage.setItem('mopyon_phone', myPhone);
                 document.getElementById('u-bal').innerText = data.user.balance + " HTG";
-                document.getElementById('user-header').classList.remove('hidden');
-                showS('menu-s');
-            } else { alert(data.msg); }
+                document.getElementById('user-header').classList.remove('hidden'); showS('menu-s');
+            } else alert(data.msg);
         }
 
         async function sendWithdraw() {
             const amount = document.getElementById('w-amt').value;
-            const res = await fetch('/withdraw', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: myPhone, amount: Number(amount) })
-            });
-            const data = await res.json();
-            alert(data.msg);
-            if(data.success) location.reload();
+            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, amount: Number(amount) }) });
+            const data = await res.json(); alert(data.msg); if(data.success) location.reload();
         }
 
         function startAutoMatch() { socket.emit('startMatchmaking', { phone: myPhone, bet: document.getElementById('bet').value }); }
@@ -152,59 +132,39 @@
         function joinRoom() { socket.emit('joinRoom', { phone: myPhone, code: document.getElementById('join-c').value }); }
 
         socket.on('roomCreated', data => alert("Kòd: " + data.code));
-        
         socket.on('gameStart', data => {
-            currentRoom = data.room;
-            currentPrize = data.prize;
-            mySymbol = (data.turn === myPhone) ? 'X' : 'O';
-            isMyTurn = (data.turn === myPhone);
-            boardState.fill(null);
-            createBoard();
+            currentRoom = data.room; currentPrize = data.prize;
+            mySymbol = (data.turn === myPhone) ? 'X' : 'O'; isMyTurn = (data.turn === myPhone);
+            boardState.fill(null); createBoard();
             document.getElementById('prize-display').innerText = "Pri: " + currentPrize + " HTG";
-            showS('game-s');
-            updateTurnText();
+            showS('game-s'); updateTurnText();
         });
 
         function createBoard() {
-            const b = document.getElementById('board');
-            b.innerHTML = "";
+            const b = document.getElementById('board'); b.innerHTML = "";
             for(let i=0; i<225; i++) {
-                const c = document.createElement('div');
-                c.className = "cell";
-                c.onclick = () => makeMove(i);
-                b.appendChild(c);
+                const c = document.createElement('div'); c.className = "cell";
+                c.onclick = () => makeMove(i); b.appendChild(c);
             }
         }
 
         function makeMove(idx) {
             if(!isMyTurn || boardState[idx]) return;
-            
-            boardState[idx] = mySymbol;
-            const cells = document.querySelectorAll('.cell');
-            cells[idx].innerText = mySymbol;
-            cells[idx].classList.add(mySymbol.toLowerCase());
-            
-            isMyTurn = false;
-            updateTurnText();
+            boardState[idx] = mySymbol; const cells = document.querySelectorAll('.cell');
+            cells[idx].innerText = mySymbol; cells[idx].classList.add(mySymbol.toLowerCase());
+            isMyTurn = false; updateTurnText();
             socket.emit('move', { room: currentRoom, index: idx, symbol: mySymbol });
-
-            if(checkWin(idx, mySymbol)) {
-                socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
-            }
+            if(checkWin(idx, mySymbol)) socket.emit('win', { room: currentRoom, phone: myPhone, prize: currentPrize });
         }
 
         socket.on('opponentMove', data => {
-            boardState[data.index] = data.symbol;
-            const cells = document.querySelectorAll('.cell');
-            cells[data.index].innerText = data.symbol;
-            cells[data.index].classList.add(data.symbol.toLowerCase());
-            isMyTurn = true;
-            updateTurnText();
+            boardState[data.index] = data.symbol; const cells = document.querySelectorAll('.cell');
+            cells[data.index].innerText = data.symbol; cells[data.index].classList.add(data.symbol.toLowerCase());
+            isMyTurn = true; updateTurnText();
         });
 
         function checkWin(idx, sym) {
-            const size = 15;
-            const r = Math.floor(idx / size), c = idx % size;
+            const size = 15, r = Math.floor(idx / size), c = idx % size;
             const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for(let [dr, dc] of dirs) {
                 let count = 1;
@@ -221,15 +181,8 @@
             return false;
         }
 
-        socket.on('gameOver', data => {
-            alert(data.winner === myPhone ? "OU GENYEN " + data.prize + " HTG! 🏆" : "OU PÈDI! ❌");
-            location.reload();
-        });
-
-        function updateTurnText() {
-            document.getElementById('turn-info').innerText = isMyTurn ? "WOU KI POU JWE! ("+mySymbol+")" : "ATANN LÒT LA...";
-        }
-
+        socket.on('gameOver', data => { alert(data.winner === myPhone ? "OU GENYEN!" : "OU PÈDI!"); location.reload(); });
+        function updateTurnText() { document.getElementById('turn-info').innerText = isMyTurn ? "WOU KI POU JWE! ("+mySymbol+")" : "ATANN LÒT LA..."; }
         socket.on('updateBalance', bal => document.getElementById('u-bal').innerText = bal + " HTG");
         socket.on('errorMsg', msg => alert(msg));
     </script>
