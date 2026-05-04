@@ -9,14 +9,20 @@
     <style>
         :root { --primary: #1b5e20; --accent: #2e7d32; --bg: #f4f7f6; --white: #ffffff; }
         body { background: var(--bg); color: #333; font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 80px; }
-        .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .hidden { display: none !important; }
         .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .banner-info { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .game-card { background: var(--white); border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); position: relative; }
+        .game-card img { width: 100%; height: 120px; object-fit: cover; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
         input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 92%; margin-bottom: 10px; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: auto; }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); border-radius: 8px; overflow: hidden; }
+        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -30,106 +36,104 @@
     <!-- LOGIN -->
     <div id="auth-s" class="screen">
         <div class="card-ui" style="text-align:center; margin-top:40px;">
-            <h2>Byenveni 👋</h2>
+            <h1>Byenveni 👋</h1>
+            <p style="color:var(--accent); font-weight:bold; font-style:italic;">" Jwe, Genyen, Touche "</p>
             <input type="text" id="phone" placeholder="Nimewo Telefòn">
             <input type="password" id="pass" placeholder="Modpas">
             <button class="btn" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- MENU -->
+    <!-- MENU PWENSIPAL -->
     <div id="menu-s" class="screen hidden">
-        <div class="card-ui" style="background: linear-gradient(135deg, var(--primary), var(--accent)); color:white;">
-            <h3>MOPYON BLITZ ⚡</h3>
-            <p style="font-size:12px;">Sèvis: 55110103 | 31594645</p>
+        <div class="banner-info">
+            <h2 style="margin:0">MOPYON BLITZ ⚡</h2>
+            <p style="font-size: 11px;">Sèvis: 55110103 | 31594645</p>
         </div>
 
-        <div id="mopyon-opts" class="card-ui">
-            <input type="number" id="bet" value="50">
-            
-            <button class="btn" style="background:#1976d2;" onclick="startAutoMatch()">JWENN ADVÈSÈ (AUTO)</button>
-            <button class="btn" style="background:#444;" onclick="createRoom()">KREYE KÒD PRIVÉ</button>
-            
-            <div id="room-info" class="hidden" style="text-align:center; margin-top:10px;">
-                <p>Kòd Match ou: <b id="c-val" style="font-size:20px; color:green;"></b></p>
-            </div>
+        <div class="card-ui" style="display:flex; gap:10px;">
+            <button class="btn" style="background:#25d366; margin:0;" onclick="window.open('https://whatsapp.com')">Gwoup</button>
+            <button class="btn" style="background:#ffa502; margin:0;" onclick="showS('withdraw-s')">Retrè</button>
+        </div>
 
+        <div class="game-grid">
+            <div class="game-card" onclick="document.getElementById('mopyon-opts').classList.toggle('hidden')">
+                <img src="https://unsplash.com" alt="Mopyon">
+                <h4 style="text-align:center;">MOPYON</h4>
+            </div>
+            <div class="game-card" style="opacity:0.6;" onclick="alert('Byento!')">
+                <img src="https://unsplash.com" alt="Domino">
+                <h4 style="text-align:center;">DOMINO</h4>
+            </div>
+        </div>
+
+        <div id="mopyon-opts" class="hidden card-ui" style="margin-top:20px;">
+            <input type="number" id="bet" value="50">
+            <!-- BOUTON MATCHMAKING AUTO -->
+            <button class="btn" style="background:#1976d2;" onclick="startAutoMatch()">JWENN MATCH (AUTO)</button>
             <hr>
-            <input type="text" id="join-c" placeholder="Antre Kòd zanmi w">
-            <button class="btn" style="background:#ffa502;" onclick="joinRoom()">ANTRE NAN MATCH</button>
+            <button class="btn" style="background:#444" onclick="createRoom()">KREYE KÒD PRIVÉ</button>
+            <input type="text" id="join-c" placeholder="Kòd zanmi w" style="margin-top:10px">
+            <button class="btn" style="background:#ffa502" onclick="joinRoom()">ANTRE NAN MATCH</button>
         </div>
     </div>
 
-    <!-- MODAL WAITING AVÈK TIMER -->
-    <div id="modal-waiting" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; text-align:center;">
+    <!-- RETRÈ -->
+    <div id="withdraw-s" class="screen hidden">
+        <div class="card-ui">
+            <h3>Fè yon Retrè (Min 100G)</h3>
+            <input type="number" id="w-amt" placeholder="Montan HTG">
+            <button class="btn" onclick="sendWithdraw()">KONFIME RETRÈ</button>
+            <button class="btn" style="background:#888" onclick="showS('menu-s')">TOUNEN</button>
+        </div>
+    </div>
+
+    <!-- MODAL WAITING (30s) -->
+    <div id="modal-waiting" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
         <div class="loader" style="width:50px; height:50px;"></div>
-        <h3 style="margin-top:20px;">N ap chèche yon advèsè...</h3>
-        <p>Tan ki rete: <span id="timer-val" style="font-weight:bold; color:#ffa502;">30</span> segond</p>
-        <button class="btn" style="background:#d32f2f; width:auto; padding:10px 30px;" onclick="cancelMatch()">ANILE</button>
+        <h3>Chèche Advèsè...</h3>
+        <p>Tan: <span id="timer-val">30</span>s</p>
+        <button class="btn" style="background:red; width:auto; padding:10px 20px;" onclick="cancelMatch()">ANILE</button>
     </div>
 
     <script>
         const socket = io();
-        let myPhone = "", matchmakingTimeout, timerInterval;
+        let myPhone = "", timerInterval;
 
-        function showS(id) { 
-            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); 
-            document.getElementById(id).classList.remove('hidden'); 
-        }
+        function showS(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
 
         async function login() {
             const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
             const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
             const data = await res.json();
             if(data.success) {
-                myPhone = data.user.phone;
-                document.getElementById('u-bal').innerText = data.user.balance + " HTG";
-                document.getElementById('user-header').classList.remove('hidden');
-                showS('menu-s');
+                myPhone = data.user.phone; document.getElementById('u-bal').innerText = data.user.balance + " HTG";
+                document.getElementById('user-header').classList.remove('hidden'); showS('menu-s');
             } else alert(data.msg);
+        }
+
+        async function sendWithdraw() {
+            const amount = document.getElementById('w-amt').value;
+            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: myPhone, amount: Number(amount) }) });
+            const data = await res.json(); alert(data.msg); if(data.success) location.reload();
         }
 
         function startAutoMatch() {
             const bet = document.getElementById('bet').value;
             document.getElementById('modal-waiting').classList.remove('hidden');
             socket.emit('startMatchmaking', { phone: myPhone, bet: bet });
-
-            // TIMER 30 SEGOND
-            let timeLeft = 30;
-            document.getElementById('timer-val').innerText = timeLeft;
-            
-            clearInterval(timerInterval);
+            let sec = 30;
             timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer-val').innerText = timeLeft;
-                if(timeLeft <= 0) {
-                    cancelMatch();
-                    alert("Pa gen moun ki disponib kounye a. Eseye ankò!");
-                }
+                sec--; document.getElementById('timer-val').innerText = sec;
+                if(sec <= 0) { cancelMatch(); alert("Pa gen moun disponib!"); }
             }, 1000);
         }
 
-        function cancelMatch() {
-            clearInterval(timerInterval);
-            socket.emit('cancelMatchmaking', document.getElementById('bet').value);
-            document.getElementById('modal-waiting').classList.add('hidden');
-        }
-
+        function cancelMatch() { clearInterval(timerInterval); socket.emit('cancelMatchmaking', document.getElementById('bet').value); document.getElementById('modal-waiting').classList.add('hidden'); }
         function createRoom() { socket.emit('createRoom', { phone: myPhone, bet: document.getElementById('bet').value }); }
         function joinRoom() { socket.emit('joinRoom', { phone: myPhone, code: document.getElementById('join-c').value }); }
 
-        socket.on('roomCreated', data => {
-            document.getElementById('c-val').innerText = data.code;
-            document.getElementById('room-info').classList.remove('hidden');
-        });
-
-        socket.on('gameStart', data => {
-            clearInterval(timerInterval);
-            document.getElementById('modal-waiting').classList.add('hidden');
-            alert("Match kòmanse! Pri: " + data.prize + " HTG");
-            // Lojik pou ouvri tablo a isit la...
-        });
-
+        socket.on('gameStart', data => { clearInterval(timerInterval); document.getElementById('modal-waiting').classList.add('hidden'); alert("Match kòmanse! Pri: " + data.prize + "G"); });
         socket.on('updateBalance', bal => { document.getElementById('u-bal').innerText = bal + " HTG"; });
         socket.on('errorMsg', msg => { cancelMatch(); alert(msg); });
     </script>
