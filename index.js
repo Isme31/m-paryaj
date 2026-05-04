@@ -17,11 +17,11 @@ const ADMIN_SECRET = "hugues";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
-    .catch(err => console.log("Erè MongoDB: ", err));
+    .catch(err => console.error("Erè MongoDB: ", err));
 
 const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true },
-    password: { type: String },
+    phone: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
     balance: { type: Number, default: 0 },
     referralCount: { type: Number, default: 0 }
 }));
@@ -36,28 +36,31 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
-        const cleanPhone = phone.trim().replace(/\s+/g, '');
-        const haitiRegex = /^[3-5][0-9]{7}$/;
+        if (!phone || !password) return res.status(400).json({ success: false, msg: "Ranpli tout bwat yo!" });
 
-        if (!haitiRegex.test(cleanPhone)) {
-            return res.json({ success: false, msg: "Nimewo Ayiti 8 chif sèlman!" });
+        const cleanPhone = phone.trim().replace(/\s+/g, '');
+        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) {
+            return res.json({ success: false, msg: "Nimewo 8 chif sèlman (Eg: 31223344)!" });
         }
 
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            if (ref && ref !== cleanPhone) {
+                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } }).catch(e => console.log("Ref Error"));
+            }
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
             return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
-        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
-        res.json({ success: true, user });
-    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
+        }
+
+        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+        return res.json({ success: true, user });
+
+    } catch (e) {
+        return res.status(500).json({ success: false, msg: "Erè Sèvè." });
+    }
 });
 
 app.post('/withdraw', async (req, res) => {
@@ -68,22 +71,11 @@ app.post('/withdraw', async (req, res) => {
             await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
             await Withdraw.create({ phone, amount });
             res.json({ success: true, msg: "Demann voye!" });
-        } else res.json({ success: false, msg: "Balans ou piti (Min 100G)." });
-    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
+        } else res.json({ success: false, msg: "Balans ou piti oswa montan an ba!" });
+    } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
 });
 
-app.post('/admin/update-balance', async (req, res) => {
-    const { phone, amount, secret } = req.body;
-    if (secret !== ADMIN_SECRET) return res.json({ success: false });
-    const user = await User.findOneAndUpdate({ phone }, { $inc: { balance: Number(amount) } }, { new: true });
-    res.json({ success: !!user });
-});
-
-app.get('/admin/withdraws', async (req, res) => {
-    if (req.query.secret !== ADMIN_SECRET) return res.json([]);
-    res.json(await Withdraw.find({ status: 'pending' }));
-});
-
+// SOCKET.IO LOGIC
 let rooms = {};
 let waitingPlayers = {}; 
 
@@ -99,16 +91,14 @@ io.on('connection', (socket) => {
             const code = `auto_${Date.now()}`;
             rooms[code] = { host: opponent.phone, bet, players: [{id: opponent.id, phone: opponent.phone}, {id: socket.id, phone: data.phone}] };
             socket.join(code);
-            if(io.sockets.sockets.get(opponent.id)) io.sockets.sockets.get(opponent.id).join(code);
+            if (io.sockets.sockets.get(opponent.id)) io.sockets.sockets.get(opponent.id).join(code);
 
             for (let p of rooms[code].players) {
                 const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -bet } }, { new: true });
                 io.to(p.id).emit('updateBalance', up.balance);
             }
-            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opponent.phone, bet });
-        } else {
-            waitingPlayers[bet] = { id: socket.id, phone: data.phone };
-        }
+            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opponent.phone, symbol: 'X' });
+        } else waitingPlayers[bet] = { id: socket.id, phone: data.phone };
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
@@ -118,26 +108,8 @@ io.on('connection', (socket) => {
         const prize = Number(data.prize);
         delete rooms[data.room];
         const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
-        io.to(data.room).emit('gameOver', { winner: data.phone, prize, winnerBalance: winner.balance });
-    });
-
-    socket.on('disconnect', async (reason) => {
-        for (let code in rooms) {
-            const room = rooms[code];
-            const playerInRoom = room.players.find(p => p.id === socket.id);
-            if (playerInRoom) {
-                const opponent = room.players.find(p => p.id !== socket.id);
-                if (room.players.length === 2 && opponent) {
-                    const prize = (room.bet * 2) * 0.95;
-                    const win = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
-                    io.to(opponent.id).emit('updateBalance', win.balance);
-                    io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Abandone!" });
-                }
-                delete rooms[code]; break;
-            }
-        }
-        for (let bet in waitingPlayers) if (waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
+        io.to(data.room).emit('gameOver', { winner: data.phone, prize });
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè aktif ⚡`));
+server.listen(PORT, () => console.log(`Blitz ap kouri sou ${PORT} ⚡`));
