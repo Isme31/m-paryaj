@@ -1,71 +1,76 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
-// --- DATA ---
-let keuPublik = []; // Pou matchmaking nòmal
-let chanmPrive = {}; // Pou jwe ak kòd
+app.use(express.static(__dirname + '/public')); // Sipoze HTML ou nan folder 'public'
+
+// --- DATA JWÈT ---
+let chanmPrive = {}; // Pou sere match ki kreye ak kòd
 
 io.on('connection', (socket) => {
-    console.log(`Konekte: ${socket.id}`);
+    console.log(`Nouvo koneksyon: ${socket.id}`);
 
-    // OPTION 1: Matchmaking Nòmal (ak nivo si w vle)
-    socket.on('join-matchmaking', (data) => {
-        const nivo = data?.nivo || 0;
-        const nouvoJwe = { socket, nivo };
-
-        // Chache yon moun ki gen menm nivo (diff mwens pase 5)
-        const adversaireIndex = keuPublik.findIndex(j => Math.abs(j.nivo - nivo) <= 5);
-
-        if (adversaireIndex !== -1) {
-            const adversaire = keuPublik.splice(adversaireIndex, 1)[0];
-            const roomName = `match_${socket.id}_${adversaire.socket.id}`;
-
-            socket.join(roomName);
-            adversaire.socket.join(roomName);
-
-            io.to(roomName).emit('match-found', { room: roomName, nivoAdversaire: adversaire.nivo });
-            console.log(`Match piblik kreye: ${roomName}`);
-        } else {
-            keuPublik.push(nouvoJwe);
-            socket.emit('waiting', 'N ap chache yon moun pou ou...');
-        }
-    });
-
-    // OPTION 2: Kreye yon match prive (Kòd)
-    socket.on('create-private', (kod) => {
+    // 1. KREYE MATCH (Lè jwè a klike sou "KREYE KÒD MATCH")
+    socket.on('create-room', (data) => {
+        const kod = Math.random().toString(36).substring(2, 7).toUpperCase(); // Jenere kòd 5 lèt
         socket.join(kod);
-        chanmPrive[kod] = socket.id;
+        
+        chanmPrive[kod] = {
+            createur: socket.id,
+            bet: data.bet,
+            status: 'waiting'
+        };
+
         socket.emit('room-created', kod);
+        console.log(`Match kreye: ${kod} ak bet: ${data.bet} HTG`);
     });
 
-    // OPTION 3: Antre nan yon match prive ak kòd
-    socket.on('join-private', (kod) => {
+    // 2. ANTRE NAN MATCH (Lè zanmi an mete kòd la)
+    socket.on('join-room', (kod) => {
         const room = io.sockets.adapter.rooms.get(kod);
-        if (room && room.size === 1) {
+        
+        if (room && room.size === 1 && chanmPrive[kod]) {
             socket.join(kod);
-            io.to(kod).emit('match-found', { room: kod, private: true });
-            delete chanmPrive[kod];
+            chanmPrive[kod].status = 'playing';
+            chanmPrive[kod].adversaire = socket.id;
+
+            // Notifye tou de jwè yo ke match la kòmanse
+            io.to(kod).emit('match-found', {
+                room: kod,
+                bet: chanmPrive[kod].bet,
+                turn: chanmPrive[kod].createur // Premye moun nan kòmanse
+            });
+            console.log(`Jwè ${socket.id} antre nan match ${kod}`);
         } else {
-            socket.emit('error-msg', 'Kòd sa pa bon oswa chanm nan plen');
+            socket.emit('error-msg', 'Kòd sa pa valid oswa match la fini');
         }
     });
 
-    // OPTION 4: Jere mouvman nan jwèt la
-    socket.on('send-move', (data) => {
-        // data dwe gen { room: "non_room_nan", move: ... }
-        socket.to(data.room).emit('receive-move', data.move);
+    // 3. JERE MOUVMAN (Lè yon jwè jwe sou grid la)
+    socket.on('make-move', (data) => {
+        // data dwe gen { room, cellIndex, symbol }
+        socket.to(data.room).emit('receive-move', data);
     });
 
-    // Netwaye si jwè a dekonekte
+    // 4. JERE DEKONEKSYON
     socket.on('disconnect', () => {
-        keuPublik = keuPublik.filter(j => j.socket.id !== socket.id);
+        // Netwaye chanm si yon moun pati
+        for (const kod in chanmPrive) {
+            if (chanmPrive[kod].createur === socket.id || chanmPrive[kod].adversaire === socket.id) {
+                io.to(kod).emit('player-left');
+                delete chanmPrive[kod];
+            }
+        }
         console.log(`Dekonekte: ${socket.id}`);
     });
 });
 
-server.listen(3000, () => console.log('Sèvè a sou pòt 3000'));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`BLITZ Sèvè ap kouri sou pòt ${PORT} ⚡`);
+});
