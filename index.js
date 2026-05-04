@@ -15,63 +15,70 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 const ADMIN_SECRET = "hugues";
 
-// 1. KONEKSYON BAZ DONE
+// 1. KONEKSYON MONGODB
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
     .catch(err => console.error("Erè MongoDB: ", err));
 
-// 2. MODÈL DONE (Deklaré anvan wout yo)
-const UserSchema = new mongoose.Schema({
+// 2. MODÈL DONE
+const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0 },
     referralCount: { type: Number, default: 0 }
-});
-const User = mongoose.model('User', UserSchema);
+}));
 
-const WithdrawSchema = new mongoose.Schema({
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
     phone: String,
     amount: Number,
     date: { type: Date, default: Date.now },
     status: { type: String, default: 'pending' }
-});
-const Withdraw = mongoose.model('Withdraw', WithdrawSchema);
+}));
 
 // 3. MIDDLEWARES
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 4. WOUT API (ROUTES)
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
+// 4. WOUT LOGIN (KORIJÉ)
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
-        if (!phone || !password) return res.json({ success: false, msg: "Ranpli tout bwat yo!" });
 
-        const cleanPhone = phone.trim().replace(/\s+/g, ''); 
+        if (!phone || !password) {
+            return res.status(400).json({ success: false, msg: "Ranpli tout bwat yo!" });
+        }
+
+        const cleanPhone = phone.trim().replace(/\s+/g, '');
+        // Aksepte 8 chif ki kòmanse ak 3, 4 oswa 5
         if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) {
             return res.json({ success: false, msg: "Nimewo Ayiti 8 chif sèlman (3, 4, 5)!" });
         }
 
         let user = await User.findOne({ phone: cleanPhone });
+
         if (!user) {
+            // Sistèm Referral
             if (ref && ref !== cleanPhone) {
-                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } }).catch(e => console.log("Ref Err:", e));
+                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } }).catch(e => console.log("Ref Error"));
             }
+            // Kreye kont ak 0 balans pou bloke fwod
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
             return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
         }
 
-        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
-        res.json({ success: true, user });
+        if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon!" });
+        }
 
-    } catch (e) { 
-        console.error("Erè nan Login:", e);
-        res.json({ success: false, msg: "Erè Sèvè: " + e.message }); 
+        return res.json({ success: true, user });
+
+    } catch (e) {
+        console.error("Erè Login Details:", e);
+        return res.status(500).json({ success: false, msg: "Erè Sèvè. Eseye ankò." });
     }
 });
 
+// 5. WOUT RETRÈ
 app.post('/withdraw', async (req, res) => {
     try {
         const { phone, amount } = req.body;
@@ -80,11 +87,11 @@ app.post('/withdraw', async (req, res) => {
             await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
             await Withdraw.create({ phone, amount });
             res.json({ success: true, msg: "Demann voye!" });
-        } else res.json({ success: false, msg: "Balans ou piti (Min 100G)." });
+        } else res.json({ success: false, msg: "Balans ou piti!" });
     } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
 });
 
-// --- ADMIN ---
+// --- ADMIN ROUTES ---
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.json({ success: false });
@@ -94,10 +101,11 @@ app.post('/admin/update-balance', async (req, res) => {
 
 app.get('/admin/withdraws', async (req, res) => {
     if (req.query.secret !== ADMIN_SECRET) return res.json([]);
-    res.json(await Withdraw.find({ status: 'pending' }));
+    const list = await Withdraw.find({ status: 'pending' });
+    res.json(list);
 });
 
-// 5. SOCKET.IO (MATCHMAKING & GAME)
+// 6. SOCKET.IO (MATCHMAKING AK JWÈT)
 let rooms = {};
 let waitingPlayers = {}; 
 
@@ -143,7 +151,7 @@ io.on('connection', (socket) => {
                 io.to(p.id).emit('updateBalance', up.balance);
             }
             io.to(data.code).emit('gameStart', { room: data.code, prize: (room.bet * 2) * 0.95, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
+        } else socket.emit('errorMsg', "Kòd pa bon!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
@@ -159,18 +167,14 @@ io.on('connection', (socket) => {
     socket.on('disconnect', async (reason) => {
         for (let code in rooms) {
             const room = rooms[code];
-            const playerInRoom = room.players.find(p => p.id === socket.id);
-            if (playerInRoom) {
+            const p = room.players.find(p => p.id === socket.id);
+            if (p) {
                 const opponent = room.players.find(p => p.id !== socket.id);
-                if (room.players.length === 2) {
+                if (room.players.length === 2 && opponent) {
                     const prize = (room.bet * 2) * 0.95;
-                    if (opponent) {
-                        const winner = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
-                        io.to(opponent.id).emit('updateBalance', winner.balance);
-                        io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Adversè a abandone!" });
-                    }
-                } else if (reason !== "client namespace disconnect") {
-                     await User.findOneAndUpdate({ phone: room.players[0].phone }, { $inc: { balance: room.bet } });
+                    const win = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
+                    io.to(opponent.id).emit('updateBalance', win.balance);
+                    io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Abandone!" });
                 }
                 delete rooms[code]; break;
             }
@@ -179,4 +183,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Blitz Sèvè Estab sou pò ${PORT} ⚡`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè Blitz ap kouri sou pò ${PORT} ⚡`));
