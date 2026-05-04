@@ -8,23 +8,22 @@
     <link rel="stylesheet" href="https://cloudflare.com">
     <style>
         :root { --primary: #1b5e20; --accent: #2e7d32; --bg: #f4f7f6; --white: #ffffff; }
-        body { background: var(--bg); font-family: sans-serif; margin: 0; padding-bottom: 20px; }
-        .header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        body { background: var(--bg); font-family: sans-serif; margin: 0; padding-bottom: 80px; }
+        .header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .hidden { display: none !important; }
         .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
         input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 90%; margin-bottom: 10px; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); }
-        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
-        .cell.x { color: red; font-weight: bold; } .cell.o { color: blue; font-weight: bold; }
+        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .cell.x { color: red; } .cell.o { color: blue; }
     </style>
 </head>
 <body>
-
     <div class="header">
-        <div style="font-weight:bold; color:var(--primary);">⚡ BLITZ</div>
-        <div id="user-header" class="hidden"><span id="u-bal" style="background:#e8f5e9; padding:5px 10px; border-radius:20px;">0 HTG</span></div>
+        <div style="font-weight:bold; color:var(--primary); font-size:20px;">⚡ BLITZ</div>
+        <div id="user-header" class="hidden"><span id="u-bal" style="background:#e8f5e9; padding:5px 12px; border-radius:20px; font-weight:bold;">0 HTG</span></div>
     </div>
 
     <div id="auth-s" class="screen">
@@ -42,20 +41,20 @@
     <div id="menu-s" class="screen hidden">
         <div class="card-ui" style="background:var(--primary); color:white;">
             <h3>MOPYON BLITZ ⚡</h3>
-            <p style="font-size:12px;">Sèvis: 55110103 / 31594645</p>
+            <p>Sèvis: 55110103 / 31594645</p>
         </div>
         <div class="card-ui">
             <button class="btn" style="background:#ffa502; margin-bottom:10px;" onclick="showS('withdraw-s')">RETRÈ</button>
             <input type="number" id="bet" value="50">
-            <button class="btn" onclick="startAuto()">JWENN MATCH (AUTO)</button>
-            <p style="margin-top:10px; text-align:center; opacity:0.6;">DOMINO PREMIUM (SOON)</p>
+            <button class="btn" onclick="startMatch()">JWENN MATCH (AUTO)</button>
+            <p style="text-align:center; margin-top:15px; opacity:0.6;">DOMINO PREMIUM (SOON)</p>
         </div>
     </div>
 
     <div id="withdraw-s" class="screen hidden">
         <div class="card-ui">
-            <h3>Retrè (Min 100G)</h3>
-            <input type="number" id="w-amt" placeholder="Montan">
+            <h3>Fè yon Retrè (Min 100G)</h3>
+            <input type="number" id="w-amt" placeholder="Montan HTG">
             <button class="btn" onclick="sendWithdraw()">KONFIME</button>
             <button class="btn" style="background:#888; margin-top:10px;" onclick="showS('menu-s')">TOUNEN</button>
         </div>
@@ -70,7 +69,8 @@
 
     <script>
         const socket = io();
-        let myPhone = "";
+        let myPhone = "", mySymbol = "", isMyTurn = false, currentRoom = "";
+        let boardState = Array(225).fill(null);
 
         function showS(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -92,6 +92,7 @@
                 document.getElementById('u-bal').innerText = data.user.balance + " HTG";
                 document.getElementById('user-header').classList.remove('hidden');
                 showS('menu-s');
+                if(data.msg) alert(data.msg);
             } else alert(data.msg);
         }
 
@@ -100,19 +101,59 @@
             const res = await fetch('/withdraw', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: myPhone, amount })
+                body: JSON.stringify({ phone: myPhone, amount: Number(amount) })
             });
             const data = await res.json();
             alert(data.msg);
             if(data.success) location.reload();
         }
 
-        function startAuto() {
+        function startMatch() {
             socket.emit('startMatchmaking', { phone: myPhone, bet: document.getElementById('bet').value });
             alert("Matchmaking kòmanse...");
         }
 
+        socket.on('gameStart', data => {
+            currentRoom = data.room;
+            mySymbol = (data.turn === myPhone) ? 'X' : 'O';
+            isMyTurn = (data.turn === myPhone);
+            createBoard();
+            showS('game-s');
+            updateTurnText();
+        });
+
+        function createBoard() {
+            const b = document.getElementById('board'); b.innerHTML = "";
+            for(let i=0; i<225; i++) {
+                const c = document.createElement('div'); c.className = "cell";
+                c.onclick = () => makeMove(i); b.appendChild(c);
+            }
+        }
+
+        function makeMove(idx) {
+            if(!isMyTurn || boardState[idx]) return;
+            boardState[idx] = mySymbol;
+            const cells = document.querySelectorAll('.cell');
+            cells[idx].innerText = mySymbol;
+            cells[idx].classList.add(mySymbol.toLowerCase());
+            isMyTurn = false; updateTurnText();
+            socket.emit('move', { room: currentRoom, index: idx, symbol: mySymbol });
+        }
+
+        socket.on('opponentMove', data => {
+            boardState[data.index] = data.symbol;
+            const cells = document.querySelectorAll('.cell');
+            cells[data.index].innerText = data.symbol;
+            cells[data.index].classList.add(data.symbol.toLowerCase());
+            isMyTurn = true; updateTurnText();
+        });
+
+        function updateTurnText() {
+            document.getElementById('turn-info').innerText = isMyTurn ? "WOU KI POU JWE! ("+mySymbol+")" : "ATANN LÒT LA...";
+        }
+
         socket.on('updateBalance', bal => document.getElementById('u-bal').innerText = bal + " HTG");
+        socket.on('gameOver', data => { alert(data.winner === myPhone ? "OU GENYEN!" : "OU PÈDI!"); location.reload(); });
         socket.on('errorMsg', msg => alert(msg));
     </script>
 </body>
