@@ -18,10 +18,11 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
     .catch(err => console.log("Erè MongoDB: ", err));
 
+// 1. MODÈL DONE (Balans kòmanse nan 0)
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
-    balance: { type: Number, default: 50 },
+    balance: { type: Number, default: 0 }, // Chanje nan 0
     referralCount: { type: Number, default: 0 }
 }));
 
@@ -32,19 +33,39 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// 2. WOUT LOGIN (Retire tout bonus kòb)
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
         const cleanPhone = phone.trim();
+        
         let user = await User.findOne({ phone: cleanPhone });
+        
         if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-            user = await User.create({ phone: cleanPhone, password, balance: 50 });
-        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
+            // Sistèm Referral (Konte moun sèlman, pa bay kòb)
+            if (ref && ref !== cleanPhone) {
+                await User.findOneAndUpdate(
+                    { phone: ref }, 
+                    { $inc: { referralCount: 1 } } // Sèlman ogmante kantite moun li envite
+                );
+            }
+            // Kreye nouvo kont ak 0 goud
+            user = await User.create({ 
+                phone: cleanPhone, 
+                password: password, 
+                balance: 0 
+            });
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon" });
+        }
+        
         res.json({ success: true, user });
-    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
+    } catch (e) { 
+        res.json({ success: false, msg: "Erè sèvè" }); 
+    }
 });
 
+// 3. LOGIK JWÈT (SOCKET.IO)
 let rooms = {};
 let waitingPlayers = {}; 
 
