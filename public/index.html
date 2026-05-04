@@ -8,135 +8,125 @@
     <link rel="stylesheet" href="https://cloudflare.com">
     <style>
         :root { --primary: #1b5e20; --accent: #2e7d32; --bg: #f4f7f6; --white: #ffffff; }
-        body { background: var(--bg); color: #333; font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 80px; }
-        .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        body { background: var(--bg); color: #333; font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
+        .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
+        .logo { font-weight: bold; color: var(--primary); font-size: 20px; }
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .hidden { display: none !important; }
         .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        .banner-info { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
+        .service-box { font-size: 11px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin-top: 10px; line-height: 1.5; }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .game-card { background: var(--white); border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); position: relative; cursor: pointer; }
+        .game-card img { width: 100%; height: 140px; object-fit: cover; display: block; }
+        .game-card h4 { padding: 12px; margin: 0; font-size: 13px; color: var(--primary); font-weight: bold; text-align: center; }
+        .badge { position: absolute; top: 8px; right: 8px; font-size: 9px; padding: 3px 7px; border-radius: 10px; color: white; font-weight: bold; z-index: 10; }
+        .mopyon-banner { width: 100%; height: 180px; border-radius: 15px; background: #1b5e20; margin-bottom: 15px; position: relative; border: 2px solid var(--primary); }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
         input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 92%; margin-bottom: 10px; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); }
-        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--white); display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div style="font-weight:bold; color:var(--primary);"><i class="fas fa-bolt"></i> BLITZ</div>
+        <div class="logo"><i class="fas fa-bolt"></i> BLITZ</div>
         <div id="user-header" class="hidden"><span id="u-bal" class="balance-pill">0 HTG</span></div>
     </div>
 
     <!-- LOGIN -->
     <div id="auth-s" class="screen">
-        <div class="card-ui" style="text-align:center; margin-top:50px;">
-            <h2>Byenveni 👋</h2>
-            <input type="text" id="phone" placeholder="Telefòn (8 chif)">
-            <input type="password" id="pass" placeholder="Modpas">
-            <button class="btn" onclick="login()">KONEKTE</button>
+        <div style="text-align: center; margin-top: 40px;">
+            <h1 style="color:var(--primary); margin-bottom:5px;">Byenveni 👋</h1>
+            <div style="color:var(--accent); font-weight:bold; font-style:italic; margin-bottom:20px;">" Jwe, Genyen, Touche "</div>
+            <div class="card-ui">
+                <input type="text" id="phone" placeholder="Nimewo Telefòn">
+                <input type="password" id="pass" placeholder="Modpas">
+                <button class="btn" onclick="login()">KONEKTE</button>
+            </div>
         </div>
     </div>
 
     <!-- MENU -->
     <div id="menu-s" class="screen hidden">
-        <div class="card-ui" style="background: linear-gradient(135deg, var(--primary), var(--accent)); color:white;">
-            <h3>MOPYON BLITZ ⚡</h3>
-            <p>Antre yon miz pou kòmanse</p>
+        <div class="banner-info">
+            <h2 style="margin:0">MOPYON BLITZ ⚡</h2>
+            <div class="service-box">
+                <i class="fas fa-info-circle"></i> <b>SÈVIS (Depo / Retrè / Asistans):</b><br>
+                Natcom: <b>55110103</b> | Digicel: <b>31594645</b>
+            </div>
         </div>
-        <div class="card-ui">
-            <input type="number" id="bet" value="50">
-            <button class="btn" onclick="startAutoMatch()">CHÈCHE MATCH</button>
-        </div>
-    </div>
 
-    <!-- JWÈT -->
-    <div id="game-s" class="screen hidden">
-        <div class="card-ui" style="text-align:center;">
-            <div id="turn-info" style="font-weight:bold; margin-bottom:10px;">Atann...</div>
-            <div id="prize-info" style="color:green; font-weight:bold; margin-bottom:10px;"></div>
-            <div class="grid" id="board"></div>
+        <div class="game-grid">
+            <div class="game-card" onclick="document.getElementById('mopyon-opts').classList.toggle('hidden')">
+                <span class="badge" style="background:#2ecc71">AKTIF</span>
+                <img src="https://unsplash.com">
+                <h4>MOPYON</h4>
+            </div>
+            <div class="game-card" onclick="alert('Byento!')" style="opacity: 0.8;">
+                <span class="badge" style="background:#e74c3c">SOON</span>
+                <img src="https://unsplash.com">
+                <h4>DOMINO PREMIUM</h4>
+            </div>
+        </div>
+
+        <div id="mopyon-opts" class="hidden card-ui" style="margin-top:20px;">
+            <input type="number" id="bet" value="50">
+            <button class="btn" onclick="startMatchmaking()">JWENN MATCH (AUTO)</button>
+            <hr>
+            <button class="btn" style="background:#444" onclick="createRoom()">KREYE KÒD PRIVÉ</button>
+            <input type="text" id="join-c" placeholder="Kòd zanmi w">
+            <button class="btn" style="background:#ffa502" onclick="joinRoom()">ANTRE NAN MATCH</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let myPhone = "", mySymbol = "", isMyTurn = false, currentRoom = "", currentPrize = 0;
+        let myPhone = "";
 
-        function showS(id) { 
-            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); 
-            document.getElementById(id).classList.remove('hidden'); 
+        function showS(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
         }
 
         async function login() {
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('pass').value;
-            const res = await fetch('/login', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ phone, password }) 
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, password })
             });
             const data = await res.json();
-            if(data.success) {
+            if (data.success) {
                 myPhone = data.user.phone;
                 document.getElementById('u-bal').innerText = data.user.balance + " HTG";
                 document.getElementById('user-header').classList.remove('hidden');
                 showS('menu-s');
-            } else alert(data.msg);
-        }
-
-        function startAutoMatch() {
-            socket.emit('startMatchmaking', { phone: myPhone, bet: document.getElementById('bet').value });
-        }
-
-        socket.on('gameStart', data => {
-            currentRoom = data.room;
-            currentPrize = data.prize;
-            mySymbol = (data.turn === myPhone) ? 'X' : 'O';
-            isMyTurn = (data.turn === myPhone);
-            document.getElementById('prize-info').innerText = "Pri: " + currentPrize + " HTG";
-            document.getElementById('turn-info').innerText = isMyTurn ? "VOU SE TOUPW!" : "ATANN LÒT LA...";
-            renderBoard();
-            showS('game-s');
-        });
-
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = "";
-            for(let i=0; i<225; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.onclick = () => makeMove(i);
-                board.appendChild(cell);
+            } else {
+                alert(data.msg);
             }
         }
 
-        function makeMove(i) {
-            if(!isMyTurn) return;
-            const cells = document.querySelectorAll('.cell');
-            if(cells[i].innerText !== "") return;
-            cells[i].innerText = mySymbol;
-            isMyTurn = false;
-            document.getElementById('turn-info').innerText = "ATANN LÒT LA...";
-            socket.emit('move', { room: currentRoom, index: i, symbol: mySymbol });
-            // Isit la ou ka ajoute lojik pou tcheke si moun nan genyen (5 nan liy)
+        function startMatchmaking() {
+            socket.emit('startMatchmaking', { phone: myPhone, bet: document.getElementById('bet').value });
         }
 
-        socket.on('opponentMove', data => {
-            const cells = document.querySelectorAll('.cell');
-            cells[data.index].innerText = data.symbol;
-            isMyTurn = true;
-            document.getElementById('turn-info').innerText = "VOU SE TOUPW!";
-        });
+        function createRoom() {
+            socket.emit('createRoom', { phone: myPhone, bet: document.getElementById('bet').value });
+        }
 
-        socket.on('updateBalance', bal => {
-            document.getElementById('u-bal').innerText = bal + " HTG";
-        });
+        function joinRoom() {
+            socket.emit('joinRoom', { phone: myPhone, code: document.getElementById('join-c').value });
+        }
 
-        socket.on('gameOver', data => {
-            alert("Jwèt fini! Winner: " + data.winner);
-            location.reload();
-        });
-
+        socket.on('roomCreated', data => alert("Kòd: " + data.code));
+        socket.on('updateBalance', bal => document.getElementById('u-bal').innerText = bal + " HTG");
         socket.on('errorMsg', msg => alert(msg));
     </script>
 </body>
