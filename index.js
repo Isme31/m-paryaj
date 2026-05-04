@@ -114,6 +114,43 @@ io.on('connection', (socket) => {
     });
 
     socket.on('leaveRoom', (room) => socket.leave(room));
+
+    // --- NOUVO KÒD POU DEKONEKSYON AK RANBOUSMAN ---
+    socket.on('disconnect', async (reason) => {
+        for (let code in rooms) {
+            const room = rooms[code];
+            const playerInRoom = room.players.find(p => p.id === socket.id);
+
+            if (playerInRoom) {
+                const opponent = room.players.find(p => p.id !== socket.id);
+                
+                if (room.players.length === 2) {
+                    // Si se espre li fè (client-side disconnect)
+                    if (reason === "client namespace disconnect" || reason === "server namespace disconnect") {
+                        const prize = (room.bet * 2) * 0.95;
+                        if (opponent) {
+                            const winner = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
+                            io.to(opponent.id).emit('updateBalance', winner.balance);
+                            io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Lòt la abandone, ou genyen pa fòfè!" });
+                        }
+                    } 
+                    // Si se entènèt li ki koupe (transport close, ping timeout)
+                    else {
+                        for (let p of room.players) {
+                            const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: room.bet } }, { new: true });
+                            io.to(p.id).emit('updateBalance', up.balance);
+                        }
+                        io.to(code).emit('errorMsg', "Koneksyon koupe. Nou ranbouse toulède jwè yo!");
+                    }
+                }
+                delete rooms[code];
+                break;
+            }
+        }
+        for (let bet in waitingPlayers) {
+            if (waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
+        }
+    });
 });
 
 server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè kouri sou pò ${PORT} ⚡`));
