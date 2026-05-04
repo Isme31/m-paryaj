@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 const ADMIN_SECRET = "hugues";
 
-// Connexion simple : On ne touche à rien d'autre
+// 1. KONEKSYON MONGODB (Pa gen reset balans)
 mongoose.connect(MONGO_URI).then(() => console.log("Mopyon Blitz Estab ✅"));
 
 const User = mongoose.model('User', new mongoose.Schema({
@@ -32,7 +32,9 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ROUTES EXISTANTES (CONSERVÉES)
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
+
+// 2. WOUT YO (Login, Withdraw, Admin)
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
@@ -56,7 +58,7 @@ app.post('/withdraw', async (req, res) => {
     } else res.json({ success: false, msg: "Balans ou piti!" });
 });
 
-// LOGIQUE MATCHMAKING (AJOUTÉ SANS SUPPRESSION)
+// 3. LOGIK JWÈT AK MATCHMAKING
 let rooms = {}, waitingPlayers = {};
 io.on('connection', (socket) => {
     socket.on('startMatchmaking', async (data) => {
@@ -118,4 +120,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Blitz kouri sou ${PORT} ⚡`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè kouri sou ${PORT} ⚡`));
