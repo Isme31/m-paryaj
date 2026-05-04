@@ -14,12 +14,10 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 
-// 1. KONEKSYON MONGODB
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
-    .catch(err => console.error("Erè koneksyon MongoDB: ", err));
+    .catch(err => console.error("Erè MongoDB: ", err));
 
-// 2. MODÈL DONE (Balans 0 pa defo)
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -34,63 +32,32 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 3. WOUT LOGIN AK ENSKRIPSYON (KORIJÉ)
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
-        
-        if (!phone || !password) {
-            return res.json({ success: false, msg: "Ranpli tout bwat yo!" });
-        }
-
+        if (!phone || !password) return res.json({ success: false, msg: "Ranpli tout bwat yo!" });
         const cleanPhone = phone.trim().replace(/\s+/g, '');
-        
-        // Regleman 8 chif (3, 4, 5 nan kòmansman)
-        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) {
-            return res.json({ success: false, msg: "Nimewo 8 chif sèlman (Eg: 31223344)!" });
-        }
+        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) return res.json({ success: false, msg: "Nimewo 8 chif sèlman!" });
 
         let user = await User.findOne({ phone: cleanPhone });
-        
         if (!user) {
-            console.log("Nouvo tantativ enskripsyon: ", cleanPhone);
-            
-            // Sistèm Referral
             if (ref && ref !== cleanPhone) {
                 await User.findOneAndUpdate({ phone: ref }, { $inc: { referralCount: 1 } }).catch(e => console.log("Ref Error"));
             }
-
-            // Kreyasyon nouvo kont
-            user = new User({ 
-                phone: cleanPhone, 
-                password: password, 
-                balance: 0 
-            });
-            
+            user = new User({ phone: cleanPhone, password: password, balance: 0 });
             await user.save();
-            console.log(`Kont kreye pou ${cleanPhone} ✅`);
-            return res.json({ success: true, user, msg: "Byenveni! Kont ou kreye ak 0 HTG." });
+            return res.json({ success: true, user, msg: "Byenveni!" });
         }
-
-        // Tcheke modpas si kont lan egziste
-        if (user.password !== password) {
-            return res.json({ success: false, msg: "Modpas pa bon!" });
-        }
-        
-        console.log(`Koneksyon reyisi: ${cleanPhone}`);
+        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         return res.json({ success: true, user });
-
-    } catch (e) { 
-        console.error("Erè Login:", e);
-        res.json({ success: false, msg: "Erè sèvè. Eseye ankò." }); 
-    }
+    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
-// 4. LOGIK JWÈT (SOCKET.IO)
 let rooms = {};
 let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
+    // MATCHMAKING AUTO
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
@@ -120,6 +87,7 @@ io.on('connection', (socket) => {
         if (waitingPlayers[bet] && waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
     });
 
+    // KREYE KÒD MATCH (PRIVÉ)
     socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         const bet = Number(data.bet);
@@ -155,26 +123,11 @@ io.on('connection', (socket) => {
         io.to(data.room).emit('gameOver', { winner: data.phone, prize, winnerBalance: winner.balance });
     });
 
-    socket.on('disconnect', async (reason) => {
-        for (let code in rooms) {
-            const room = rooms[code];
-            const playerInRoom = room.players.find(p => p.id === socket.id);
-            if (playerInRoom) {
-                const opponent = room.players.find(p => p.id !== socket.id);
-                if (room.players.length === 2 && opponent) {
-                    const prize = (room.bet * 2) * 0.95;
-                    const winner = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
-                    io.to(opponent.id).emit('updateBalance', winner.balance);
-                    io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Lòt la abandone!" });
-                }
-                delete rooms[code];
-                break;
-            }
-        }
+    socket.on('disconnect', () => {
         for (let bet in waitingPlayers) {
             if (waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
         }
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Blitz ap kouri sou pò ${PORT} ⚡`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè Blitz kouri sou ${PORT} ⚡`));
