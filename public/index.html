@@ -10,6 +10,7 @@
         :root { --primary: #1b5e20; --accent: #2e7d32; --bg: #f4f7f6; --white: #ffffff; }
         body { background: var(--bg); color: #333; font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
         
+        /* Header */
         .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
         .logo { font-weight: bold; color: var(--primary); font-size: 20px; }
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; }
@@ -17,30 +18,40 @@
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .hidden { display: none !important; }
 
-        .banner { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
+        /* Banner ak Enfòmasyon Sèvis */
+        .banner-info { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
         .service-box { font-size: 11px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin-top: 10px; line-height: 1.5; }
 
+        /* Kat Jwèt yo */
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .game-card { background: var(--white); border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); position: relative; cursor: pointer; }
         .game-card img { width: 100%; height: 140px; object-fit: cover; display: block; }
         .game-card h4 { padding: 12px; margin: 0; font-size: 13px; color: var(--primary); font-weight: bold; text-align: center; }
         .badge { position: absolute; top: 8px; right: 8px; font-size: 9px; padding: 3px 7px; border-radius: 10px; color: white; font-weight: bold; z-index: 10; }
 
+        /* Gwo Foto Jwèt la (Banner Mopyon) */
+        .mopyon-banner { width: 100%; height: 180px; border-radius: 15px; background: url('https://ibb.co') no-repeat center center; background-size: cover; margin-bottom: 15px; position: relative; border: 2px solid var(--primary); }
+
+        /* Loader Animation */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* Tablo Jwèt 15x15 */
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); border-radius: 8px; overflow: hidden; margin-top: 10px; }
         .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
 
         .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn:active { transform: scale(0.98); }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 92%; margin-bottom: 10px; font-size: 15px; }
         
+        /* Navigasyon Anba */
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--white); display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; }
         .nav-item { color: #888; text-decoration: none; font-size: 10px; display: flex; flex-direction: column; align-items: center; border: none; background: none; cursor: pointer; }
-        .active { color: var(--primary); }
+        .nav-item.active { color: var(--primary); }
 
+        /* Modal Rezilta */
         #modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; color: white; text-align: center; }
     </style>
 </head>
@@ -65,9 +76,9 @@
         </div>
     </div>
 
-    <!-- MENI -->
+    <!-- MENI PWENSIPAL -->
     <div id="menu-s" class="screen hidden">
-        <div class="banner">
+        <div class="banner-info">
             <h2 style="margin:0">MOPYON BLITZ ⚡</h2>
             <div class="service-box">
                 <i class="fas fa-info-circle"></i> <b>SÈVIS (Depo / Retrè / Èd):</b><br>
@@ -83,33 +94,40 @@
         <div class="game-grid">
             <div class="game-card" onclick="document.getElementById('mopyon-opts').classList.toggle('hidden')">
                 <span class="badge" style="background:#2ecc71">AKTIF</span>
-                <img src="https://unsplash.com">
+                <img src="https://unsplash.com" alt="Mopyon">
                 <h4>MOPYON</h4>
             </div>
             <div class="game-card" onclick="alert('Byento!')" style="opacity: 0.8;">
                 <span class="badge" style="background:#e74c3c">SOON</span>
-                <img src="https://unsplash.com">
+                <img src="https://unsplash.com" alt="Domino">
                 <h4>DOMINO</h4>
             </div>
         </div>
 
+        <!-- Opsyon Match ak gwo foto ou mande a -->
         <div id="mopyon-opts" class="hidden card-ui" style="margin-top: 20px;">
-            <h3 style="margin:0">Miz Match (HTG)</h3>
+            <!-- GWO FOTO JWÈT LA -->
+            <div class="mopyon-banner">
+                <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold;">
+                    CHWAZI KANTITE HTG
+                </div>
+            </div>
+
             <input type="number" id="bet" value="50">
-            <button id="btn-create" class="btn" onclick="create()">KREYE KÒD</button>
+            <button id="btn-create" class="btn" onclick="create()">KREYE KÒD MATCH</button>
             
             <div id="room-info" class="hidden" style="text-align:center; margin-top:10px;">
                 <div class="loader"></div>
-                <p style="font-size:12px; color:var(--primary); font-weight:bold; margin:5px 0;">Kòd Match: <span id="c-val" style="font-size:22px; letter-spacing:2px;"></span></p>
-                <p style="font-size:10px; color:#666;">Voye kòd sa bay moun ou vle jwe a.</p>
+                <p style="font-size:12px; color:var(--primary); font-weight:bold; margin:5px 0;">Kòd: <span id="c-val" style="font-size:24px; letter-spacing:2px;"></span></p>
+                <p style="font-size:10px; color:#666;">Voye kòd sa bay zanmi w lan...</p>
             </div>
             <hr style="margin:15px 0; border:0.1px solid #eee">
-            <input type="text" id="join-c" placeholder="Antre kòd zanmi w">
+            <input type="text" id="join-c" placeholder="Kòd yon zanmi">
             <button class="btn" style="background:#ffa502" onclick="join()">ANTRE NAN MATCH</button>
         </div>
 
         <div class="card-ui" style="margin-top:20px;">
-            <p style="font-size:11px; margin:0 0 5px 0;">Lyen Referal (5G pa moun):</p>
+            <p style="font-size:11px; margin:0 0 5px 0;">Lyen Referal (Gagne 5G):</p>
             <input type="text" id="ref-link" readonly style="font-size:10px; background:#f9f9f9; border:none; width:90%;">
         </div>
     </div>
@@ -124,9 +142,9 @@
         </div>
     </div>
 
-    <!-- JWÈT -->
+    <!-- JWÈT (SAN REFRESH) -->
     <div id="game-s" class="screen hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; background: white; padding: 10px; border-radius: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <button onclick="backToMenu()" style="background:red; color:white; border:none; padding:8px 15px; border-radius:8px;">KITE</button>
             <b id="timer" style="color:red; font-size:20px">30s</b>
             <div id="status" style="font-size: 12px; font-weight:bold;">...</div>
@@ -134,14 +152,14 @@
         <div id="board" class="grid"></div>
     </div>
 
-    <!-- NAV -->
+    <!-- NAVIGASYON -->
     <div id="nav" class="nav-bar hidden">
         <button class="nav-item active" onclick="showS('menu-s')"><i class="fas fa-home"></i>AKEY</button>
         <button class="nav-item" onclick="showS('withdraw-s')"><i class="fas fa-wallet"></i>RETRÈ</button>
         <button class="nav-item" onclick="alert('Nimewo: 55110103 / 31594645')"><i class="fas fa-headset"></i>ÈD</button>
     </div>
 
-    <!-- MODAL -->
+    <!-- MODAL FINAL -->
     <div id="modal" class="hidden">
         <h1 id="res-t"></h1>
         <h2 id="res-p" style="color:#2ecc71"></h2>
@@ -158,6 +176,7 @@
             document.getElementById(id).classList.remove('hidden'); 
         }
 
+        // Fonksyon kle pou evite refresh (Zewo Sèvè Nèf)
         function backToMenu() {
             clearInterval(timerInt);
             document.getElementById('modal').classList.add('hidden');
@@ -221,7 +240,7 @@
         socket.on('opponentMove', d => { boardData[d.index] = d.symbol; myT = true; renderBoard(); updateStatus(); startTimer(); });
 
         function updateStatus() { 
-            document.getElementById('status').innerText = myT ? "TOU PA W ("+myS+")" : "ATANN LÒT LA..."; 
+            document.getElementById('status').innerText = myT ? "TOU PA W ("+myS+")" : "ATANN TOU PA L..."; 
             document.getElementById('status').style.color = myT ? "green" : "#888";
         }
 
