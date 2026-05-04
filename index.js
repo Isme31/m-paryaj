@@ -7,15 +7,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-// Pò dinamik pou Render (Trè enpòtan)
 const PORT = process.env.PORT || 3000;
 
-// Sèvi fichye yo ki nan menm katab ak server.js
-app.use(express.static(__dirname));
+// 1. Di Express tout fichye static yo (CSS, JS, Images) nan katab "public"
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Wout pou voye index.html san katab "src"
+// 2. Wout pou index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 3. Wout pou admin.html (si ou bezwen l)
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 let chanmPrive = {};
@@ -84,4 +88,4 @@ function checkWin(board, index, player) {
     return false;
 }
 
-server.listen(PORT, () => console.log(`BLITZ ⚡ aktive sou pò ${PORT}`));
+server.listen(PORT, () => console.log(`BLITZ ⚡ sou pò ${PORT}`));
