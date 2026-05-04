@@ -6,13 +6,18 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { transports: ['websocket', 'polling'], cors: { origin: "*" } });
+const io = new Server(server, { 
+    transports: ['websocket', 'polling'], 
+    cors: { origin: "*" } 
+});
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 const ADMIN_SECRET = "hugues";
 
-mongoose.connect(MONGO_URI).then(() => console.log("Blitz Sèvè ✅")).catch(e => console.log(e));
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("Mopyon Blitz Estab ✅"))
+    .catch(err => console.log("Erè MongoDB: ", err));
 
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
@@ -22,53 +27,117 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
-    phone: String, amount: Number, status: { type: String, default: 'pending' }
+    phone: String,
+    amount: Number,
+    date: { type: Date, default: Date.now },
+    status: { type: String, default: 'pending' }
 }));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
         const cleanPhone = phone.trim().replace(/\s+/g, '');
-        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) return res.json({ success: false, msg: "Nimewo Ayiti 8 chif!" });
+        const haitiRegex = /^[3-5][0-9]{7}$/;
+
+        if (!haitiRegex.test(cleanPhone)) {
+            return res.json({ success: false, msg: "Nimewo Ayiti 8 chif sèlman!" });
+        }
 
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
             if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
             return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
-        }
-        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
         res.json({ success: true, user });
-    } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
+    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
 app.post('/withdraw', async (req, res) => {
-    const { phone, amount } = req.body;
-    const user = await User.findOne({ phone });
-    if (user && user.balance >= amount && amount >= 100) {
-        await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
-        await Withdraw.create({ phone, amount });
-        res.json({ success: true, msg: "Demann voye!" });
-    } else res.json({ success: false, msg: "Balans ou piti!" });
+    try {
+        const { phone, amount } = req.body;
+        const user = await User.findOne({ phone });
+        if (user && user.balance >= amount && amount >= 100) {
+            await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
+            await Withdraw.create({ phone, amount });
+            res.json({ success: true, msg: "Demann voye!" });
+        } else res.json({ success: false, msg: "Balans ou piti (Min 100G)." });
+    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.json({ success: false });
-    await User.findOneAndUpdate({ phone }, { $inc: { balance: Number(amount) } });
-    res.json({ success: true });
+    const user = await User.findOneAndUpdate({ phone }, { $inc: { balance: Number(amount) } }, { new: true });
+    res.json({ success: !!user });
 });
+
+app.get('/admin/withdraws', async (req, res) => {
+    if (req.query.secret !== ADMIN_SECRET) return res.json([]);
+    res.json(await Withdraw.find({ status: 'pending' }));
+});
+
+let rooms = {};
+let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
         if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
-        // Lojik matchmaking ou te genyen an...
+
+        if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
+            const opponent = waitingPlayers[bet];
+            delete waitingPlayers[bet];
+            const code = `auto_${Date.now()}`;
+            rooms[code] = { host: opponent.phone, bet, players: [{id: opponent.id, phone: opponent.phone}, {id: socket.id, phone: data.phone}] };
+            socket.join(code);
+            if(io.sockets.sockets.get(opponent.id)) io.sockets.sockets.get(opponent.id).join(code);
+
+            for (let p of rooms[code].players) {
+                const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -bet } }, { new: true });
+                io.to(p.id).emit('updateBalance', up.balance);
+            }
+            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opponent.phone, bet });
+        } else {
+            waitingPlayers[bet] = { id: socket.id, phone: data.phone };
+        }
+    });
+
+    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+
+    socket.on('win', async (data) => {
+        if (!rooms[data.room]) return;
+        const prize = Number(data.prize);
+        delete rooms[data.room];
+        const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
+        io.to(data.room).emit('gameOver', { winner: data.phone, prize, winnerBalance: winner.balance });
+    });
+
+    socket.on('disconnect', async (reason) => {
+        for (let code in rooms) {
+            const room = rooms[code];
+            const playerInRoom = room.players.find(p => p.id === socket.id);
+            if (playerInRoom) {
+                const opponent = room.players.find(p => p.id !== socket.id);
+                if (room.players.length === 2 && opponent) {
+                    const prize = (room.bet * 2) * 0.95;
+                    const win = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
+                    io.to(opponent.id).emit('updateBalance', win.balance);
+                    io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Abandone!" });
+                }
+                delete rooms[code]; break;
+            }
+        }
+        for (let bet in waitingPlayers) if (waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Blitz kouri sou ${PORT}`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè aktif ⚡`));
