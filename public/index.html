@@ -29,8 +29,17 @@
         .game-card h4 { padding: 12px; margin: 0; font-size: 13px; color: var(--primary); font-weight: bold; text-align: center; }
         .badge { position: absolute; top: 8px; right: 8px; font-size: 9px; padding: 3px 7px; border-radius: 10px; color: white; font-weight: bold; z-index: 10; }
 
-        /* Gwo Foto Jwèt la (Banner Mopyon) */
-        .mopyon-banner { width: 100%; height: 180px; border-radius: 15px; background: url('https://ibb.co') no-repeat center center; background-size: cover; margin-bottom: 15px; position: relative; border: 2px solid var(--primary); }
+        /* GWO FOTO JWÈT LA (KOREKSYON FOTO BLANCH) */
+        .mopyon-banner { 
+            width: 100%; 
+            height: 180px; 
+            border-radius: 15px; 
+            background: #1b5e20 url('https://unsplash.com') no-repeat center center; 
+            background-size: cover; 
+            margin-bottom: 15px; 
+            position: relative; 
+            border: 2px solid var(--primary); 
+        }
 
         /* Loader Animation */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; }
@@ -42,7 +51,6 @@
 
         .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn:active { transform: scale(0.98); }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 92%; margin-bottom: 10px; font-size: 15px; }
         
@@ -104,9 +112,8 @@
             </div>
         </div>
 
-        <!-- Opsyon Match ak gwo foto ou mande a -->
         <div id="mopyon-opts" class="hidden card-ui" style="margin-top: 20px;">
-            <!-- GWO FOTO JWÈT LA -->
+            <!-- GWO FOTO JWÈT LA KI KORIJE -->
             <div class="mopyon-banner">
                 <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold;">
                     CHWAZI KANTITE HTG
@@ -142,7 +149,7 @@
         </div>
     </div>
 
-    <!-- JWÈT (SAN REFRESH) -->
+    <!-- JWÈT -->
     <div id="game-s" class="screen hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <button onclick="backToMenu()" style="background:red; color:white; border:none; padding:8px 15px; border-radius:8px;">KITE</button>
@@ -176,7 +183,6 @@
             document.getElementById(id).classList.remove('hidden'); 
         }
 
-        // Fonksyon kle pou evite refresh (Zewo Sèvè Nèf)
         function backToMenu() {
             clearInterval(timerInt);
             document.getElementById('modal').classList.add('hidden');
