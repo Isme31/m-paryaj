@@ -23,7 +23,7 @@ mongoose.connect(MONGO_URI)
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
-    balance: { type: Number, default: 0 }, // 0 pou bloke moun k ap kreye fo kont
+    balance: { type: Number, default: 0 }, // Bloke fwod: nou kòmanse ak 0 goud
     referralCount: { type: Number, default: 0 }
 }));
 
@@ -46,7 +46,7 @@ app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
         const cleanPhone = phone.trim().replace(/\s+/g, ''); 
-        const haitiRegex = /^[3-5][0-9]{7}$/; // Aksepte 3, 4, 5 (8 chif)
+        const haitiRegex = /^[3-5][0-9]{7}$/; // Aksepte sèlman nimewo Ayiti 8 chif (3, 4, 5)
 
         if (!haitiRegex.test(cleanPhone)) {
             return res.json({ success: false, msg: "Nimewo sa pa valab! (8 chif Digicel/Natcom)" });
@@ -54,13 +54,13 @@ app.post('/login', async (req, res) => {
 
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
-            // Referal: bay moun ki envite a 5 goud si li egziste
+            // Referal: bay moun ki envite a 5 goud
             if (ref && ref !== cleanPhone) {
                 await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
             }
-            // Kreye kont ak 0 balans pou evite fwod 50 goud la
+            // Kreye kont ak 0 balans pou evite moun k ap kreye fo kont
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
-            return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
+            return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje kont ou." });
         } else if (user.password !== password) {
             return res.json({ success: false, msg: "Modpas pa bon" });
         }
@@ -68,7 +68,7 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
-// --- DEMANN RETRÈ ---
+// --- DEMANN RETRÈ (Sere nan MongoDB) ---
 app.post('/withdraw', async (req, res) => {
     try {
         const { phone, amount } = req.body;
@@ -81,10 +81,10 @@ app.post('/withdraw', async (req, res) => {
         } else {
             res.json({ success: false, msg: "Balans ou piti (Min 100G)." });
         }
-    } catch (e) { res.json({ success: false, msg: "Erè" }); }
+    } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
-// --- ADMIN ---
+// --- ROUTE ADMIN ---
 app.post('/admin/update-balance', async (req, res) => {
     const { phone, amount, secret } = req.body;
     if (secret !== ADMIN_SECRET) return res.json({ success: false });
@@ -95,6 +95,13 @@ app.post('/admin/update-balance', async (req, res) => {
 app.get('/admin/withdraws', async (req, res) => {
     if (req.query.secret !== ADMIN_SECRET) return res.json([]);
     res.json(await Withdraw.find({ status: 'pending' }));
+});
+
+app.post('/admin/confirm-withdraw', async (req, res) => {
+    const { id, secret } = req.body;
+    if (secret !== ADMIN_SECRET) return res.json({ success: false });
+    await Withdraw.findByIdAndUpdate(id, { status: 'completed' });
+    res.json({ success: true });
 });
 
 // --- SISTÈM JWÈT (SOCKET.IO) ---
@@ -192,4 +199,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè BLITZ aktif sou pò ${PORT} ⚡`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Sèvè aktif sou pò ${PORT} ⚡`));
