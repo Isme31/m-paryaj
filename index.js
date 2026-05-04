@@ -9,26 +9,46 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
 
-// 1. Di Express tout fichye static yo (CSS, JS, Images) nan katab "public"
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 2. Wout pou index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+let chanmPrive = {}; 
+let keuPublik = [];
+let users = {}; // Pou simulation baz de done
 
-// 3. Wout pou admin.html (si ou bezwen l)
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-let chanmPrive = {};
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
 io.on('connection', (socket) => {
+    // LOGIN AK BOUS
     socket.on('login', (data) => {
-        socket.emit('login-success', { phone: data.phone, balance: "250" });
+        if(!users[data.phone]) users[data.phone] = { phone: data.phone, bal: 250, history: [] };
+        socket.phone = data.phone;
+        socket.emit('login-success', users[data.phone]);
     });
 
+    // MATCHMAKING PIBLIK (Blitz Mode)
+    socket.on('join-matchmaking', (data) => {
+        keuPublik = keuPublik.filter(j => j.socket.id !== socket.id);
+        const adversaire = keuPublik.shift();
+
+        if (adversaire) {
+            const roomName = `blitz_${socket.id}_${adversaire.socket.id}`;
+            socket.join(roomName);
+            adversaire.socket.join(roomName);
+            chanmPrive[roomName] = { 
+                players: [socket.id, adversaire.socket.id], 
+                board: Array(225).fill(null), 
+                turn: socket.id,
+                bet: 50 
+            };
+            io.to(roomName).emit('match-found', { room: roomName, startTurn: socket.id, mode: 'piblik' });
+        } else {
+            keuPublik.push({ socket, phone: socket.phone });
+            socket.emit('waiting', 'Ap chèche yon advèsè...');
+        }
+    });
+
+    // KREYE MATCH PRIVE
     socket.on('create-room', (data) => {
         const kod = Math.random().toString(36).substring(2, 7).toUpperCase();
         socket.join(kod);
@@ -36,6 +56,7 @@ io.on('connection', (socket) => {
         socket.emit('room-created', kod);
     });
 
+    // ANTRE NAN MATCH PRIVE
     socket.on('join-room', (kod) => {
         const r = chanmPrive[kod];
         if (r && r.players.length === 1) {
@@ -47,6 +68,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // JERE MOUVMAN
     socket.on('make-move', (data) => {
         const r = chanmPrive[data.room];
         if (r && r.turn === socket.id && r.board[data.index] === null) {
@@ -57,15 +79,15 @@ io.on('connection', (socket) => {
 
             if (checkWin(r.board, data.index, socket.id)) {
                 io.to(data.room).emit('game-over', { winner: socket.id });
+                // Mizajou bous si gen kòb
+                if(users[socket.phone]) users[socket.phone].bal += parseInt(r.bet || 0);
                 delete chanmPrive[data.room];
             }
         }
     });
 
     socket.on('disconnect', () => {
-        for (let key in chanmPrive) {
-            if (chanmPrive[key].players.includes(socket.id)) delete chanmPrive[key];
-        }
+        keuPublik = keuPublik.filter(j => j.socket.id !== socket.id);
     });
 });
 
