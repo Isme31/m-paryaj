@@ -1,166 +1,115 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 const mongoose = require('mongoose');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, { 
+    transports: ['websocket', 'polling'], 
+    cors: { origin: "*" } 
+});
 
 const PORT = process.env.PORT || 3000;
-
-// 1. KONEKSYON MONGODB (Ranplase lyen sa a ak pa w la)
-const MONGO_URI = "lyen_mongodb_ou_isit_la"; 
+const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+const ADMIN_SECRET = "hugues";
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("Konekte ak MongoDB! ✅"))
-    .catch(err => console.error("Erè MongoDB:", err));
+    .then(() => console.log("Mopyon Blitz Estab ✅"))
+    .catch(err => console.error("Erè MongoDB: ", err));
 
-// 2. SCHEMA ITILIZATÈ
-const UserSchema = new mongoose.Schema({
+const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
-    balance: { type: Number, default: 250 },
-    history: Array
-});
-const User = mongoose.model('User', UserSchema);
+    password: { type: String, required: true },
+    balance: { type: Number, default: 0 },
+    referralCount: { type: Number, default: 0 }
+}));
 
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
+    phone: String,
+    amount: Number,
+    date: { type: Date, default: Date.now },
+    status: { type: String, default: 'pending' }
+}));
+
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-let chanmPrive = {};
-let keuPublik = [];
+app.post('/login', async (req, res) => {
+    try {
+        const { phone, password, ref } = req.body;
+        if (!phone || !password) return res.status(400).json({ success: false, msg: "Ranpli tout bwat yo!" });
 
-// ROUTES
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+        const cleanPhone = phone.trim().replace(/\s+/g, '');
+        if (!/^[3-5][0-9]{7}$/.test(cleanPhone)) {
+            return res.json({ success: false, msg: "Nimewo 8 chif sèlman (Eg: 31223344)!" });
+        }
+
+        let user = await User.findOne({ phone: cleanPhone });
+        if (!user) {
+            if (ref && ref !== cleanPhone) {
+                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } }).catch(e => console.log("Ref Error"));
+            }
+            user = await User.create({ phone: cleanPhone, password, balance: 0 });
+            return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
+        }
+
+        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+        return res.json({ success: true, user });
+
+    } catch (e) {
+        return res.status(500).json({ success: false, msg: "Erè Sèvè." });
+    }
+});
+
+app.post('/withdraw', async (req, res) => {
+    try {
+        const { phone, amount } = req.body;
+        const user = await User.findOne({ phone });
+        if (user && user.balance >= amount && amount >= 100) {
+            await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
+            await Withdraw.create({ phone, amount });
+            res.json({ success: true, msg: "Demann voye!" });
+        } else res.json({ success: false, msg: "Balans ou piti oswa montan an ba!" });
+    } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
+});
+
+// SOCKET.IO LOGIC
+let rooms = {};
+let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
+    socket.on('startMatchmaking', async (data) => {
+        const bet = Number(data.bet);
+        const user = await User.findOne({ phone: data.phone });
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
 
-    // LOGIN
-    socket.on('login', async (data) => {
-        try {
-            let user = await User.findOne({ phone: data.phone });
-            if (!user) {
-                user = new User({ phone: data.phone });
-                await user.save();
+        if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
+            const opponent = waitingPlayers[bet];
+            delete waitingPlayers[bet];
+            const code = `auto_${Date.now()}`;
+            rooms[code] = { host: opponent.phone, bet, players: [{id: opponent.id, phone: opponent.phone}, {id: socket.id, phone: data.phone}] };
+            socket.join(code);
+            if (io.sockets.sockets.get(opponent.id)) io.sockets.sockets.get(opponent.id).join(code);
+
+            for (let p of rooms[code].players) {
+                const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -bet } }, { new: true });
+                io.to(p.id).emit('updateBalance', up.balance);
             }
-            socket.phone = user.phone;
-            socket.emit('login-success', { phone: user.phone, bal: user.balance });
-        } catch (e) { socket.emit('error-msg', 'Erè koneksyon baz de done'); }
+            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opponent.phone, symbol: 'X' });
+        } else waitingPlayers[bet] = { id: socket.id, phone: data.phone };
     });
 
-    // MATCHMAKING PIBLIK
-    socket.on('join-matchmaking', async () => {
-        const user = await User.findOne({ phone: socket.phone });
-        if (!user || user.balance < 50) return socket.emit('error-msg', 'Balans twò piti (50 HTG min)');
+    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
-        keuPublik = keuPublik.filter(j => j.socket.id !== socket.id);
-        const adversaire = keuPublik.shift();
-
-        if (adversaire) {
-            const roomName = `blitz_${socket.id}_${adversaire.socket.id}`;
-            socket.join(roomName);
-            adversaire.socket.join(roomName);
-            chanmPrive[roomName] = { 
-                players: [socket.id, adversaire.socket.id], 
-                phones: [socket.phone, adversaire.phone],
-                board: Array(225).fill(null), 
-                turn: socket.id, 
-                bet: 50 
-            };
-            io.to(roomName).emit('match-found', { room: roomName, startTurn: socket.id });
-        } else {
-            keuPublik.push({ socket, phone: socket.phone });
-        }
-    });
-
-    // KREYE MATCH PRIVE
-    socket.on('create-room', (data) => {
-        const kod = Math.random().toString(36).substring(2, 7).toUpperCase();
-        socket.join(kod);
-        chanmPrive[kod] = { 
-            players: [socket.id], 
-            phones: [socket.phone], 
-            bet: data.bet, 
-            board: Array(225).fill(null), 
-            turn: socket.id 
-        };
-        socket.emit('room-created', kod);
-    });
-
-    // ANTRE NAN MATCH PRIVE
-    socket.on('join-room', (kod) => {
-        const r = chanmPrive[kod];
-        if (r && r.players.length === 1) {
-            socket.join(kod);
-            r.players.push(socket.id);
-            r.phones.push(socket.phone);
-            io.to(kod).emit('match-found', { room: kod, bet: r.bet, startTurn: r.turn });
-        } else {
-            socket.emit('error-msg', 'Kòd invalid!');
-        }
-    });
-
-    // JERE MOUVMAN
-    socket.on('make-move', async (data) => {
-        const r = chanmPrive[data.room];
-        if (r && r.turn === socket.id && r.board[data.index] === null) {
-            r.board[data.index] = socket.id;
-            const symbol = (socket.id === r.players[0]) ? 'X' : 'O';
-            r.turn = r.players.find(id => id !== socket.id);
-            io.to(data.room).emit('update-board', { index: data.index, symbol, nextTurn: r.turn });
-
-            if (checkWin(r.board, data.index, socket.id)) {
-                io.to(data.room).emit('game-over', { winner: socket.id });
-                
-                // PEYE WINNER LA NAN MONGODB
-                const winnerPhone = socket.phone;
-                const loserPhone = r.phones.find(p => p !== winnerPhone);
-                const betAmount = parseInt(r.bet);
-
-                await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: betAmount } });
-                await User.findOneAndUpdate({ phone: loserPhone }, { $inc: { balance: -betAmount } });
-
-                delete chanmPrive[data.room];
-            }
-        }
-    });
-
-    // ADMIN OPSYON
-    socket.on('get-all-users', async () => {
-        const allUsers = await User.find({});
-        socket.emit('admin-users-list', allUsers);
-    });
-
-    socket.on('update-balance', async (data) => {
-        await User.findOneAndUpdate({ phone: data.phone }, { balance: data.newBal });
-        const allUsers = await User.find({});
-        socket.emit('admin-users-list', allUsers);
-        io.emit('balance-updated', { phone: data.phone, newBal: data.newBal });
-    });
-
-    socket.on('disconnect', () => {
-        keuPublik = keuPublik.filter(j => j.socket.id !== socket.id);
+    socket.on('win', async (data) => {
+        if (!rooms[data.room]) return;
+        const prize = Number(data.prize);
+        delete rooms[data.room];
+        const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
+        io.to(data.room).emit('gameOver', { winner: data.phone, prize });
     });
 });
 
-function checkWin(board, index, player) {
-    const size = 15;
-    const r = Math.floor(index / size), c = index % size;
-    const dirs = [[0,1], [1,0], [1,1], [1,-1]];
-    for (let [dr, dc] of dirs) {
-        let count = 1;
-        for (let i=1; i<5; i++) {
-            let nr=r+dr*i, nc=c+dc*i;
-            if (nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*size+nc]===player) count++; else break;
-        }
-        for (let i=1; i<5; i++) {
-            let nr=r-dr*i, nc=c-dc*i;
-            if (nr>=0 && nr<15 && nc>=0 && nc<15 && board[nr*size+nc]===player) count++; else break;
-        }
-        if (count >= 5) return true;
-    }
-    return false;
-}
-
-server.listen(PORT, () => console.log(`BLITZ ⚡ aktive sou pò ${PORT}`));
+server.listen(PORT, () => console.log(`Blitz ap kouri sou ${PORT} ⚡`));
