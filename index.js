@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const path = require('path');
+const axios = require('axios'); // Mwen ajoute sa ✅
 
 const app = express();
 const server = http.createServer(app);
@@ -13,7 +14,6 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
-const ADMIN_SECRET = "hugues";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
@@ -34,22 +34,17 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 }));
 
 app.use(express.json());
-// Sa ap fè tout CSS ak JS nan dossier public la mache
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- DE TI ROUTE OU TE MANKE YO ---
-
-// 1. Voye moun sou paj jwèt la lè yo louvri sit la
+// Route pou paj akèy la (index.html)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 2. Paj Admin lan (eg: ://sit-ou.com)
+// Route pou paj admin (admin.html)
 app.get('/admin-panel', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
-
-// --- FIN ROUTE YO ---
 
 app.post('/login', async (req, res) => {
     try {
@@ -126,5 +121,13 @@ io.on('connection', (socket) => {
         io.to(data.room).emit('gameOver', { winner: data.phone, prize });
     });
 });
+
+// SELF-PING POU EVITE DÒMI (Chak 10 minit) ✅
+setInterval(() => {
+    // RANPLASE URL SA A AK VRÈ LINK RENDER OU A
+    axios.get('https://onrender.com')
+        .then(() => console.log('Keep-alive: Sèvè a reveye!'))
+        .catch(err => console.log('Keep-alive Error'));
+}, 600000); 
 
 server.listen(PORT, () => console.log(`Blitz ap kouri sou ${PORT} ⚡`));
