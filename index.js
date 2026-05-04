@@ -46,10 +46,9 @@ app.post('/login', async (req, res) => {
 });
 
 let rooms = {};
-let waitingPlayers = {}; // Matchmaking memory
+let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
-    // Matchmaking Otomatik
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
@@ -60,7 +59,6 @@ io.on('connection', (socket) => {
             delete waitingPlayers[bet];
             const code = `auto_${Date.now()}`;
             rooms[code] = { host: opponent.phone, bet, players: [{id: opponent.id, phone: opponent.phone}, {id: socket.id, phone: data.phone}] };
-            
             socket.join(code);
             const oppSocket = io.sockets.sockets.get(opponent.id);
             if(oppSocket) oppSocket.join(code);
@@ -80,7 +78,6 @@ io.on('connection', (socket) => {
         if (waitingPlayers[bet] && waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
     });
 
-    // Chanm Privé
     socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         const bet = Number(data.bet);
