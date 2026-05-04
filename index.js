@@ -5,22 +5,26 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, { 
+    cors: { origin: "*" } 
+});
 
-// KOREKSYON POU RENDER: Itilize pò anviwònman an oswa 3000
+// 1. Pò a dwe dinamik pou Render
 const PORT = process.env.PORT || 3000;
 
-// Fòse sèvè a sèvi index.html
-app.use(express.static(__dirname));
+// 2. Konekte katab kote index.html la ye a
+app.use(express.static(path.join(__dirname)));
 
+// 3. Wout prensipal la (Fòse lekti index.html)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let chanmPrive = {}; 
-let keuPublik = [];
+let chanmPrive = {};
 
 io.on('connection', (socket) => {
+    console.log('Yon jwè konekte:', socket.id);
+
     socket.on('login', (data) => {
         socket.emit('login-success', { phone: data.phone, balance: "250" });
     });
@@ -28,7 +32,12 @@ io.on('connection', (socket) => {
     socket.on('create-room', (data) => {
         const kod = Math.random().toString(36).substring(2, 7).toUpperCase();
         socket.join(kod);
-        chanmPrive[kod] = { players: [socket.id], bet: data.bet, board: Array(225).fill(null), turn: socket.id };
+        chanmPrive[kod] = { 
+            players: [socket.id], 
+            bet: data.bet, 
+            board: Array(225).fill(null), 
+            turn: socket.id 
+        };
         socket.emit('room-created', kod);
     });
 
@@ -49,7 +58,11 @@ io.on('connection', (socket) => {
             r.board[data.index] = socket.id;
             const symbol = (socket.id === r.players[0]) ? 'X' : 'O';
             r.turn = r.players.find(id => id !== socket.id);
-            io.to(data.room).emit('update-board', { index: data.index, symbol, nextTurn: r.turn });
+            io.to(data.room).emit('update-board', { 
+                index: data.index, 
+                symbol, 
+                nextTurn: r.turn 
+            });
 
             if (checkWin(r.board, data.index, socket.id)) {
                 io.to(data.room).emit('game-over', { winner: socket.id });
@@ -59,7 +72,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        keuPublik = keuPublik.filter(j => j.socket.id !== socket.id);
+        for (const kod in chanmPrive) {
+            if (chanmPrive[kod].players.includes(socket.id)) {
+                delete chanmPrive[kod];
+            }
+        }
     });
 });
 
@@ -82,4 +99,4 @@ function checkWin(board, index, player) {
     return false;
 }
 
-server.listen(PORT, () => console.log(`Sèvè BLITZ ⚡ sou pò ${PORT}`));
+server.listen(PORT, () => console.log(`Blitz kòmanse sou pò ${PORT}`));
