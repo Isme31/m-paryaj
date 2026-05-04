@@ -1,88 +1,111 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
-// Sèvi fichye HTML yo (si index.html nan menm katab la)
-app.use(express.static(__dirname));
+const ADMIN_SECRET = "MOPYON2024";
+const PORT = process.env.PORT || 3000;
 
-// --- DATA SÈVÈ ---
-let chanmPrive = {}; 
-let keuPublik = [];
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+mongoose.connect("mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority")
+    .then(() => console.log("MongoDB Konekte ✅"));
+
+const User = mongoose.model('User', new mongoose.Schema({
+    phone: { type: String, unique: true },
+    password: String,
+    balance: { type: Number, default: 50 }, // 50G Kado
+    referralCount: { type: Number, default: 0 }
+}));
+
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({ phone: String, amount: Number, fee: Number, status: { type: String, default: 'Pending' } }));
+
+// ROUTES
+app.post('/login', async (req, res) => {
+    const { phone, password, ref } = req.body;
+    const cleanPhone = phone.trim();
+    let user = await User.findOne({ phone: cleanPhone });
+    if (!user) {
+        if (ref) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+        user = await User.create({ phone: cleanPhone, password, balance: 50 });
+    }
+    res.json({ success: true, phone: user.phone, balance: user.balance });
+});
+
+app.post('/request-withdraw', async (req, res) => {
+    const { phone, amount } = req.body;
+    const amt = Number(amount);
+    if (amt < 100) return res.json({ success: false, msg: "Minimòm 100G" });
+    const user = await User.findOne({ phone });
+    if (user && user.balance >= amt) {
+        const fee = amt * 0.05; // 5% Admin
+        await User.updateOne({ phone }, { $inc: { balance: -amt } });
+        await Withdraw.create({ phone, amount: amt - fee, fee });
+        res.json({ success: true, newBalance: user.balance - amt });
+    } else res.json({ success: false, msg: "Balans piti" });
+});
+
+// GAME LOGIC
+let rooms = {};
+let activeGames = {};
 
 io.on('connection', (socket) => {
-    console.log(`Nouvo koneksyon: ${socket.id}`);
-
-    // 1. LOJIK LOGIN (Pou bouton "KONEKTE" a mache)
-    socket.on('login', (data) => {
-        console.log(`Itilizatè konekte: ${data.phone}`);
-        // Voye konfimasyon bay HTML la
-        socket.emit('login-success', {
-            phone: data.phone,
-            balance: "250" // Balans tès
-        });
+    socket.on('createRoom', async (data) => {
+        const user = await User.findOne({ phone: data.phone });
+        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans piti");
+        const code = (data.type === 'domino' ? 'DOM-' : 'MOP-') + Math.floor(1000 + Math.random() * 9000);
+        rooms[code] = { host: data.phone, bet: Number(data.bet), type: data.type };
+        socket.join(code);
+        socket.emit('roomCreated', { code, bet: data.bet });
     });
 
-    // 2. KREYE MATCH PRIVE (Bouton "KREYE KÒD MATCH")
-    socket.on('create-room', (data) => {
-        const kod = Math.random().toString(36).substring(2, 7).toUpperCase();
-        socket.join(kod);
-        
-        chanmPrive[kod] = {
-            createur: socket.id,
-            bet: data.bet,
-            status: 'waiting'
-        };
+    socket.on('joinRoom', async (data) => {
+        const room = rooms[data.code];
+        const user = await User.findOne({ phone: data.phone });
+        if (room && user && user.balance >= room.bet) {
+            await User.updateOne({ phone: room.host }, { $inc: { balance: -room.bet } });
+            await User.updateOne({ phone: data.phone }, { $inc: { balance: -room.bet } });
+            const prize = (room.bet * 2) * 0.95; // 5% Admin
+            
+            if (room.type === 'domino') {
+                let deck = []; for(let i=0; i<=6; i++) for(let j=i; j<=6; j++) deck.push([i,j]);
+                deck.sort(() => Math.random() - 0.5);
+                const h1 = deck.slice(0, 7), h2 = deck.slice(7, 14);
+                
+                const getMaxD = (hand) => {
+                    let doubles = hand.filter(d => d[0] === d[1]).map(d => d[0]);
+                    return doubles.length > 0 ? Math.max(...doubles) : -1;
+                };
 
-        socket.emit('room-created', kod);
-        console.log(`Match prive kreye: ${kod} (Miz: ${data.bet} HTG)`);
-    });
+                const d1 = getMaxD(h1), d2 = getMaxD(h2);
+                const first = d1 > d2 ? room.host : data.phone;
 
-    // 3. ANTRE NAN MATCH (Bouton "ANTRE NAN MATCH")
-    socket.on('join-room', (kod) => {
-        const room = io.sockets.adapter.rooms.get(kod);
-        
-        if (room && room.size === 1 && chanmPrive[kod]) {
-            socket.join(kod);
-            chanmPrive[kod].status = 'playing';
-            chanmPrive[kod].adversaire = socket.id;
-
-            // Notifye de jwè yo
-            io.to(kod).emit('match-found', {
-                room: kod,
-                bet: chanmPrive[kod].bet,
-                firstTurn: chanmPrive[kod].createur
-            });
-        } else {
-            socket.emit('error-msg', 'Kòd sa pa bon oswa match la plen');
-        }
-    });
-
-    // 4. JERE MOUVMAN (Mopyon 15x15)
-    socket.on('make-move', (data) => {
-        // data: { room, cellIndex, symbol }
-        socket.to(data.room).emit('receive-move', data);
-    });
-
-    // 5. DEKONEKSYON
-    socket.on('disconnect', () => {
-        // Netwaye si yon moun pati
-        for (const kod in chanmPrive) {
-            if (chanmPrive[kod].createur === socket.id || chanmPrive[kod].adversaire === socket.id) {
-                io.to(kod).emit('player-left');
-                delete chanmPrive[kod];
+                activeGames[data.code] = { prize, players: [room.host, data.phone] };
+                io.to(data.code).emit('gameStart', { type:'domino', room:data.code, hands:{[room.host]:h1, [data.phone]:h2}, prize, firstTurn:first });
+            } else {
+                activeGames[data.code] = { prize, players: [room.host, data.phone] };
+                io.to(data.code).emit('gameStart', { type:'mopyon', room:data.code, prize, firstTurn:room.host });
             }
+            delete rooms[data.code];
+        } else socket.emit('errorMsg', "Kòd erè!");
+    });
+
+    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+    
+    socket.on('win', async (data) => {
+        const game = activeGames[data.room];
+        if (game) {
+            delete activeGames[data.room];
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: game.prize } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: data.phone, prize: game.prize.toFixed(2), newBalance: winner.balance });
         }
-        keuPublik = keuPublik.filter(j => j.id !== socket.id);
-        console.log(`Dekonekte: ${socket.id}`);
     });
 });
 
-// LANSE SÈVÈ A
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`=== BLITZ SÈVÈ KÒMANSE SOU PÒT ${PORT} ===`);
-});
+server.listen(PORT, () => console.log("Sèvè LIVE 🚀"));
