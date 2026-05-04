@@ -4,96 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BLITZ ⚡</title>
-    <!-- Nou ajoute FontAwesome pou ikon yo ka parèt -->
     <link rel="stylesheet" href="https://cloudflare.com">
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #2e7d32; --bg: #f4f7f6; --white: #ffffff; }
-        body { background: var(--bg); color: #333; font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 80px; }
-        
-        .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
+        body { background: var(--bg); color: #333; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .header { background: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .logo { font-weight: bold; color: var(--primary); font-size: 20px; }
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; }
-
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .hidden { display: none !important; }
-
-        .banner-info { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; }
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .game-card { background: var(--white); border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); position: relative; cursor: pointer; text-align: center;}
-        .game-card img { width: 100%; height: 120px; object-fit: cover; background: #ddd; }
-
-        /* Board 15x15 */
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #999; border: 2px solid var(--primary); border-radius: 5px; width: 100%; max-width: 400px; margin: auto; }
+        .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-top: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #999; border: 2px solid var(--primary); margin-top: 10px; }
         .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .cell:empty:hover { background: #f0f0f0; }
-
-        .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 90%; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
-        
+        input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         #modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; color: white; }
     </style>
 </head>
 <body>
-
     <div class="header">
         <div class="logo"><i class="fas fa-bolt"></i> BLITZ</div>
-        <div id="user-header" class="hidden">
-            <span id="u-bal" class="balance-pill">0 HTG</span>
-        </div>
+        <div id="user-header" class="hidden"><span id="u-bal" class="balance-pill">0 HTG</span></div>
     </div>
 
-    <!-- LOGIN -->
     <div id="auth-s" class="screen">
-        <div style="text-align: center; margin-top: 40px;">
+        <div class="card-ui" style="text-align: center;">
             <h1 style="color:var(--primary);">Byenveni 👋</h1>
-            <p>" Jwe, Genyen, Touche "</p>
-            <div class="card-ui">
-                <input type="text" id="phone" placeholder="Nimewo Telefòn">
-                <input type="password" id="pass" placeholder="Modpas">
-                <button class="btn" onclick="login()">KONEKTE</button>
-            </div>
+            <input type="text" id="phone" placeholder="Nimewo Telefòn">
+            <button class="btn" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- MENI -->
     <div id="menu-s" class="screen hidden">
-        <div class="banner-info">
-            <h2 style="margin:0">MOPYON BLITZ ⚡</h2>
-            <p style="font-size: 12px;">Chwazi yon opsyon pou kòmanse.</p>
-        </div>
-
-        <div class="game-grid">
-            <div class="game-card" onclick="document.getElementById('mopyon-opts').classList.toggle('hidden')">
-                <img src="https://unsplash.com" alt="Mopyon">
-                <h4 style="margin: 10px 0;">MOPYON</h4>
-            </div>
-        </div>
-
-        <div id="mopyon-opts" class="hidden card-ui" style="margin-top: 20px;">
+        <div class="card-ui">
+            <h3>MOPYON ⚡</h3>
             <label>Miz (HTG):</label>
             <input type="number" id="bet" value="50">
-            <button id="btn-create" class="btn" onclick="create()">KREYE KÒD</button>
-            <div id="room-info" class="hidden" style="text-align:center;">
-                <p>Voye kòd sa bay zanmi w:</p>
-                <h2 id="c-val" style="color:var(--primary); letter-spacing:3px;"></h2>
+            <button class="btn" onclick="create()">KREYE KÒD</button>
+            <div id="room-info" class="hidden" style="text-align:center; margin-top:10px;">
+                <p>Kòd pa w: <b id="c-val" style="font-size:22px; color:var(--primary);"></b></p>
             </div>
-            <hr>
-            <input type="text" id="join-c" placeholder="Mete kòd zanmi w">
+            <hr style="margin:20px 0;">
+            <input type="text" id="join-c" placeholder="Antre kòd zanmi w">
             <button class="btn" style="background:#ffa502" onclick="join()">ANTRE NAN MATCH</button>
         </div>
     </div>
 
-    <!-- JWÈT -->
     <div id="game-s" class="screen hidden">
         <div class="card-ui" style="text-align:center;">
-            <h3 id="game-status">Atann tour ou...</h3>
+            <h3 id="game-status">Atann...</h3>
             <div id="board" class="grid"></div>
         </div>
     </div>
 
-    <!-- MODAL -->
     <div id="modal" class="hidden">
         <h1 id="modal-msg">REZILTA</h1>
         <button class="btn" style="width:200px" onclick="location.reload()">RETOUNEN</button>
@@ -103,11 +67,6 @@
         const socket = io();
         let myRoom = null;
 
-        function showS(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
-
         function login() {
             const phone = document.getElementById('phone').value;
             if(phone) socket.emit('login', { phone });
@@ -116,7 +75,8 @@
         socket.on('login-success', (data) => {
             document.getElementById('u-bal').innerText = data.balance + " HTG";
             document.getElementById('user-header').classList.remove('hidden');
-            showS('menu-s');
+            document.getElementById('auth-s').classList.add('hidden');
+            document.getElementById('menu-s').classList.remove('hidden');
         });
 
         function create() {
@@ -130,27 +90,31 @@
         });
 
         function join() {
-            const kod = document.getElementById('join-c').value;
-            if(kod) socket.emit('join-room', kod.toUpperCase());
+            const kod = document.getElementById('join-c').value.trim().toUpperCase();
+            if(kod) socket.emit('join-room', kod);
         }
 
         socket.on('match-found', (data) => {
             myRoom = data.room;
-            showS('game-s');
+            document.getElementById('menu-s').classList.add('hidden');
+            document.getElementById('game-s').classList.remove('hidden');
             const boardDiv = document.getElementById('board');
             boardDiv.innerHTML = '';
             for (let i = 0; i < 225; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
+                cell.id = 'cell-' + i;
                 cell.onclick = () => socket.emit('make-move', { room: myRoom, index: i });
                 boardDiv.appendChild(cell);
             }
         });
 
         socket.on('update-board', (data) => {
-            const cells = document.querySelectorAll('.cell');
-            cells[data.index].innerText = data.symbol;
-            cells[data.index].style.color = data.symbol === 'X' ? 'red' : 'blue';
+            const cell = document.getElementById('cell-' + data.index);
+            if(cell) {
+                cell.innerText = data.symbol;
+                cell.style.color = data.symbol === 'X' ? 'red' : 'blue';
+            }
             document.getElementById('game-status').innerText = (data.nextTurn === socket.id) ? "TOUR PA W! ⚡" : "Advèsè ap jwe...";
         });
 
