@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 const ADMIN_SECRET = "hugues";
 
-// KONEKSYON SENP (PA GEN RESET)
+// Connexion simple sans Reset
 mongoose.connect(MONGO_URI).then(() => console.log("Mopyon Blitz Estab ✅"));
 
 const User = mongoose.model('User', new mongoose.Schema({
@@ -32,7 +32,7 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// LOGIN KI PWOTEJE ANSYEN DONE YO
+// LOGIN & ENREGISTREMENT
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
@@ -40,38 +40,35 @@ app.post('/login', async (req, res) => {
         let user = await User.findOne({ phone: cleanPhone });
 
         if (!user) {
-            // Si se yon nouvo moun, nou kreye l (ak referral si genyen)
             if (ref && ref !== cleanPhone) {
                 await User.findOneAndUpdate({ phone: ref }, { $inc: { referralCount: 1 } }).catch(e => console.log("Ref Err"));
             }
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
-            return res.json({ success: true, user, msg: "Byenveni! Kontakte nou pou rechaje." });
+            return res.json({ success: true, user, msg: "Bienvenue ! Contactez-nous pour recharger." });
         }
-
-        // Si li te la deja, nou tcheke modpas sèlman (balans li pa chanje)
-        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+        if (user.password !== password) return res.json({ success: false, msg: "Mot de passe incorrect !" });
         res.json({ success: true, user });
-    } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
+    } catch (e) { res.json({ success: false, msg: "Erreur Serveur" }); }
 });
 
-// OPSYON RETRÈ
+// RETRAITS
 app.post('/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const user = await User.findOne({ phone });
     if (user && user.balance >= amount && amount >= 100) {
         await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
         await Withdraw.create({ phone, amount });
-        res.json({ success: true, msg: "Demann voye!" });
-    } else res.json({ success: false, msg: "Balans ou piti!" });
+        res.json({ success: true, msg: "Demande envoyée !" });
+    } else res.json({ success: false, msg: "Solde insuffisant !" });
 });
 
-// SOCKET LOGIC - MATCHMAKING & ROOMS
+// LOGIQUE MATCHMAKING & JEU
 let rooms = {}, waitingPlayers = {};
 io.on('connection', (socket) => {
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Solde insuffisant !");
 
         if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
             const opponent = waitingPlayers[bet];
@@ -95,7 +92,7 @@ io.on('connection', (socket) => {
 
     socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Balans ou piti!");
+        if (!user || user.balance < data.bet) return socket.emit('errorMsg', "Solde insuffisant !");
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         rooms[code] = { host: data.phone, bet: Number(data.bet), players: [{id: socket.id, phone: data.phone}] };
         socket.join(code); socket.emit('roomCreated', { code, bet: data.bet });
@@ -111,10 +108,11 @@ io.on('connection', (socket) => {
                 io.to(p.id).emit('updateBalance', up.balance);
             }
             io.to(data.code).emit('gameStart', { room: data.code, prize: (room.bet * 2) * 0.95, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon!");
+        } else socket.emit('errorMsg', "Code invalide ou solde bas !");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+    
     socket.on('win', async (data) => {
         if (!rooms[data.room]) return;
         const prize = Number(data.prize); delete rooms[data.room];
@@ -127,4 +125,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`Sèvè Blitz ap kouri ⚡`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Serveur Blitz actif sur le port ${PORT} ⚡`));
