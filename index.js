@@ -13,16 +13,25 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+const ADMIN_SECRET = "hugues";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
     .catch(err => console.log("Erè MongoDB: ", err));
 
+// --- MODÈL ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
     balance: { type: Number, default: 50 },
     referralCount: { type: Number, default: 0 }
+}));
+
+const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
+    phone: String,
+    amount: Number,
+    date: { type: Date, default: Date.now },
+    status: { type: String, default: 'pending' }
 }));
 
 app.use(express.json());
@@ -32,23 +41,65 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// --- LOGIN + SEKIRITE ---
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
-        const cleanPhone = phone.trim();
+        const cleanPhone = phone.trim().replace(/\s+/g, ''); 
+        const haitiRegex = /^[3-5][0-9]{7}$/;
+
+        if (!haitiRegex.test(cleanPhone)) {
+            return res.json({ success: false, msg: "Nimewo sa pa valab! (8 chif Digicel/Natcom)" });
+        }
+
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            if (ref && ref !== cleanPhone) {
+                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+            }
             user = await User.create({ phone: cleanPhone, password, balance: 50 });
-        } else if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon" });
+        } else if (user.password !== password) {
+            return res.json({ success: false, msg: "Modpas pa bon" });
+        }
         res.json({ success: true, user });
     } catch (e) { res.json({ success: false, msg: "Erè sèvè" }); }
 });
 
+// --- RETRÈ ---
+app.post('/withdraw', async (req, res) => {
+    try {
+        const { phone, amount } = req.body;
+        const amt = Number(amount);
+        const user = await User.findOne({ phone });
+        if (user && user.balance >= amt && amt >= 100) {
+            await User.findOneAndUpdate({ phone }, { $inc: { balance: -amt } });
+            await Withdraw.create({ phone, amount: amt });
+            res.json({ success: true, msg: "Demann voye! N ap trete l rapid." });
+        } else {
+            res.json({ success: false, msg: "Balans ou piti (Min 100G)." });
+        }
+    } catch (e) { res.json({ success: false, msg: "Erè" }); }
+});
+
+// --- ADMIN ---
+app.post('/admin/update-balance', async (req, res) => {
+    const { phone, amount, secret } = req.body;
+    if (secret !== ADMIN_SECRET) return res.json({ success: false });
+    const user = await User.findOneAndUpdate({ phone }, { $inc: { balance: Number(amount) } }, { new: true });
+    res.json({ success: !!user });
+});
+
+app.get('/admin/withdraws', async (req, res) => {
+    if (req.query.secret !== ADMIN_SECRET) return res.json([]);
+    res.json(await Withdraw.find({ status: 'pending' }));
+});
+
+// --- JWÈT (SOCKET.IO) ---
 let rooms = {};
 let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
+    // Matchmaking Auto
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
@@ -67,8 +118,7 @@ io.on('connection', (socket) => {
                 const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -bet } }, { new: true });
                 io.to(p.id).emit('updateBalance', up.balance);
             }
-            const prize = (bet * 2) * 0.95;
-            io.to(code).emit('gameStart', { room: code, prize, turn: opponent.phone, bet });
+            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opponent.phone, bet });
         } else {
             waitingPlayers[bet] = { id: socket.id, phone: data.phone };
         }
@@ -78,6 +128,7 @@ io.on('connection', (socket) => {
         if (waitingPlayers[bet] && waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
     });
 
+    // Kòd Prive
     socket.on('createRoom', async (data) => {
         const user = await User.findOne({ phone: data.phone });
         const bet = Number(data.bet);
@@ -98,9 +149,8 @@ io.on('connection', (socket) => {
                 const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: -room.bet } }, { new: true });
                 io.to(p.id).emit('updateBalance', up.balance);
             }
-            const prize = (room.bet * 2) * 0.95;
-            io.to(data.code).emit('gameStart', { room: data.code, prize, turn: room.host, bet: room.bet });
-        } else socket.emit('errorMsg', "Kòd pa bon oswa balans piti!");
+            io.to(data.code).emit('gameStart', { room: data.code, prize: (room.bet * 2) * 0.95, turn: room.host, bet: room.bet });
+        } else socket.emit('errorMsg', "Kòd erè oswa balans piti!");
     });
 
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
@@ -113,43 +163,29 @@ io.on('connection', (socket) => {
         io.to(data.room).emit('gameOver', { winner: data.phone, prize, winnerBalance: winner.balance });
     });
 
-    socket.on('leaveRoom', (room) => socket.leave(room));
-
-    // --- NOUVO KÒD POU DEKONEKSYON AK RANBOUSMAN ---
     socket.on('disconnect', async (reason) => {
         for (let code in rooms) {
             const room = rooms[code];
-            const playerInRoom = room.players.find(p => p.id === socket.id);
-
-            if (playerInRoom) {
+            const pIndex = room.players.findIndex(p => p.id === socket.id);
+            if (pIndex !== -1) {
                 const opponent = room.players.find(p => p.id !== socket.id);
-                
                 if (room.players.length === 2) {
-                    // Si se espre li fè (client-side disconnect)
                     if (reason === "client namespace disconnect" || reason === "server namespace disconnect") {
                         const prize = (room.bet * 2) * 0.95;
                         if (opponent) {
                             const winner = await User.findOneAndUpdate({ phone: opponent.phone }, { $inc: { balance: prize } }, { new: true });
                             io.to(opponent.id).emit('updateBalance', winner.balance);
-                            io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Lòt la abandone, ou genyen pa fòfè!" });
+                            io.to(opponent.id).emit('gameOver', { winner: opponent.phone, prize, msg: "Abandone! Ou genyen." });
                         }
-                    } 
-                    // Si se entènèt li ki koupe (transport close, ping timeout)
-                    else {
-                        for (let p of room.players) {
-                            const up = await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: room.bet } }, { new: true });
-                            io.to(p.id).emit('updateBalance', up.balance);
-                        }
-                        io.to(code).emit('errorMsg', "Koneksyon koupe. Nou ranbouse toulède jwè yo!");
+                    } else {
+                        for (let p of room.players) { await User.findOneAndUpdate({ phone: p.phone }, { $inc: { balance: room.bet } }); }
+                        io.to(code).emit('errorMsg', "Koneksyon koupe. Ranbousman!");
                     }
                 }
-                delete rooms[code];
-                break;
+                delete rooms[code]; break;
             }
         }
-        for (let bet in waitingPlayers) {
-            if (waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet];
-        }
+        for (let bet in waitingPlayers) { if (waitingPlayers[bet].id === socket.id) delete waitingPlayers[bet]; }
     });
 });
 
