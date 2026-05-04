@@ -1,40 +1,30 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+// KOREKSYON POU RENDER: Itilize pò anviwònman an oswa 3000
+const PORT = process.env.PORT || 3000;
+
+// Fòse sèvè a sèvi index.html
 app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 let chanmPrive = {}; 
 let keuPublik = [];
 
 io.on('connection', (socket) => {
-    // LOGIN
     socket.on('login', (data) => {
         socket.emit('login-success', { phone: data.phone, balance: "250" });
     });
 
-    // MATCHMAKING PIBLIK
-    socket.on('join-matchmaking', (data) => {
-        const nivo = data?.nivo || 0;
-        const adversaireIndex = keuPublik.findIndex(j => Math.abs(j.nivo - nivo) <= 5);
-
-        if (adversaireIndex !== -1) {
-            const adversaire = keuPublik.splice(adversaireIndex, 1)[0];
-            const roomName = `match_${socket.id}_${adversaire.socket.id}`;
-            socket.join(roomName);
-            adversaire.socket.join(roomName);
-            chanmPrive[roomName] = { players: [socket.id, adversaire.socket.id], board: Array(225).fill(null), turn: socket.id };
-            io.to(roomName).emit('match-found', { room: roomName, startTurn: socket.id });
-        } else {
-            keuPublik.push({ socket, nivo });
-        }
-    });
-
-    // KREYE MATCH PRIVE
     socket.on('create-room', (data) => {
         const kod = Math.random().toString(36).substring(2, 7).toUpperCase();
         socket.join(kod);
@@ -42,7 +32,6 @@ io.on('connection', (socket) => {
         socket.emit('room-created', kod);
     });
 
-    // ANTRE NAN MATCH PRIVE
     socket.on('join-room', (kod) => {
         const r = chanmPrive[kod];
         if (r && r.players.length === 1) {
@@ -54,7 +43,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // JERE MOUVMAN (15x15)
     socket.on('make-move', (data) => {
         const r = chanmPrive[data.room];
         if (r && r.turn === socket.id && r.board[data.index] === null) {
@@ -94,4 +82,4 @@ function checkWin(board, index, player) {
     return false;
 }
 
-server.listen(3000, () => console.log('Sèvè BLITZ ⚡ sou 3000'));
+server.listen(PORT, () => console.log(`Sèvè BLITZ ⚡ sou pò ${PORT}`));
