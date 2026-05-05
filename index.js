@@ -13,6 +13,8 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// NOUVO: Nou pa mete modpas la la ankò pou sekirite ✅
 const MONGO_URI = process.env.MONGO_URI; 
 
 const ADMIN_INFO = {
@@ -42,48 +44,52 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- NOUVO: ROUTE POU TCHEKE BALANS LAN TOUT TAN ---
-app.get('/api/get-balance/:phone', async (req, res) => {
-    try {
-        const user = await User.findOne({ phone: req.params.phone });
-        if (user) {
-            res.json({ success: true, balance: user.balance });
-        } else {
-            res.status(404).json({ success: false });
-        }
-    } catch (e) { res.status(500).json({ success: false }); }
+app.get('/api/admin-info', (req, res) => {
+    res.json(ADMIN_INFO);
 });
 
-app.get('/api/admin-info', (req, res) => { res.json(ADMIN_INFO); });
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.post('/login', async (req, res) => {
     try {
         const { phone, password } = req.body;
+        if (!phone || !password) return res.status(400).json({ success: false, msg: "Ranpli tout bwat yo!" });
         const cleanPhone = phone.trim().replace(/\s+/g, '');
+        
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
+            // Itilizatè kòmanse ak 0 goud
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
-            return res.json({ success: true, user, msg: `Byenveni! Depoze sou ${ADMIN_INFO.depo_phone}` });
+            return res.json({ success: true, user, msg: `Byenveni! Kontakte nou nan ${ADMIN_INFO.depo_phone} pou rechaje.` });
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         return res.json({ success: true, user });
     } catch (e) { return res.status(500).json({ success: false, msg: "Erè Sèvè." }); }
 });
 
-// --- SOCKET.IO ---
-io.on('connection', (socket) => {
-    // Lè yon jwè konekte, nou voye balans li ba li depi nan DB
-    socket.on('checkBalance', async (phone) => {
+app.post('/withdraw', async (req, res) => {
+    try {
+        const { phone, amount } = req.body;
         const user = await User.findOne({ phone });
-        if (user) socket.emit('updateBalance', user.balance);
-    });
+        if (user && user.balance >= amount && amount >= 100) {
+            await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
+            await Withdraw.create({ phone, amount });
+            res.json({ success: true, msg: `Demann voye! W ap resevwa kòb la sou ${ADMIN_INFO.retre_phone} byento.` });
+        } else res.json({ success: false, msg: "Balans ou piti oswa montan an ba!" });
+    } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
+});
 
+// SOCKET.IO
+let rooms = {};
+let waitingPlayers = {}; 
+
+io.on('connection', (socket) => {
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
         if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
-        
         if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
             const opponent = waitingPlayers[bet];
             delete waitingPlayers[bet];
@@ -98,23 +104,19 @@ io.on('connection', (socket) => {
             io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opponent.phone, symbol: 'X' });
         } else waitingPlayers[bet] = { id: socket.id, phone: data.phone };
     });
-
     socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
-
     socket.on('win', async (data) => {
         if (!rooms[data.room]) return;
         const prize = Number(data.prize);
         delete rooms[data.room];
         const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
         io.to(data.room).emit('gameOver', { winner: data.phone, prize });
-        socket.emit('updateBalance', winner.balance);
     });
 });
 
-let rooms = {};
-let waitingPlayers = {}; 
-
-// Ranplase ak URL Render ou a pou sèvè a pa dòmi
-setInterval(() => { axios.get('https://onrender.com').catch(() => {}); }, 600000); 
+// SELF-PING POU KENBE SÈVÈ A REVEYE
+setInterval(() => {
+    axios.get('https://onrender.com').catch(() => {});
+}, 600000); 
 
 server.listen(PORT, () => console.log(`Blitz ap kouri sou ${PORT} ⚡`));
