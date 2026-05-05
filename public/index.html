@@ -7,117 +7,207 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #ffffff; }
-        body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding-bottom: 80px; }
+        body { background: #f8f9fa; font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 80px; text-align: center; }
+        .hidden { display: none !important; }
         
-        /* Header */
-        .header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        /* 1. LOGIN DESIGN */
+        .auth-screen { padding: 60px 20px; }
+        .auth-card { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        input { width: 90%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
+
+        /* 2. HEADER & BANNER (Jan foto a te ye a) */
+        .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .logo { color: var(--primary); font-weight: 800; font-size: 26px; }
-        .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; font-size: 18px; }
+        .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; }
+        .banner { background: #2e7d32; margin: 15px; padding: 30px 20px; border-radius: 20px; color: white; text-align: left; }
+        .service-box { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 15px; margin-top: 15px; font-size: 12px; }
 
-        /* Banyè Vèt la */
-        .banner { background: #2e7d32; margin: 15px; padding: 30px 20px; border-radius: 20px; color: white; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .banner h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 1px; }
-        .service-box { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 15px; margin-top: 20px; font-size: 13px; line-height: 1.5; }
-
-        /* Bouton Aksyon */
+        /* 3. BUTTONS & GAME CARDS */
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px; }
         .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .btn-gwoup { background: #5cb85c; }
-        .btn-retre { background: #ff9800; }
-
-        /* Kat Jwèt yo */
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 25px 15px; }
-        .game-card { background: white; padding: 30px 10px; border-radius: 20px; text-align: center; box-shadow: 0 2px 15px rgba(0,0,0,0.05); position: relative; border: 1px solid #f0f0f0; }
-        .badge { position: absolute; top: 12px; right: 12px; padding: 5px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
-        .badge-aktif { background: #4caf50; }
-        .badge-soon { background: #f44336; }
-        .game-card img { width: 55px; height: auto; margin-bottom: 15px; }
-        .game-card span { display: block; font-weight: 800; color: #777; font-size: 16px; letter-spacing: 1px; }
+        .game-card { background: white; padding: 30px 10px; border-radius: 20px; text-align: center; box-shadow: 0 2px 15px rgba(0,0,0,0.05); position: relative; }
+        .badge { position: absolute; top: 12px; right: 12px; padding: 5px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
 
-        /* Baw Navigasyon anba */
+        /* 4. JWÈT MOPYON & TIMER */
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: var(--primary); width: 95vw; height: 95vw; max-width: 400px; margin: auto; }
+        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 14px; height: 100%; }
+        #timer-box { font-size: 30px; color: red; font-weight: 900; margin: 15px; }
+        #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:20px; }
+
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; }
-        .nav-item { color: #bbb; font-weight: bold; font-size: 13px; cursor: pointer; text-decoration: none; }
-        .nav-item.active { color: var(--primary); }
-
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <!-- PAJ AKEY (Dakey) -->
-    <div id="menu-s">
-        <div class="header">
-            <div class="logo">BLITZ</div>
-            <div id="u-bal" class="balance-pill">100 HTG</div>
-        </div>
-
-        <div class="banner">
-            <h2>MOPYON BLITZ ⚡</h2>
-            <div class="service-box">
-                <b>SÈVIS (Depo / Retrè / Asistans):</b><br>
-                Natcom: 55110103 | Digicel: 31594645
-            </div>
-        </div>
-
-        <div class="action-grid">
-            <button class="btn-act btn-gwoup" onclick="window.open('https://wa.me')">Gwoup</button>
-            <button class="btn-act btn-retre" onclick="showS('withdraw-s')">Retrè</button>
-        </div>
-
-        <div class="game-grid">
-            <!-- Mopyon Card -->
-            <div class="game-card" onclick="showS('mopyon-opts')">
-                <span class="badge badge-aktif">AKTIF</span>
-                <img src="https://flaticon.com" alt="Mopyon">
-                <span>MOPYON</span>
-            </div>
-            <!-- Domino Card -->
-            <div class="game-card">
-                <span class="badge badge-soon">SOON</span>
-                <img src="https://flaticon.com" alt="Domino">
-                <span style="color:#ccc">DOMINO</span>
-            </div>
-        </div>
-
-        <div class="bottom-nav">
-            <div class="nav-item active">AKEY</div>
-            <div class="nav-item" onclick="showS('withdraw-s')">RETRÈ</div>
-            <div class="nav-item" onclick="window.open('https://wa.me')">ÈD</div>
+    <!-- SCREEN 1: LOGIN -->
+    <div id="auth-s" class="auth-screen">
+        <div class="auth-card">
+            <h1 style="color:var(--primary); margin-bottom:5px;">Byenveni 👋</h1>
+            <p style="color:var(--primary); font-weight:bold; font-style:italic; margin-bottom:25px;">" Jwe, Genyen, Touche "</p>
+            <input type="text" id="phone" placeholder="Nimewo Telefòn">
+            <input type="password" id="pass" placeholder="Modpas">
+            <button class="btn-act" style="background:var(--primary); width:100%;" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- PAJ RETRÈ (Seksyon ki te manke a) -->
-    <div id="withdraw-s" class="hidden" style="padding: 20px; text-align: center;">
-        <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
-            <h2 style="color:var(--primary)">Mande Retrè</h2>
-            <input type="number" id="w-amount" placeholder="Montan HTG (Min 100)" style="width:100%; padding:15px; margin:20px 0; border-radius:12px; border:1px solid #ddd;">
-            <button class="btn-act btn-retre" style="width:100%;" onclick="withdraw()">KONFIME</button>
-            <button class="btn-act" style="width:100%; background:#eee; color:#555; margin-top:10px;" onclick="showS('menu-s')">RETOUNEN</button>
+    <!-- SCREEN 2: DA KEY (Akey jan foto a te ye) -->
+    <div id="menu-s" class="hidden">
+        <div class="header">
+            <div class="logo">BLITZ</div>
+            <div id="u-bal" class="balance-pill">0 HTG</div>
         </div>
+        <div class="banner">
+            <h2>MOPYON BLITZ ⚡</h2>
+            <div class="service-box"><b>SÈVIS:</b> Natcom: 55110103 | Digicel: 31594645</div>
+        </div>
+        <div class="action-grid">
+            <button class="btn-act" style="background:#5cb85c;" onclick="window.open('https://wa.me')">Gwoup</button>
+            <button class="btn-act" style="background:#ff9800;" onclick="showS('withdraw-s')">Retrè</button>
+        </div>
+        <div class="game-grid">
+            <div class="game-card" onclick="showS('mopyon-opts')">
+                <span class="badge" style="background:#4caf50">AKTIF</span>
+                <img src="https://flaticon.com" width="50">
+                <div style="font-weight:bold; margin-top:10px;">MOPYON</div>
+            </div>
+            <div class="game-card">
+                <span class="badge" style="background:#f44336">SOON</span>
+                <img src="https://flaticon.com" width="50">
+                <div style="font-weight:bold; color:#ccc; margin-top:10px;">DOMINO</div>
+            </div>
+        </div>
+        <div class="bottom-nav">
+            <div style="color:var(--primary); font-weight:bold;">AKEY</div>
+            <div onclick="showS('withdraw-s')">RETRÈ</div>
+            <div onclick="window.open('https://wa.me')">ÈD</div>
+        </div>
+    </div>
+
+    <!-- SCREEN 3: RETRÈ -->
+    <div id="withdraw-s" class="hidden screen" style="padding:20px;">
+        <div class="auth-card">
+            <h3>Mande Retrè</h3>
+            <input type="number" id="w-amount" placeholder="Montan HTG">
+            <button class="btn-act" style="background:#ff9800; width:100%;" onclick="withdraw()">KONFIME</button>
+            <button class="btn-act" style="background:#eee; color:#333; width:100%; margin-top:10px;" onclick="showS('menu-s')">RETOUNEN</button>
+        </div>
+    </div>
+
+    <!-- SCREEN 4: OPTIONS JWÈT -->
+    <div id="mopyon-opts" class="hidden screen" style="padding:20px;">
+        <div class="auth-card">
+            <h3>Miz Match</h3>
+            <input type="number" id="bet" value="50">
+            <button class="btn-act" style="background:var(--primary); width:100%;" onclick="startMatchmaking()">MATCH OTOMATIK</button>
+            <hr>
+            <input type="text" id="p-code" placeholder="Kòd Chanm">
+            <button class="btn-act" style="background:#444; width:100%;" onclick="joinPrivate()">KREYE / ANTRE</button>
+            <button class="btn-act" style="background:#999; width:100%; margin-top:10px;" onclick="showS('menu-s')">ANILE</button>
+        </div>
+    </div>
+
+    <!-- SCREEN 5: JWÈT MOPYON (OVERLAY) -->
+    <div id="game-overlay" class="hidden">
+        <div id="timer-box">30s</div>
+        <h3 id="match-status">Chache moun...</h3>
+        <div id="turn-info" style="font-weight:bold; margin-bottom:10px;"></div>
+        <div class="grid" id="board-grid"></div>
+        <button class="btn-act" style="background:red; width:120px; margin-top:20px;" onclick="location.reload()">KITE</button>
     </div>
 
     <script>
         const socket = io();
-        let user = { balance: 100, phone: "55110103" }; // Egzanp pou tès
+        let user, room, symbol, myTurn, prize, board, timerInt;
 
         function showS(id) {
-            document.querySelectorAll('#menu-s, #withdraw-s, #mopyon-opts, #game-overlay').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.auth-screen, .screen, #menu-s, #game-overlay').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
+        }
+
+        async function login() {
+            const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
+            const data = await res.json();
+            if(data.success) { user = data.user; showS('menu-s'); updateUI(); } else alert(data.msg);
+        }
+
+        function updateUI() { document.getElementById('u-bal').innerText = user.balance + " HTG"; }
+
+        function startMatchmaking() {
+            socket.emit('startMatchmaking', { phone: user.phone, bet: document.getElementById('bet').value });
+            showS('game-overlay'); resetBoard();
+        }
+
+        function joinPrivate() {
+            socket.emit('joinPrivate', { roomCode: document.getElementById('p-code').value, phone: user.phone, bet: document.getElementById('bet').value });
+            showS('game-overlay'); resetBoard();
+        }
+
+        socket.on('gameStart', (data) => {
+            room = data.room; prize = data.prize;
+            symbol = (data.turn === user.phone) ? 'X' : 'O';
+            myTurn = (data.turn === user.phone);
+            document.getElementById('match-status').innerText = "Ou se: " + symbol;
+            startTimer(); updateTurnText();
+        });
+
+        socket.on('opponentMove', (data) => {
+            board[data.r][data.c] = data.symbol;
+            myTurn = true; renderBoard(); startTimer(); updateTurnText();
+        });
+
+        function makeMove(r, c) {
+            if(!myTurn || board[r][c] !== '') return;
+            board[r][c] = symbol; myTurn = false;
+            renderBoard(); clearInterval(timerInt); updateTurnText();
+            socket.emit('move', { room, r, c, symbol, phone: user.phone, prize });
+            if(checkWin(r, c)) socket.emit('win', { room, phone: user.phone, prize });
+        }
+
+        function checkWin(r, c) {
+            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            for(let [dr, dc] of dirs) {
+                let count = 1;
+                for(let i=1; i<5; i++) if(board[r+dr*i]?.[c+dc*i] === symbol) count++; else break;
+                for(let i=1; i<5; i++) if(board[r-dr*i]?.[c-dc*i] === symbol) count++; else break;
+                if(count >= 5) return true;
+            }
+            return false;
+        }
+
+        function startTimer() {
+            let t = 30; clearInterval(timerInt);
+            timerInt = setInterval(() => {
+                t--; document.getElementById('timer-box').innerText = t + "s";
+                if(t <= 0) { clearInterval(timerInt); }
+            }, 1000);
+        }
+
+        function updateTurnText() {
+            document.getElementById('turn-info').innerText = myTurn ? "TOU PA W! ⚡" : "ATANN OPOZAN...";
         }
 
         async function withdraw() {
             const amount = document.getElementById('w-amount').value;
-            if(amount < 100) return alert("Minimòm se 100 HTG");
-            
-            const res = await fetch('/withdraw', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ phone: user.phone, amount: Number(amount) }) 
-            });
+            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount }) });
             const data = await res.json();
-            if(data.success) {
-                alert("Demann voye! L'ap parèt nan MongoDB ou.");
-                showS('menu-s');
+            if(data.success) { alert("Demann voye!"); user.balance -= amount; updateUI(); showS('menu-s'); } else alert(data.msg);
+        }
+
+        socket.on('gameOver', (data) => {
+            clearInterval(timerInt); alert(data.msg + "\nGanyan: " + data.winner);
+            if(data.winner === user.phone) { user.balance = data.newBalance; updateUI(); }
+            showS('menu-s');
+        });
+
+        function resetBoard() { board = Array(15).fill().map(() => Array(15).fill('')); renderBoard(); }
+        function renderBoard() {
+            const g = document.getElementById('board-grid'); g.innerHTML = '';
+            for(let r=0; r<15; r++) for(let c=0; c<15; c++) {
+                const d = document.createElement('div'); d.className = 'cell'; d.innerText = board[r][c];
+                if(board[r][c] === 'X') d.style.color = 'red'; if(board[r][c] === 'O') d.style.color = 'blue';
+                d.onclick = () => makeMove(r, c); g.appendChild(d);
             }
         }
     </script>
