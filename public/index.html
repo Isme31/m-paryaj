@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLITZ ⚡ | Jwe, Genyen, Touche</title>
+    <title>BLITZ ⚡ | Jwe & Touche</title>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="https://cloudflare.com">
     <style>
@@ -13,18 +13,23 @@
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .hidden { display: none !important; }
-        .slogan { color: var(--accent); font-weight: bold; font-style: italic; margin-bottom: 20px; font-size: 14px; }
         .card-ui { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: #bbb; border: 2px solid var(--primary); width: 100%; max-width: 400px; margin: auto; }
-        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; }
+        
+        /* Bèl tablo vèt */
+        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; background: #1b5e20; border: 4px solid #1b5e20; border-radius: 12px; width: 100%; max-width: 420px; margin: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+        .cell { aspect-ratio: 1/1; background: white; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; cursor: pointer; border-radius: 2px; transition: 0.1s; }
+        .cell:active { background: #e8f5e9; }
+        .x-style { color: #d32f2f; } /* Wouj */
+        .o-style { color: #1976d2; } /* Ble */
+
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 20px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="logo">BLITZ ⚡</div>
+        <div class="logo" style="color:var(--primary); font-weight:bold;">BLITZ ⚡</div>
         <div id="user-header" class="hidden"><span id="u-bal" class="balance-pill">0 HTG</span></div>
     </div>
 
@@ -32,10 +37,10 @@
     <div id="auth-s" class="screen">
         <div style="text-align: center; margin-top: 50px;">
             <h1>Byenveni 👋</h1>
-            <div class="slogan">" Jwe, Genyen, Touche "</div>
+            <p style="color:var(--accent); font-style:italic;">" Jwe, Genyen, Touche "</p>
             <div class="card-ui">
-                <input type="text" id="phone" placeholder="Telefòn">
-                <input type="password" id="pass" placeholder="Modpas">
+                <input type="text" id="phone" placeholder="Telefòn" style="padding:12px; border-radius:10px; border:1px solid #ddd; width:93%; margin-bottom:10px;">
+                <input type="password" id="pass" placeholder="Modpas" style="padding:12px; border-radius:10px; border:1px solid #ddd; width:93%; margin-bottom:10px;">
                 <button class="btn" onclick="login()">KONEKTE</button>
             </div>
         </div>
@@ -45,34 +50,20 @@
     <div id="menu-s" class="screen hidden">
         <div class="card-ui" style="background: linear-gradient(135deg, var(--primary), var(--accent)); color: white;">
             <h3 style="margin:0">MOPYON BLITZ ⚡</h3>
-            <p style="font-size:10px;">Natcom: 55110103 | Digicel: 31594645</p>
+            <p style="font-size:10px; opacity:0.8;">Natcom: 55110103 | Digicel: 31594645</p>
         </div>
-
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <button class="btn" style="background:#ffa502;" onclick="showS('withdraw-s')">Retrè</button>
-            <button class="btn" style="background:#25d366;" onclick="window.open('https://wa.me')">Admin</button>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div class="card-ui" style="text-align:center;" onclick="showS('mopyon-opts')">
-                <i class="fas fa-gamepad fa-2x"></i>
-                <h4>MOPYON</h4>
-            </div>
-            <div class="card-ui" style="text-align:center; opacity:0.6;" onclick="alert('Byento!')">
-                <i class="fas fa-th fa-2x"></i>
-                <h4>DOMINO</h4>
-            </div>
-        </div>
+        <button class="btn" style="background:#ffa502;" onclick="showS('withdraw-s')">Retrè</button>
+        <button class="btn" onclick="showS('mopyon-opts')">MOPYON</button>
+        <button class="btn" style="background:#666; opacity:0.6;">DOMINO (Byento)</button>
     </div>
 
-    <!-- MOPYON OPTS -->
+    <!-- MOPYON OPTIONS -->
     <div id="mopyon-opts" class="screen hidden">
         <div class="card-ui">
-            <h3>Match</h3>
-            <input type="number" id="bet" value="50">
+            <input type="number" id="bet" value="50" style="padding:12px; width:93%; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;">
             <button class="btn" onclick="startMatchmaking()">MATCHMAKING</button>
             <button class="btn" style="background:#444;" onclick="createPrivate()">KREYE KÒD</button>
-            <input type="text" id="join-code" placeholder="Kòd zanmi" style="margin-top:10px;">
+            <input type="text" id="join-code" placeholder="Kòd zanmi" style="padding:12px; width:93%; margin-top:10px; border-radius:10px; border:1px solid #ddd;">
             <button class="btn" style="background:#666;" onclick="joinPrivate()">ANTRE</button>
             <button class="btn" style="background:#999;" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
@@ -81,21 +72,21 @@
     <!-- WITHDRAW -->
     <div id="withdraw-s" class="screen hidden">
         <div class="card-ui">
-            <h3>Retrè</h3>
-            <input type="number" id="w-amount" placeholder="Montan">
+            <h3>Mande Retrè</h3>
+            <input type="number" id="w-amount" placeholder="Montan HTG" style="padding:12px; width:93%; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;">
             <button class="btn" onclick="submitWithdraw()">VOYE</button>
             <button class="btn" style="background:#ccc;" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
     </div>
 
-    <!-- GAME -->
+    <!-- GAME OVERLAY -->
     <div id="game-overlay" class="hidden">
-        <h2 id="match-status">Chache...</h2>
+        <h3 id="match-status">Chache...</h3>
         <div id="prize-tag" class="balance-pill">-- HTG</div>
         <div id="room-display" style="margin:10px 0; color:#888; font-weight:bold;"></div>
         <div class="grid" id="board-grid"></div>
         <p id="turn-info" style="font-weight:bold; margin-top:10px;"></p>
-        <button class="btn" style="background:red; width:150px;" onclick="location.reload()">KITE JWÈT</button>
+        <button class="btn" style="background:#e74c3c; width:150px;" onclick="location.reload()">KITE JWÈT</button>
     </div>
 
     <script>
@@ -125,6 +116,7 @@
 
         function createPrivate() {
             const bet = parseInt(document.getElementById('bet').value);
+            if(user.balance < bet) return alert("Balans ba!");
             const code = Math.floor(1000 + Math.random() * 9000);
             socket.emit('joinRoom', { roomCode: code, phone: user.phone, bet });
             document.getElementById('game-overlay').classList.remove('hidden');
@@ -151,9 +143,8 @@
             for(let r=0; r<15; r++){
                 for(let c=0; c<15; c++){
                     const cell = document.createElement('div'); cell.className = 'cell';
-                    if(board[r][c] === 'X') cell.style.color = 'red';
-                    if(board[r][c] === 'O') cell.style.color = 'blue';
-                    cell.innerText = board[r][c];
+                    if(board[r][c] === 'X') { cell.innerText = 'X'; cell.classList.add('x-style'); }
+                    if(board[r][c] === 'O') { cell.innerText = 'O'; cell.classList.add('o-style'); }
                     cell.onclick = () => {
                         if(!myTurn || board[r][c] !== '') return;
                         board[r][c] = symbol; myTurn = false; renderBoard(); updateTurnText();
@@ -172,7 +163,7 @@
         }
 
         function checkWin(r, c) {
-            const s = board[r][c]; const dirs = [,,, [1,-1]];
+            const s = board[r][c]; const dirs = [[0,1],[1,0],[1,1],[1,-1]];
             for(let [dr, dc] of dirs) {
                 let count = 1;
                 for(let i=1; i<5; i++) if(board[r+dr*i]?.[c+dc*i] === s) count++; else break;
@@ -180,6 +171,12 @@
                 if(count >= 5) return true;
             }
             return false;
+        }
+
+        async function submitWithdraw() {
+            const amount = document.getElementById('w-amount').value;
+            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount }) });
+            const d = await res.json(); alert(d.msg); location.reload();
         }
 
         socket.on('gameOver', (d) => { alert(d.winner === user.phone ? "OU GENYEN!" : "OU PÈDI!"); location.reload(); });
