@@ -2,89 +2,109 @@
 <html lang="ht">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLITZ ⚡</title>
+    <title>BLITZ ⚡ | Jwe & Touche</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #f8f9fa; }
         body { background: var(--bg); font-family: sans-serif; margin: 0; padding-bottom: 90px; text-align: center; }
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
+        
+        /* HEADER & BANNER */
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .logo { color: var(--primary); font-weight: 900; font-size: 24px; }
         .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; }
         .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; }
+        
+        /* BOUTON AK KAT JWÈT */
         .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
-        .game-card { background: white; padding: 25px 10px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; }
+        .game-card { background: white; padding: 25px 10px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; border: 1px solid #eee; }
         .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
+        
+        /* JWÈT GRID 20x20 */
         .grid-20 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); width: 98vw; height: 98vw; max-width: 450px; margin: auto; }
         .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 11px; aspect-ratio: 1/1; }
-        .win-cell { background: #c8e6c9 !important; animation: pulse 0.8s infinite; border: 1px solid var(--primary) !important; color: var(--primary) !important; }
+        .win-cell { background: #c8e6c9 !important; animation: pulse 0.8s infinite; color: var(--primary) !important; border: 1px solid var(--primary) !important; }
         @keyframes pulse { 0% {transform:scale(1);} 50% {transform:scale(1.1);} 100% {transform:scale(1);} }
+        
         input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; }
         #timer-box { font-size: 32px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:10px; overflow-y: auto; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; }
+        a { text-decoration: none; color: inherit; }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN -->
+    <!-- 1. LOGIN (AVÈK SLOGAN) -->
     <div id="auth-s" class="screen" style="padding-top:60px;">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
             <h1 style="color:var(--primary)">BLITZ 👋</h1>
             <p style="font-weight:bold; color:var(--primary); font-style:italic;">" Jwe, Genyen, Touche "</p>
-            <input type="text" id="phone" placeholder="Telefòn"><input type="password" id="pass" placeholder="Modpas">
+            <input type="text" id="phone" placeholder="Nimewo Telefòn"><input type="password" id="pass" placeholder="Modpas">
             <button class="btn-act" style="background:var(--primary)" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- HOME -->
+    <!-- 2. MENU (DAKEY) -->
     <div id="menu-s" class="hidden">
         <div class="header"><b class="logo">BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
+        
+        <!-- BANNER WHATSAPP -->
         <div class="banner">
             <h2>MOPYON BLITZ ⚡</h2>
             <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:13px;">
                 <b>SÈVIS DEPO / ASISTANS :</b><br>
-                <a href="https://wa.me" style="color:white; text-decoration:none;">📲 Natcom: 55110103</a> | 
-                <a href="https://wa.me" style="color:white; text-decoration:none;">📲 Digicel: 31594645</a>
+                <a href="https://wa.me" style="color:white;">📲 Natcom: 55110103</a> | 
+                <a href="https://wa.me" style="color:white;">📲 Digicel: 31594645</a>
             </div>
         </div>
+
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:0 15px;">
-            <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://wa.me')">Gwoup</button>
+            <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://whatsapp.com')">Gwoup</button>
             <button class="btn-act" style="background:#ff9800;" onclick="showS('withdraw-s')">Retrè</button>
         </div>
+
+        <!-- KAT JWÈT YO (SA W TE MANKE A) -->
         <div class="game-grid">
             <div class="game-card" onclick="showS('mopyon-opts')">
                 <span class="badge" style="background:#4caf50">AKTIF</span>
-                <img src="https://flaticon.com" width="50"><div style="font-weight:bold; margin-top:10px;">MOPYON</div>
+                <img src="https://flaticon.com" width="50">
+                <div style="font-weight:bold; margin-top:10px;">MOPYON</div>
             </div>
-            <div class="game-card" style="opacity: 0.6;">
+            <div class="game-card" style="opacity: 0.6; cursor: default;">
                 <span class="badge" style="background:#f44336">SOON</span>
-                <img src="https://flaticon.com" width="50"><div style="font-weight:bold; color:#888;">DOMINO</div>
+                <img src="https://flaticon.com" width="50">
+                <div style="font-weight:bold; color:#888;">DOMINO</div>
             </div>
         </div>
-        <div class="bottom-nav"><b style="color:var(--primary)">AKEY</b><div onclick="showS('withdraw-s')">RETRÈ</div><div onclick="window.open('https://wa.me')">ÈD</div></div>
+
+        <div class="bottom-nav">
+            <b style="color:var(--primary)">AKEY</b> 
+            <div onclick="showS('withdraw-s')">RETRÈ</div> 
+            <div onclick="window.open('https://whatsapp.com')">GWOUOP</div>
+        </div>
     </div>
 
-    <!-- RETRÈ -->
+    <!-- 3. WITHDRAW -->
     <div id="withdraw-s" class="hidden screen"><div style="background:white; padding:30px; border-radius:25px;">
         <h3>Mande Retrè</h3><input type="number" id="w-amount" placeholder="Montan HTG">
         <button class="btn-act" style="background:#ff9800" onclick="withdraw()">KONFIME</button>
         <button class="btn-act" style="background:#eee; color:#333;" onclick="showS('menu-s')">RETOUNEN</button>
     </div></div>
 
-    <!-- OPTS -->
+    <!-- 4. OPTIONS PRIVÉ -->
     <div id="mopyon-opts" class="hidden screen"><div style="background:white; padding:25px; border-radius:20px;">
         <h3>Match Privé</h3><input type="text" id="p-code" placeholder="Kòd Chanm"><input type="number" id="bet" value="50">
         <button class="btn-act" style="background:var(--primary)" onclick="joinPrivate()">KREYE / ANTRE</button>
         <button class="btn-act" style="background:#999;" onclick="showS('menu-s')">ANILE</button>
     </div></div>
 
-    <!-- GAME -->
+    <!-- 5. GAME OVERLAY -->
     <div id="game-overlay" class="hidden"><div id="timer-box">30s</div><h3 id="match-status">...</h3>
         <div id="turn-info" style="font-weight:bold; margin-bottom:10px; color:var(--primary);"></div>
-        <div class="grid-20" id="board-grid"></div><button class="btn-act" style="background:red; width:150px;" onclick="location.reload()">KITE</button>
+        <div class="grid-20" id="board-grid"></div><button class="btn-act" style="background:red; width:150px; margin-top:20px;" onclick="location.reload()">KITE</button>
     </div>
 
     <script>
