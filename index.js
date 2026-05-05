@@ -31,7 +31,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const cleanP = (p) => { let c = p.toString().replace(/\D/g, ''); return c.length > 8 ? c.slice(-8) : c; };
 
-// ANTI-TRICH: SÈVÈ A TCHEKE VIKTWA A
+// ANTI-TRICH: SÈVÈ A TCHEKE SI 5 PWEN ALIGNÉ
 function checkWinServer(board, r, c, symbol) {
     const ds = [{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1},{dr:1,dc:-1}];
     for (let {dr, dc} of ds) {
@@ -87,7 +87,7 @@ function startTurnTimer(roomCode, activePlayer) {
             const winnerP = players.find(p => p !== activePlayer);
             const prize = (rooms[roomCode].bet * 2) * 0.95;
             const winner = await User.findOneAndUpdate({ phone: winnerP }, { $inc: { balance: prize } }, { new: true });
-            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan opozan an fini!", newBalance: winner.balance });
+            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan fini!", newBalance: winner.balance });
             delete rooms[roomCode];
         }
     }, 31000);
@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
             socket.emit('match-status', "KÒD: " + rCode + " (Atann zanmi...)");
         } else {
             const r = rooms[rCode];
-            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm plen!");
+            if (r.phones.length >= 2) return socket.emit('errorMsg', "Plen!");
             r.phones.push(p8); socket.join(rCode);
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
             io.to(rCode).emit('gameStart', { room: rCode, prize: (r.bet * 2) * 0.95, turn: r.host });
@@ -120,7 +120,6 @@ io.on('connection', (socket) => {
         if (rooms[rCode]) {
             rooms[rCode].board[data.r][data.c] = data.symbol;
             socket.to(rCode).emit('opponentMove', data);
-            // ANTI-TRICH: SÈVÈ A DESIDE SI JWÈ A GENYEN
             const winCells = checkWinServer(rooms[rCode].board, data.r, data.c, data.symbol);
             if (winCells) {
                 clearTimeout(gameTimers[rCode]);
@@ -135,4 +134,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`⚡ Blitz sou ${PORT}`));
+server.listen(PORT, () => console.log(`⚡ Blitz Ready`));
