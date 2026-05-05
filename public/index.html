@@ -7,13 +7,13 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #f2f2f2; margin: 0; padding: 0; }
+        body { background-color: #f2f2f2; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
 
-        /* --- STYLE PAJ KONEKSYON (LOGIN) --- */
+        /* --- 1. PAJ LOGIN (SA WAP CHÈCHE A) --- */
         #login-page { 
             display: flex; flex-direction: column; align-items: center; 
-            justify-content: center; min-height: 100vh; width: 100%; 
+            justify-content: center; width: 100%; min-height: 100vh;
         }
         .login-container { 
             background: white; width: 90%; max-width: 350px; padding: 40px 20px; 
@@ -26,9 +26,9 @@
         .input-group { border: 1px solid #eee; border-radius: 12px; margin-bottom: 15px; padding: 5px 15px; text-align: left; }
         .input-group input { border: none; width: 100%; padding: 12px 0; outline: none; font-size: 15px; }
         .btn-konekte { background: #1b5e20; color: white; width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .footer-logo { margin-top: 20px; font-weight: bold; font-size: 18px; letter-spacing: 2px; text-align: center; color: black; }
+        .footer-logo { margin-top: 20px; font-weight: bold; font-size: 18px; letter-spacing: 2px; color: black; }
 
-        /* --- STYLE PAJ DAKÈY (DASHBOARD) --- */
+        /* --- 2. DASHBOARD JWÈT LA --- */
         #main-dashboard { width: 100%; background: #f5f5f5; min-height: 100vh; }
         .top-nav { display: flex; justify-content: space-between; padding: 15px; background: white; align-items: center; }
         .logo-green { color: #1b5e20; font-weight: bold; font-size: 24px; }
@@ -37,18 +37,17 @@
         .banner h1 { margin: 0; font-size: 26px; }
         .service-info { background: rgba(0,0,0,0.1); margin-top: 15px; padding: 10px; border-radius: 10px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
         .main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px; }
-        .btn-action { padding: 18px; border-radius: 12px; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; margin-bottom: 80px; }
-        .card { background: white; border-radius: 15px; overflow: hidden; text-align: center; position: relative; padding-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; }
+        .btn-action { padding: 18px; border-radius: 12px; border: none; color: white; font-weight: bold; cursor: pointer; }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
+        .card { background: white; border-radius: 15px; overflow: hidden; text-align: center; position: relative; padding-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .badge { position: absolute; top: 10px; right: 10px; padding: 3px 10px; border-radius: 10px; font-size: 10px; color: white; font-weight: bold; }
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px; border-top: 1px solid #eee; }
         .nav-item { color: #999; font-size: 11px; text-decoration: none; font-weight: bold; text-transform: uppercase; }
-        .nav-item.active { color: #2e7d32; }
     </style>
 </head>
 <body>
 
-    <!-- 1. BLÒK KONEKSYON (LOGIN) -->
+    <!-- KONSÈY: SI JWÈ A PA KONEKTE, L AP WÈ SA AN PREMYE -->
     <div id="login-page">
         <div class="login-container">
             <div class="close-btn">✕</div>
@@ -61,7 +60,7 @@
         <div class="footer-logo">BLITZ ⚡</div>
     </div>
 
-    <!-- 2. BLÒK DASHBOARD (LÈ JWÈ FIN KONEKTE) -->
+    <!-- DASHBOARD KI KACHE TANKOU DEFÒ -->
     <div id="main-dashboard" class="hidden">
         <div class="top-nav">
             <div class="logo-green">BLITZ</div>
@@ -79,7 +78,7 @@
             <button class="btn-action" style="background:#ff9800;" onclick="showRetre()">Retrè</button>
         </div>
         <div class="game-grid">
-            <div class="card" onclick="alert('Matchmaking ap kòmanse...')">
+            <div class="card" onclick="alert('Matchmaking...')">
                 <span class="badge" style="background:#4caf50">AKTIF</span>
                 <div style="height:100px; display:flex; align-items:center; justify-content:center; font-size:40px;">🎮</div>
                 <div style="font-weight:bold; color:#2e7d32">MOPYON</div>
@@ -91,7 +90,7 @@
             </div>
         </div>
         <div class="bottom-nav">
-            <a href="#" class="nav-item active">AKEY</a>
+            <a href="#" class="nav-item" style="color:#2e7d32">AKEY</a>
             <a href="#" class="nav-item" onclick="showRetre()">RETRÈ</a>
             <a href="#" class="nav-item">ÈD</a>
         </div>
@@ -101,12 +100,22 @@
         const socket = io();
         let user = null;
 
-        // FONKSYON KONEKSYON
+        // Lè ou louvri paj la, si pa gen moun ki konekte, n ap asire n paj login lan parèt
+        window.onload = () => {
+            const saved = localStorage.getItem('blitz_user');
+            if(saved) {
+                user = JSON.parse(saved);
+                initApp();
+            } else {
+                // Fòse paj login lan parèt
+                document.getElementById('login-page').classList.remove('hidden');
+                document.getElementById('main-dashboard').classList.add('hidden');
+            }
+        };
+
         async function login() {
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
-            if(!phone || !password) return alert("Ranpli bwat yo!");
-
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -117,46 +126,30 @@
                 user = data.user;
                 localStorage.setItem('blitz_user', JSON.stringify(user));
                 initApp();
-            } else {
-                alert(data.msg || "Modpas pa bon!");
-            }
+            } else alert(data.msg);
         }
 
-        // FONKSYON POU LIMEN DASHBOARD LA
         function initApp() {
             document.getElementById('login-page').classList.add('hidden');
             document.getElementById('main-dashboard').classList.remove('hidden');
-            setInterval(updateBalance, 5000); // Tcheke balans chak 5 segond
+            setInterval(updateBalance, 5000);
             updateBalance();
         }
 
-        // REFRESH BALANS
         async function updateBalance() {
-            if(!user) return;
             const res = await fetch(`/api/get-balance/${user.phone}`);
             const data = await res.json();
             if(data.success) document.getElementById('u-balance').innerText = data.balance;
         }
 
         function showRetre() {
-            const amount = prompt("Konbyen ou vle rale?");
-            if(amount) {
-                fetch('/withdraw', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ phone: user.phone, amount: Number(amount) })
-                }).then(r => r.json()).then(d => alert(d.msg));
-            }
+            const amt = prompt("Konbyen HTG ou vle rale?");
+            if(amt) fetch('/withdraw', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: user.phone, amount: Number(amt) })
+            }).then(r => r.json()).then(d => alert(d.msg));
         }
-
-        // TCHEKE SI JWÈ A TE DEJA KONEKTE LÈ L LOUVRI SIT LA
-        window.onload = () => {
-            const saved = localStorage.getItem('blitz_user');
-            if(saved) {
-                user = JSON.parse(saved);
-                initApp();
-            }
-        };
     </script>
 </body>
 </html>
