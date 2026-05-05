@@ -15,7 +15,7 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// KONEKSYON MONGODB AK OPSYON TRANZAKSYON
+// KONEKSYON MONGODB AK DEBLOKAJ SEKIRITE
 mongoose.connect(MONGO_URI, {
     tlsAllowInvalidCertificates: true,
     sslValidate: false,
@@ -41,6 +41,7 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// LOGIN & TRANZAKSYON RECHAJ
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
@@ -62,7 +63,7 @@ app.post('/withdraw', async (req, res) => {
     if (user && user.balance >= val && val >= 100) {
         await User.findOneAndUpdate({ phone }, { $inc: { balance: -val } });
         await Withdraw.create({ phone, amount: val });
-        res.json({ success: true, msg: "Mande voye!" });
+        res.json({ success: true, msg: "Mande voye bay admin!" });
     } else res.json({ success: false, msg: "Balans ba!" });
 });
 
@@ -70,6 +71,7 @@ let rooms = {};
 let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
+    // MATCHMAKING OTOMATIK
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
         const user = await User.findOne({ phone: data.phone });
@@ -79,14 +81,12 @@ io.on('connection', (socket) => {
             const opp = waitingPlayers[bet];
             delete waitingPlayers[bet];
             const code = `room_${Date.now()}`;
-            rooms[code] = { phones: [opp.phone, data.phone], bet };
+            rooms[code] = { phones: [opp.phone, data.phone], bet, hostId: opp.id };
             
             socket.join(code);
             io.sockets.sockets.get(opp.id)?.join(code);
-
             await User.updateMany({ phone: { $in: [opp.phone, data.phone] } }, { $inc: { balance: -bet } });
             
-            // Jwè 1 se X, Jwè 2 se O
             io.to(opp.id).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone, symbol: 'X' });
             socket.emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone, symbol: 'O' });
         } else {
@@ -94,19 +94,24 @@ io.on('connection', (socket) => {
         }
     });
 
+    // CHANM PRIVÉ
     socket.on('joinRoom', async (data) => {
         const { roomCode, phone, bet } = data;
         const user = await User.findOne({ phone });
+
         if (!rooms[roomCode]) {
             if (!user || user.balance < Number(bet)) return socket.emit('errorMsg', "Balans ou piti!");
             rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone], hostId: socket.id };
             socket.join(roomCode);
         } else {
             const r = rooms[roomCode];
+            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm sa a plen!");
             if (user.balance < r.bet) return socket.emit('errorMsg', "Balans ou piti!");
+
             r.phones.push(phone);
             socket.join(roomCode);
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
+
             io.to(r.hostId).emit('gameStart', { room: roomCode, prize: (r.bet * 2) * 0.95, turn: r.host, symbol: 'X' });
             socket.emit('gameStart', { room: roomCode, prize: (r.bet * 2) * 0.95, turn: r.host, symbol: 'O' });
         }
