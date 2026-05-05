@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLITZ ⚡ | Jwe & Touche</title>
+    <title>BLITZ ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #f8f9fa; }
@@ -11,33 +11,32 @@
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         
-        /* Header & Banner */
+        /* DESIGN PREMIUM */
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 8px 15px; border-radius: 20px; font-weight: bold; }
         .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; }
-        .service-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-top: 15px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
-        
-        /* Actions & Cards */
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px; }
-        .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn-act:active { transform: scale(0.95); }
+        
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px 15px; }
         .game-card { background: white; padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; }
         .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
         .badge-aktif { background: #4caf50; }
         .badge-soon { background: #f44336; }
         
-        /* Game Board */
+        /* JWÈT */
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: var(--primary); width: 95vw; height: 95vw; max-width: 400px; margin: auto; }
         .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 14px; }
-        #timer-box { font-size: 28px; color: red; font-weight: 900; margin: 10px; }
+        #timer-box { font-size: 30px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:20px; }
         
-        input { width: 90%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
+        input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
     </style>
 </head>
 <body>
 
-    <!-- AUTH -->
+    <!-- LOGIN -->
     <div id="auth-s" class="screen" style="padding-top:60px;">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
             <h1 style="color:var(--primary); margin-bottom:5px;">Byenveni 👋</h1>
@@ -48,12 +47,14 @@
         </div>
     </div>
 
-    <!-- HOME -->
+    <!-- HOME PAGE -->
     <div id="menu-s" class="hidden">
         <div class="header"><b>BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
         <div class="banner">
             <h2>MOPYON BLITZ ⚡</h2>
-            <div class="service-box">Natcom: 55110103 | Digicel: 31594645</div>
+            <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:12px; border:1px solid rgba(255,255,255,0.2);">
+                <b>SÈVIS:</b> Natcom: 55110103 | Digicel: 31594645
+            </div>
         </div>
         <div class="action-grid">
             <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://wa.me')">Gwoup</button>
@@ -75,11 +76,12 @@
 
     <!-- WITHDRAW -->
     <div id="withdraw-s" class="hidden screen">
-        <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
+        <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,0.05); margin:15px;">
             <h3>Mande Retrè</h3>
-            <input type="number" id="w-amount" placeholder="Montan HTG (Min 100)">
+            <p style="font-size:12px; color:#888;">Minimòm 100 HTG</p>
+            <input type="number" id="w-amount" placeholder="Montan HTG">
             <button class="btn-act" style="background:var(--accent); width:100%;" onclick="withdraw()">KONFIME</button>
-            <button class="btn-act" style="background:#eee; color:#333; width:100%; margin-top:10px;" onclick="showS('menu-s')">RETOUNEN</button>
+            <button class="btn-act" style="background:#eee; color:#333; width:100%; margin-top:10px;" onclick="showS('menu-s')">ANILE</button>
         </div>
     </div>
 
@@ -93,7 +95,7 @@
                 <input type="text" id="p-code" placeholder="Kòd Chanm">
                 <button class="btn-act" style="background:#444; width:100%;" onclick="joinPrivate()">KREYE / ANTRE</button>
             </div>
-            <button class="btn-act" style="background:#999; width:100%;" onclick="showS('menu-s')">ANILE</button>
+            <button class="btn-act" style="background:#999; width:100%; margin-top:10px;" onclick="showS('menu-s')">ANILE</button>
         </div>
     </div>
 
@@ -117,6 +119,15 @@
 
         function finiJwet() { showS('menu-s'); clearInterval(timerInt); }
 
+        function startTimer() {
+            let t = 30; clearInterval(timerInt);
+            document.getElementById('timer-box').innerText = t + "s";
+            timerInt = setInterval(() => {
+                t--; document.getElementById('timer-box').innerText = t + "s";
+                if(t <= 0) clearInterval(timerInt);
+            }, 1000);
+        }
+
         async function login() {
             const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
             const ref = new URLSearchParams(window.location.search).get('ref');
@@ -137,11 +148,13 @@
             showS('game-overlay'); resetBoard();
         }
 
+        socket.on('match-status', (msg) => { document.getElementById('match-status').innerText = msg; });
+
         socket.on('gameStart', (data) => {
             room = data.room; prize = data.prize;
             symbol = (data.turn === user.phone) ? 'X' : 'O';
             myTurn = (data.turn === user.phone);
-            document.getElementById('match-status').innerText = "Ou se: " + symbol;
+            document.getElementById('match-status').innerText = "Match! Ou se " + symbol;
             startTimer(); updateTurnText();
         });
 
@@ -169,21 +182,13 @@
             return false;
         }
 
-        function startTimer() {
-            let t = 30; clearInterval(timerInt);
-            timerInt = setInterval(() => {
-                t--; document.getElementById('timer-box').innerText = t + "s";
-                if(t <= 0) clearInterval(timerInt);
-            }, 1000);
-        }
-
         function updateTurnText() {
             document.getElementById('turn-info').innerText = myTurn ? "TOU PA W! ⚡" : "ATANN OPOZAN...";
         }
 
         async function withdraw() {
             const amount = document.getElementById('w-amount').value;
-            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount }) });
+            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount: Number(amount) }) });
             const data = await res.json();
             if(data.success) { alert("Demann voye!"); user.balance -= amount; updateUI(); showS('menu-s'); } else alert(data.msg);
         }
@@ -203,6 +208,7 @@
                 d.onclick = () => makeMove(r, c); g.appendChild(d);
             }
         }
+        socket.on('errorMsg', (m) => { alert(m); finiJwet(); });
     </script>
 </body>
 </html>
