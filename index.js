@@ -11,7 +11,8 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-mongoose.connect(MONGO_URI, { tlsAllowInvalidCertificates: true, sslValidate: false, retryWrites: true })
+// FIX TOTAL MONGODB
+mongoose.connect(MONGO_URI, { tlsAllowInvalidCertificates: true, sslValidate: false })
 .then(() => console.log("✅ MONGO KONEKTE")).catch(err => console.log("❌ ERÈ MONGO:", err));
 
 const User = mongoose.model('User', new mongoose.Schema({
@@ -63,7 +64,7 @@ app.post('/withdraw', async (req, res) => {
     if (user && user.balance >= amount && amount >= 100) {
         await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
         await Withdraw.create({ phone, amount });
-        res.json({ success: true, msg: "Demann voye!" });
+        res.json({ success: true, msg: "Demann voye bay admin!" });
     } else res.json({ success: false, msg: "Balans ba!" });
 });
 
@@ -105,10 +106,10 @@ io.on('connection', (socket) => {
 
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
-            clearTimeout(gameTimers[data.room]); delete gameTimers[data.room];
+            clearTimeout(gameTimers[data.room]);
             const prize = Number(data.prize); delete rooms[data.room];
             const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, msg: "MOPYON!", newBalance: winner.balance });
+            io.to(data.room).emit('gameOver', { winner: data.phone, msg: "MOPYON! Ou genyen!", newBalance: winner.balance });
         }
     });
 });
