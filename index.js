@@ -11,7 +11,6 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// KONEKSYON SEKIRIZE
 mongoose.connect(MONGO_URI, { 
     tlsAllowInvalidCertificates: true, 
     sslValidate: false,
@@ -32,7 +31,7 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// FONKSYON SEKIRITE 8 CHIF
+// FONCTION STANDARD 8 CHIFFRES
 const cleanP = (p) => {
     let c = p.toString().replace(/\D/g, ''); 
     return c.length > 8 ? c.slice(-8) : c;
@@ -48,7 +47,7 @@ app.post('/login', async (req, res) => {
                 const r8 = cleanP(ref);
                 await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } });
             }
-            user = await User.create({ phone: p8, password, balance: 10 }); 
+            user = await User.create({ phone: p8, password, balance: 100 }); 
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         res.json({ success: true, user });
@@ -92,7 +91,8 @@ function startTurnTimer(roomCode, activePlayer) {
     if (gameTimers[roomCode]) clearTimeout(gameTimers[roomCode]);
     gameTimers[roomCode] = setTimeout(async () => {
         if (rooms[roomCode]) {
-            const winnerP = rooms[roomCode].phones.find(p => p !== activePlayer);
+            const players = rooms[roomCode].phones;
+            const winnerP = players.find(p => p !== activePlayer);
             const prize = (rooms[roomCode].bet * 2) * 0.95;
             const winner = await User.findOneAndUpdate({ phone: winnerP }, { $inc: { balance: prize } }, { new: true });
             io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan opozan an fini!", newBalance: winner.balance });
@@ -103,24 +103,24 @@ function startTurnTimer(roomCode, activePlayer) {
 
 io.on('connection', (socket) => {
     socket.on('joinPrivate', async (data) => {
+        if (!data.roomCode || data.roomCode.trim() === "") return socket.emit('errorMsg', "Tape yon kòd!");
         const p8 = cleanP(data.phone);
-        const { roomCode, bet } = data;
+        const rCode = data.roomCode.trim();
         const user = await User.findOne({ phone: p8 });
-        if (!user || user.balance < Number(bet)) return socket.emit('errorMsg', "Balans ou piti!");
+        if (!user || user.balance < Number(data.bet)) return socket.emit('errorMsg', "Balans ou piti!");
 
-        if (!rooms[roomCode]) {
-            rooms[roomCode] = { host: p8, bet: Number(bet), phones: [p8], board: Array(20).fill().map(() => Array(20).fill('')) };
-            socket.join(roomCode);
-            socket.emit('match-status', "KÒD: " + roomCode + " (Atann zanmi...)");
+        if (!rooms[rCode]) {
+            rooms[rCode] = { host: p8, bet: Number(data.bet), phones: [p8], board: Array(20).fill().map(() => Array(20).fill('')) };
+            socket.join(rCode);
+            socket.emit('match-status', "KÒD: " + rCode + " (Atann zanmi...)");
         } else {
-            const r = rooms[roomCode];
-            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm sa plen!");
+            const r = rooms[rCode];
+            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm plen!");
             r.phones.push(p8);
-            socket.join(roomCode);
-            const prize = (r.bet * 2) * 0.95;
+            socket.join(rCode);
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
-            io.to(roomCode).emit('gameStart', { room: roomCode, prize, turn: r.host });
-            startTurnTimer(roomCode, r.host);
+            io.to(rCode).emit('gameStart', { room: rCode, prize: (r.bet * 2) * 0.95, turn: r.host });
+            startTurnTimer(rCode, r.host);
         }
     });
 
@@ -144,4 +144,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`⚡ Blitz Ready`));
+server.listen(PORT, () => console.log(`⚡ Blitz sou ${PORT}`));
