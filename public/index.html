@@ -7,100 +7,85 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; font-family: sans-serif; }
-        body { background-color: #f5f5f5; margin: 0; padding: 0; }
+        body { background-color: #f2f2f2; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none; }
 
-        /* HEADER */
+        /* --- LOGIN DESIGN --- */
+        #login-page { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 100vh; }
+        .login-container { background: white; width: 90%; max-width: 350px; padding: 40px 20px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; position: relative; }
+        .close-btn { position: absolute; top: 20px; right: 20px; color: #999; font-size: 20px; }
+        .login-container h2 { color: #1b5e20; margin: 0; font-size: 28px; }
+        .slogan { color: #2e7d32; font-style: italic; font-size: 13px; margin-bottom: 30px; font-weight: bold; }
+        .input-group { border: 1px solid #eee; border-radius: 12px; margin-bottom: 15px; padding: 5px 15px; text-align: left; }
+        .input-group input { border: none; width: 100%; padding: 12px 0; outline: none; font-size: 15px; }
+        .btn-konekte { background: #1b5e20; color: white; width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .footer-logo { margin-top: 20px; font-weight: bold; font-size: 18px; letter-spacing: 2px; }
+
+        /* --- DASHBOARD DESIGN --- */
+        #game-page { width: 100%; background: #f5f5f5; min-height: 100vh; }
         .top-nav { display: flex; justify-content: space-between; padding: 15px; background: white; align-items: center; }
-        .logo { color: #1b5e20; font-weight: bold; font-size: 24px; }
+        .logo-green { color: #1b5e20; font-weight: bold; font-size: 24px; }
         .balance-pill { background: #f1f8e9; color: #2e7d32; padding: 8px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #c8e6c9; }
-
-        /* GREEN BANNER */
-        .banner { background: linear-gradient(135deg, #1b5e20, #2e7d32); margin: 15px; border-radius: 15px; padding: 25px; color: white; position: relative; }
-        .banner h1 { margin: 0; font-size: 28px; letter-spacing: 1px; }
-        .banner .service-info { background: rgba(0,0,0,0.1); margin-top: 15px; padding: 10px; border-radius: 10px; font-size: 13px; border: 1px solid rgba(255,255,255,0.2); }
-
-        /* MAIN BUTTONS */
+        .banner { background: linear-gradient(135deg, #1b5e20, #2e7d32); margin: 15px; border-radius: 15px; padding: 25px; color: white; }
+        .banner h1 { margin: 0; font-size: 26px; }
+        .service-info { background: rgba(0,0,0,0.1); margin-top: 15px; padding: 10px; border-radius: 10px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
         .main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px; }
-        .btn-action { padding: 20px; border-radius: 12px; border: none; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .btn-gwoup { background-color: #4caf50; }
-        .btn-retre { background-color: #ff9800; }
-
-        /* GAME CARDS */
+        .btn-action { padding: 18px; border-radius: 12px; border: none; color: white; font-weight: bold; cursor: pointer; }
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
-        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; position: relative; }
-        .badge { position: absolute; top: 10px; right: 10px; padding: 3px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
-        .badge.aktif { background: #4caf50; }
-        .badge.soon { background: #f44336; }
-        .card-img { height: 120px; background: #fafafa; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee; }
-        .card-title { padding: 15px; font-weight: bold; color: #2e7d32; font-size: 14px; }
-
-        /* REFERRAL BOX */
-        .ref-box { background: white; margin: 0 15px 80px 15px; padding: 15px; border-radius: 10px; font-size: 14px; color: #666; text-align: left; }
-
-        /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px; border-top: 1px solid #eee; }
-        .nav-item { color: #999; font-size: 12px; text-decoration: none; font-weight: bold; text-transform: uppercase; }
-        .nav-item.active { color: #2e7d32; }
-
-        /* LOGIN PAGE */
-        .login-screen { padding: 40px 20px; text-align: center; }
-        .login-input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; outline: none; }
-        .btn-login { width: 100%; padding: 15px; background: #2e7d32; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 10px; }
+        .card { background: white; border-radius: 15px; overflow: hidden; text-align: center; position: relative; padding-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .badge { position: absolute; top: 10px; right: 10px; padding: 3px 10px; border-radius: 10px; font-size: 10px; color: white; font-weight: bold; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px; border-top: 1px solid #eee; }
+        .nav-item { color: #999; font-size: 11px; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <!-- PAJ KONEKSYON -->
-    <div id="login-page" class="login-screen">
-        <h1 style="color:#1b5e20">BLITZ</h1>
-        <input type="number" id="phone" class="login-input" placeholder="Nimewo Telefòn">
-        <input type="password" id="password" class="login-input" placeholder="Modpas">
-        <button class="btn-login" onclick="login()">KONEKTE</button>
+    <div id="login-page">
+        <div class="login-container">
+            <div class="close-btn">✕</div>
+            <h2>Byenveni 👋</h2>
+            <p class="slogan">" Jwe, Genyen, Touche "</p>
+            <div class="input-group"><input type="number" id="phone" placeholder="34343434"></div>
+            <div class="input-group"><input type="password" id="password" placeholder="Modpas"></div>
+            <button class="btn-konekte" onclick="login()">Konekte</button>
+        </div>
+        <div class="footer-logo">BLITZ ⚡</div>
     </div>
 
-    <!-- DASHBOARD (Menm jan ak foto a) -->
+    <!-- DASHBOARD -->
     <div id="game-page" class="hidden">
         <div class="top-nav">
-            <div class="logo">BLITZ</div>
+            <div class="logo-green">BLITZ</div>
             <div class="balance-pill"><span id="u-balance">0</span> HTG</div>
         </div>
-
         <div class="banner">
             <h1>MOPYON BLITZ ⚡</h1>
             <div class="service-info">
                 <b>SÈVIS (Depo / Retrè / Asistans):</b><br>
-                Natcom: <span id="nat-num">55110103</span> | Digicel: <span id="dig-num">31594645</span>
+                Natcom: 55110103 | Digicel: 31594645
             </div>
         </div>
-
         <div class="main-actions">
-            <button class="btn-action btn-gwoup" onclick="window.location.href='https://wa.me'">Gwoup</button>
-            <button class="btn-action btn-retre" onclick="showRetre()">Retrè</button>
+            <button class="btn-action" style="background:#4caf50;" onclick="window.location.href='https://wa.me'">Gwoup</button>
+            <button class="btn-action" style="background:#ff9800;" onclick="showRetre()">Retrè</button>
         </div>
-
         <div class="game-grid">
             <div class="card" onclick="startMatch()">
-                <span class="badge aktif">AKTIF</span>
-                <div class="card-img"><img src="https://flaticon.com" width="50"></div>
-                <div class="card-title">MOPYON</div>
+                <span class="badge" style="background:#4caf50">AKTIF</span>
+                <div style="height:100px; display:flex; align-items:center; justify-content:center; font-size:40px;">🎮</div>
+                <div style="font-weight:bold; color:#2e7d32">MOPYON</div>
             </div>
             <div class="card">
-                <span class="badge soon">SOON</span>
-                <div class="card-img"><img src="https://flaticon.com" width="50" style="filter: grayscale(1);"></div>
-                <div class="card-title" style="color:#999">DOMINO</div>
+                <span class="badge" style="background:#f44336">SOON</span>
+                <div style="height:100px; display:flex; align-items:center; justify-content:center; font-size:40px; opacity:0.3;">🎲</div>
+                <div style="font-weight:bold; color:#999">DOMINO</div>
             </div>
         </div>
-
-        <div class="ref-box">
-            Gagne <b>5 HTG</b> pa moun ou envite: <br>
-            <small>Kòd ou: <span id="u-phone">...</span></small>
-        </div>
-
         <div class="bottom-nav">
-            <a href="#" class="nav-item active">Akey</a>
-            <a href="#" class="nav-item" onclick="showRetre()">Retrè</a>
-            <a href="#" class="nav-item">Èd</a>
+            <a href="#" class="nav-item" style="color:#2e7d32">AKEY</a>
+            <a href="#" class="nav-item" onclick="showRetre()">RETRÈ</a>
+            <a href="#" class="nav-item">ÈD</a>
         </div>
     </div>
 
@@ -127,7 +112,6 @@
         function initApp() {
             document.getElementById('login-page').classList.add('hidden');
             document.getElementById('game-page').classList.remove('hidden');
-            document.getElementById('u-phone').innerText = user.phone;
             setInterval(updateBalance, 5000);
             updateBalance();
         }
@@ -139,19 +123,17 @@
         }
 
         function startMatch() {
-            alert("Matchmaking ap kòmanse...");
-            socket.emit('startMatchmaking', { phone: user.phone, bet: 50 });
+            const bet = prompt("Antre paryaj (50, 100, 500):", "50");
+            if(bet) socket.emit('startMatchmaking', { phone: user.phone, bet: Number(bet) });
         }
 
         function showRetre() {
             const amount = prompt("Konbyen ou vle rale?");
-            if(amount) {
-                fetch('/withdraw', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ phone: user.phone, amount: Number(amount) })
-                }).then(r => r.json()).then(d => alert(d.msg));
-            }
+            if(amount) fetch('/withdraw', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: user.phone, amount: Number(amount) })
+            }).then(r => r.json()).then(d => alert(d.msg));
         }
 
         window.onload = () => {
