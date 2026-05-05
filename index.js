@@ -31,7 +31,6 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// FONCTION POUR GARDER SEULEMENT LES 8 DERNIERS CHIFFRES
 const cleanP = (p) => {
     let c = p.toString().replace(/\D/g, ''); 
     return c.length > 8 ? c.slice(-8) : c;
@@ -47,7 +46,7 @@ app.post('/login', async (req, res) => {
                 const r8 = cleanP(ref);
                 await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } });
             }
-            user = await User.create({ phone: p8, password, balance: 100 }); 
+            user = await User.create({ phone: p8, password, balance: 10 }); 
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         res.json({ success: true, user });
@@ -63,7 +62,7 @@ app.post('/withdraw', async (req, res) => {
             await User.findOneAndUpdate({ phone: p8 }, { $inc: { balance: -amt } });
             await Withdraw.create({ phone: p8, amount: amt });
             res.json({ success: true });
-        } else res.json({ success: false, msg: "Balans ba!" });
+        } else res.json({ success: false });
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
@@ -77,7 +76,7 @@ function startTurnTimer(roomCode, activePlayer, prize) {
             const players = rooms[roomCode].phones;
             const winnerP = players.find(p => p !== activePlayer);
             const winner = await User.findOneAndUpdate({ phone: winnerP }, { $inc: { balance: prize } }, { new: true });
-            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan opozan an fini (30s)!", newBalance: winner.balance });
+            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan fini (30s)!", newBalance: winner.balance });
             delete rooms[roomCode];
         }
     }, 30000);
@@ -93,10 +92,9 @@ io.on('connection', (socket) => {
         if (!rooms[roomCode]) {
             rooms[roomCode] = { host: p8, bet: Number(bet), phones: [p8] };
             socket.join(roomCode);
-            socket.emit('match-status', "KÒD: " + roomCode + " (Atann opozan...)");
+            socket.emit('match-status', "KÒD: " + roomCode + " (Atann zanmi...)");
         } else {
             const r = rooms[roomCode];
-            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm plen!");
             r.phones.push(p8);
             socket.join(roomCode);
             const prize = (r.bet * 2) * 0.95;
@@ -124,4 +122,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log(`⚡ Blitz sou ${PORT}`));
+server.listen(PORT, () => console.log(`⚡ Blitz Ready`));
