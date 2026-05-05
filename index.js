@@ -13,22 +13,20 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = "mongodb+srv://hugues:belard@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
-// Kòd sa a ap pran lyen an nan Render sekrèman
+
+// NOUVO: Nou pa mete modpas la la ankò pou sekirite ✅
 const MONGO_URI = process.env.MONGO_URI; 
 
-// KONFIGIRASYON ADMIN
 const ADMIN_INFO = {
     depo_phone: "31594645",
     retre_phone: "55110103",
-    assistant_whatsapp: "https://wa.me" // Lyen dirèk pou WhatsApp
+    assistant_whatsapp: "https://wa.me"
 };
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Mopyon Blitz Estab ✅"))
     .catch(err => console.error("Erè MongoDB: ", err));
 
-// --- MODÈL YO ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -46,8 +44,6 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- ROUTE POU ENFO ADMIN ---
-// Sa ap pèmèt ou afiche nimewo yo nan jwèt la fasil
 app.get('/api/admin-info', (req, res) => {
     res.json(ADMIN_INFO);
 });
@@ -56,17 +52,15 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- LOGIN & WITHDRAW ---
 app.post('/login', async (req, res) => {
     try {
-        const { phone, password, ref } = req.body;
+        const { phone, password } = req.body;
         if (!phone || !password) return res.status(400).json({ success: false, msg: "Ranpli tout bwat yo!" });
         const cleanPhone = phone.trim().replace(/\s+/g, '');
+        
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
-            if (ref && ref !== cleanPhone) {
-                await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } }).catch(e => console.log("Ref Error"));
-            }
+            // Itilizatè kòmanse ak 0 goud
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
             return res.json({ success: true, user, msg: `Byenveni! Kontakte nou nan ${ADMIN_INFO.depo_phone} pou rechaje.` });
         }
@@ -87,7 +81,7 @@ app.post('/withdraw', async (req, res) => {
     } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
 });
 
-// --- SOCKET.IO ---
+// SOCKET.IO
 let rooms = {};
 let waitingPlayers = {}; 
 
@@ -120,7 +114,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// SELF-PING POU EVITE DÒMI
+// SELF-PING POU KENBE SÈVÈ A REVEYE
 setInterval(() => {
     axios.get('https://onrender.com').catch(() => {});
 }, 600000); 
