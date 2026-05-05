@@ -11,6 +11,7 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
+// KONEKSYON SEKIRIZE
 mongoose.connect(MONGO_URI, { 
     tlsAllowInvalidCertificates: true, 
     sslValidate: false,
@@ -31,7 +32,7 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// FONKSYON POU PRAN 8 DÈNYE CHIF SÈLMAN
+// FONKSYON SEKIRITE 8 CHIF
 const cleanP = (p) => {
     let c = p.toString().replace(/\D/g, ''); 
     return c.length > 8 ? c.slice(-8) : c;
@@ -47,7 +48,7 @@ app.post('/login', async (req, res) => {
                 const r8 = cleanP(ref);
                 await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } });
             }
-            user = await User.create({ phone: p8, password, balance: 100 }); 
+            user = await User.create({ phone: p8, password, balance: 10 }); 
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         res.json({ success: true, user });
