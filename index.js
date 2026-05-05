@@ -13,8 +13,6 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-
-// NOUVO: Nou pa mete modpas la la ankò pou sekirite ✅
 const MONGO_URI = process.env.MONGO_URI; 
 
 const ADMIN_INFO = {
@@ -44,25 +42,26 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/api/admin-info', (req, res) => {
-    res.json(ADMIN_INFO);
+app.get('/api/get-balance/:phone', async (req, res) => {
+    try {
+        const user = await User.findOne({ phone: req.params.phone });
+        if (user) res.json({ success: true, balance: user.balance });
+        else res.status(404).json({ success: false });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('/api/admin-info', (req, res) => { res.json(ADMIN_INFO); });
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 app.post('/login', async (req, res) => {
     try {
         const { phone, password } = req.body;
         if (!phone || !password) return res.status(400).json({ success: false, msg: "Ranpli tout bwat yo!" });
         const cleanPhone = phone.trim().replace(/\s+/g, '');
-        
         let user = await User.findOne({ phone: cleanPhone });
         if (!user) {
-            // Itilizatè kòmanse ak 0 goud
             user = await User.create({ phone: cleanPhone, password, balance: 0 });
-            return res.json({ success: true, user, msg: `Byenveni! Kontakte nou nan ${ADMIN_INFO.depo_phone} pou rechaje.` });
+            return res.json({ success: true, user });
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         return res.json({ success: true, user });
@@ -76,15 +75,14 @@ app.post('/withdraw', async (req, res) => {
         if (user && user.balance >= amount && amount >= 100) {
             await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
             await Withdraw.create({ phone, amount });
-            res.json({ success: true, msg: `Demann voye! W ap resevwa kòb la sou ${ADMIN_INFO.retre_phone} byento.` });
+            res.json({ success: true, msg: "Demann voye!" });
         } else res.json({ success: false, msg: "Balans ou piti oswa montan an ba!" });
     } catch (e) { res.json({ success: false, msg: "Erè Sèvè" }); }
 });
 
-// SOCKET.IO
+// SOCKET.IO LOGIC
 let rooms = {};
 let waitingPlayers = {}; 
-
 io.on('connection', (socket) => {
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
@@ -114,9 +112,5 @@ io.on('connection', (socket) => {
     });
 });
 
-// SELF-PING POU KENBE SÈVÈ A REVEYE
-setInterval(() => {
-    axios.get('https://onrender.com').catch(() => {});
-}, 600000); 
-
-server.listen(PORT, () => console.log(`Blitz ap kouri sou ${PORT} ⚡`));
+setInterval(() => { axios.get('https://onrender.com').catch(() => {}); }, 600000); 
+server.listen(PORT, () => console.log(`Blitz kouri sou ${PORT} ⚡`));
