@@ -11,32 +11,33 @@
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         
-        /* DESIGN PREMIUM */
+        /* HEADER & BANNER */
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .logo { color: var(--primary); font-weight: 900; font-size: 24px; }
         .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; font-size: 18px; }
         .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; }
         .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
         
+        /* CARDS */
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px 15px; }
         .game-card { background: white; padding: 25px 10px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; }
         .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
         
-        /* TABLEAU 20x20 */
+        /* GRID 20x20 & WIN ANIMATION */
         .grid-20 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); width: 98vw; height: 98vw; max-width: 450px; margin: auto; }
         .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 11px; aspect-ratio: 1/1; }
-        .win-cell { background: #c8e6c9 !important; animation: pulse 0.8s infinite; color: var(--primary) !important; }
+        .win-cell { background: #c8e6c9 !important; animation: pulse 0.8s infinite; color: var(--primary) !important; border: 1px solid var(--primary) !important; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
         #timer-box { font-size: 32px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:10px; overflow-y: auto; }
         input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; }
+        a { text-decoration: none; color: inherit; }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN -->
+    <!-- PAJ LOGIN -->
     <div id="auth-s" class="screen" style="padding-top:60px;">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
             <h1 style="color:var(--primary); margin-bottom:5px;">Byenveni 👋</h1>
@@ -47,17 +48,19 @@
         </div>
     </div>
 
-    <!-- HOME -->
+    <!-- PAJ DAKEY (MENU) -->
     <div id="menu-s" class="hidden">
         <div class="header"><b>BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
         <div class="banner">
             <h2>MOPYON BLITZ ⚡</h2>
-            <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:11px;">
-                Natcom: 55110103 | Digicel: 31594645
+            <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:13px; border: 1px solid rgba(255,255,255,0.2);">
+                <b>SÈVIS DEPO / ASISTANS :</b><br>
+                <a href="https://wa.me">📲 Natcom: 55110103</a> | 
+                <a href="https://wa.me">📲 Digicel: 31594645</a>
             </div>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:0 15px;">
-            <button class="btn-act" style="background:#5cb85c;" onclick="window.open('https://wa.me')">Gwoup</button>
+            <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://wa.me')">Gwoup</button>
             <button class="btn-act" style="background:#ff9800;" onclick="showS('withdraw-s')">Retrè</button>
         </div>
         <div class="game-grid">
@@ -69,7 +72,7 @@
             <div class="game-card">
                 <span class="badge" style="background:#f44336">SOON</span>
                 <img src="https://flaticon.com" width="50">
-                <div style="font-weight:bold; color:#ccc;">DOMINO</div>
+                <div style="font-weight:bold; color:#ccc; margin-top:10px;">DOMINO</div>
             </div>
         </div>
         <div class="bottom-nav">
@@ -79,7 +82,7 @@
         </div>
     </div>
 
-    <!-- RETRÈ -->
+    <!-- PAJ RETRÈ -->
     <div id="withdraw-s" class="hidden screen">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
             <h3>Mande Retrè</h3>
@@ -89,10 +92,10 @@
         </div>
     </div>
 
-    <!-- MOPYON OPTS -->
+    <!-- OPTIONS MATCH PRIVÉ -->
     <div id="mopyon-opts" class="hidden screen">
         <div style="background:white; padding:25px; border-radius:20px;">
-            <h3>Chanm Privé</h3>
+            <h3>Match Privé</h3>
             <input type="text" id="p-code" placeholder="Kòd Chanm (ex: 505)">
             <input type="number" id="bet" value="50">
             <button class="btn-act" style="background:var(--primary)" onclick="joinPrivate()">KREYE / ANTRE</button>
@@ -100,13 +103,13 @@
         </div>
     </div>
 
-    <!-- GAME OVERLAY -->
+    <!-- EKRAN JWÈT (OVERLAY) -->
     <div id="game-overlay" class="hidden">
         <div id="timer-box">30s</div>
         <h3 id="match-status">Atann...</h3>
         <div id="turn-info" style="font-weight:bold; margin-bottom:10px; color:var(--primary);"></div>
         <div class="grid-20" id="board-grid"></div>
-        <button class="btn-act" style="background:red; width:150px; margin-top:20px;" onclick="finiJwet()">KITE</button>
+        <button class="btn-act" style="background:red; width:150px; margin-top:20px;" onclick="location.reload()">KITE</button>
     </div>
 
     <script>
@@ -117,8 +120,6 @@
             document.querySelectorAll('.screen, #menu-s, #game-overlay, #auth-s, #withdraw-s, #mopyon-opts').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         }
-
-        function finiJwet() { clearInterval(timerInt); showS('menu-s'); }
 
         async function login() {
             const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
@@ -132,6 +133,7 @@
 
         function joinPrivate() {
             const code = document.getElementById('p-code').value;
+            if(!code) return alert("Antre yon kòd!");
             socket.emit('joinPrivate', { roomCode: code, phone: user.phone, bet: document.getElementById('bet').value });
             showS('game-overlay'); resetBoard();
         }
@@ -154,6 +156,7 @@
             board[r][c] = symbol; myTurn = false;
             renderBoard(); clearInterval(timerInt); updateTurnText();
             socket.emit('move', { room, r, c, symbol, phone: user.phone, prize });
+            
             let winCells = checkWin(r, c);
             if(winCells) {
                 colorWinCells(winCells);
@@ -198,7 +201,7 @@
 
         async function withdraw() {
             const amount = document.getElementById('w-amount').value;
-            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount }) });
+            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount: Number(amount) }) });
             const data = await res.json();
             if(data.success) { alert("Demann voye!"); user.balance -= amount; updateUI(); showS('menu-s'); }
         }
@@ -207,7 +210,7 @@
             clearInterval(timerInt);
             alert(data.msg + "\nGanyan: " + data.winner);
             if(data.winner === user.phone) { user.balance = data.newBalance; updateUI(); }
-            setTimeout(() => { showS('menu-s'); }, 2000);
+            setTimeout(() => { showS('menu-s'); }, 2500);
         });
 
         function resetBoard() { board = Array(20).fill().map(() => Array(20).fill('')); renderBoard(); }
