@@ -11,12 +11,14 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
+// KONEKSYON SEKIRIZE AK MONGODB
 mongoose.connect(MONGO_URI, { 
     tlsAllowInvalidCertificates: true, 
     sslValidate: false,
     retryWrites: true 
 }).then(() => console.log("✅ MONGO KONEKTE")).catch(err => console.log("❌ ERÈ MONGO:", err));
 
+// MODEL DATABASE
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
@@ -34,18 +36,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 let rooms = {};
 let gameTimers = {};
 
+// TIMER SÈVÈ (30S)
 function startTurnTimer(roomCode, activePlayer, prize) {
     if (gameTimers[roomCode]) clearTimeout(gameTimers[roomCode]);
     gameTimers[roomCode] = setTimeout(async () => {
         if (rooms[roomCode]) {
-            const winnerPhone = rooms[roomCode].phones.find(p => p !== activePlayer);
+            const players = rooms[roomCode].phones;
+            const winnerPhone = players.find(p => p !== activePlayer);
             const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
             io.to(roomCode).emit('gameOver', { winner: winnerPhone, msg: "Tan opozan an fini (30s)!", newBalance: winner.balance });
-            delete rooms[roomCode];
+            delete rooms[roomCode]; delete gameTimers[roomCode];
         }
     }, 30000);
 }
 
+// LOGIN & PARRAINAGE
 app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     const cleanPhone = phone.trim();
@@ -58,6 +63,7 @@ app.post('/login', async (req, res) => {
     res.json({ success: true, user });
 });
 
+// RETRÈ (WITHDRAW)
 app.post('/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const user = await User.findOne({ phone });
@@ -68,6 +74,7 @@ app.post('/withdraw', async (req, res) => {
     } else res.json({ success: false, msg: "Balans ba!" });
 });
 
+// LOGIK SOCKET (MATCHMAKING & CHANM PRIVÉ)
 io.on('connection', (socket) => {
     socket.on('joinPrivate', async (data) => {
         const { roomCode, phone, bet } = data;
@@ -101,7 +108,8 @@ io.on('connection', (socket) => {
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
             clearTimeout(gameTimers[data.room]);
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: Number(data.prize) } }, { new: true });
+            const prize = Number(data.prize);
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
             io.to(data.room).emit('gameOver', { winner: data.phone, msg: "MOPYON! 5 PWEN ALIGNÉ!", newBalance: winner.balance });
             delete rooms[data.room];
         }
