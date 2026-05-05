@@ -56,7 +56,7 @@ app.post('/login', async (req, res) => {
         let user = await User.findOne({ phone: p8 });
         if (!user) {
             if (ref) { const r8 = cleanP(ref); await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } }); }
-            user = await User.create({ phone: p8, password, balance: 100 }); 
+            user = await User.create({ phone: p8, password, balance: 0 }); // Kòmanse ak 0
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
         res.json({ success: true, user });
@@ -72,7 +72,7 @@ app.post('/withdraw', async (req, res) => {
             await User.findOneAndUpdate({ phone: p8 }, { $inc: { balance: -amt } });
             await Withdraw.create({ phone: p8, amount: amt });
             res.json({ success: true });
-        } else res.json({ success: false });
+        } else res.json({ success: false, msg: "Balans ba!" });
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
@@ -87,7 +87,7 @@ function startTurnTimer(roomCode, activePlayer) {
             const winnerP = players.find(p => p !== activePlayer);
             const prize = (rooms[roomCode].bet * 2) * 0.95;
             const winner = await User.findOneAndUpdate({ phone: winnerP }, { $inc: { balance: prize } }, { new: true });
-            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan fini!", newBalance: winner.balance });
+            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan opozan an fini!", newBalance: winner.balance });
             delete rooms[roomCode];
         }
     }, 31000);
@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
             socket.emit('match-status', "KÒD: " + rCode + " (Atann zanmi...)");
         } else {
             const r = rooms[rCode];
-            if (r.phones.length >= 2) return socket.emit('errorMsg', "Plen!");
+            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm plen!");
             r.phones.push(p8); socket.join(rCode);
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
             io.to(rCode).emit('gameStart', { room: rCode, prize: (r.bet * 2) * 0.95, turn: r.host });
