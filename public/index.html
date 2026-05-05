@@ -10,30 +10,23 @@
         body { background: var(--bg); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 90px; text-align: center; }
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
-        
-        /* HEADER & BANNER PREMIUM */
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; }
         .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; }
         .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
-        
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px 15px; }
         .game-card { background: white; padding: 25px 10px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; }
         .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
-        
-        /* GRID 20x20 */
         .grid-20 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); width: 98vw; height: 98vw; max-width: 450px; margin: auto; }
         .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 11px; aspect-ratio: 1/1; }
         #timer-box { font-size: 32px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:10px; overflow-y: auto; }
-        
         input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN -->
     <div id="auth-s" class="screen" style="padding-top:60px;">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
             <h1 style="color:var(--primary)">Byenveni 👋</h1>
@@ -44,9 +37,8 @@
         </div>
     </div>
 
-    <!-- HOME -->
     <div id="menu-s" class="hidden">
-        <div class="header"><b style="font-size:22px; color:var(--primary)">BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
+        <div class="header"><b>BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
         <div class="banner">
             <h2>MOPYON BLITZ ⚡</h2>
             <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:11px; border:1px solid rgba(255,255,255,0.2);">
@@ -76,7 +68,6 @@
         </div>
     </div>
 
-    <!-- WITHDRAW -->
     <div id="withdraw-s" class="hidden screen">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
             <h3>Mande Retrè</h3>
@@ -86,11 +77,10 @@
         </div>
     </div>
 
-    <!-- MOPYON OPTS -->
     <div id="mopyon-opts" class="hidden screen">
         <div style="background:white; padding:25px; border-radius:20px;">
             <input type="number" id="bet" value="50">
-            <button class="btn-act" style="background:var(--primary)" onclick="startMatchmaking()">MATCH OTOMATIK</button>
+            <button class="btn-act" style="background:var(--primary)" onclick="startMatchmaking()">MATCHMAKING</button>
             <hr>
             <input type="text" id="p-code" placeholder="Kòd Chanm Privé">
             <button class="btn-act" style="background:#444" onclick="joinPrivate()">KREYE / ANTRE</button>
@@ -98,7 +88,6 @@
         </div>
     </div>
 
-    <!-- GAME OVERLAY -->
     <div id="game-overlay" class="hidden">
         <div id="timer-box">30s</div>
         <h3 id="match-status">Chache...</h3>
@@ -179,14 +168,14 @@
         }
 
         function updateTurnText() {
-            document.getElementById('turn-info').innerText = myTurn ? "TOU PA W! ⚡" : "ATANN OPOZAN...";
+            document.getElementById('turn-info').innerText = myTurn ? "SE TOU PA W! ⚡" : "ATANN OPOZAN...";
         }
 
         async function withdraw() {
             const amount = document.getElementById('w-amount').value;
             const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount }) });
             const data = await res.json();
-            if(data.success) { alert("Demann voye!"); user.balance -= amount; updateUI(); showS('menu-s'); } else alert("Echec!");
+            if(data.success) { alert("Demann voye!"); user.balance -= amount; updateUI(); showS('menu-s'); }
         }
 
         socket.on('gameOver', (data) => {
