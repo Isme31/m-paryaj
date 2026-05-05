@@ -3,27 +3,17 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const path = require('path');
-const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-    transports: ['websocket', 'polling'], 
-    cors: { origin: "*" } 
-});
+const io = new Server(server, { transports: ['websocket', 'polling'] });
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// KONEKSYON MONGODB AK DEBLOKAJ SEKIRITE
-mongoose.connect(MONGO_URI, {
-    tlsAllowInvalidCertificates: true,
-    sslValidate: false,
-    retryWrites: true,
-})
-.then(() => console.log("✅ MONGO KONEKTE: Tranzaksyon Debloke!"))
-.catch(err => console.log("❌ ERÈ MONGO:", err));
+mongoose.connect(MONGO_URI).then(() => console.log("✅ MONGO KONEKTE")).catch(err => console.log("❌ ERÈ MONGO:", err));
 
+// Modèles
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -32,107 +22,85 @@ const User = mongoose.model('User', new mongoose.Schema({
 }));
 
 const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
-    phone: String,
-    amount: Number,
-    date: { type: Date, default: Date.now },
-    status: { type: String, default: 'pending' }
+    phone: String, amount: Number, status: { type: String, default: 'pending' }, date: { type: Date, default: Date.now }
 }));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// LOGIN & TRANZAKSYON RECHAJ
+// Routes API
 app.post('/login', async (req, res) => {
-    try {
-        const { phone, password, ref } = req.body;
-        const cleanPhone = phone.trim().replace(/\s+/g, '');
-        let user = await User.findOne({ phone: cleanPhone });
-        if (!user) {
-            if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-            user = await User.create({ phone: cleanPhone, password, balance: 0 });
-        }
-        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
-        res.json({ success: true, user });
-    } catch (e) { res.status(500).json({ success: false }); }
+    const { phone, password, ref } = req.body;
+    const cleanPhone = phone.trim();
+    let user = await User.findOne({ phone: cleanPhone });
+    if (!user) {
+        // Système de Parrainage (Bonus 5 HTG)
+        if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
+        user = await User.create({ phone: cleanPhone, password, balance: 10 }); 
+    }
+    if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+    res.json({ success: true, user });
 });
 
 app.post('/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const user = await User.findOne({ phone });
-    const val = Number(amount);
-    if (user && user.balance >= val && val >= 100) {
-        await User.findOneAndUpdate({ phone }, { $inc: { balance: -val } });
-        await Withdraw.create({ phone, amount: val });
-        res.json({ success: true, msg: "Mande voye bay admin!" });
-    } else res.json({ success: false, msg: "Balans ba!" });
+    if (user && user.balance >= amount && amount >= 100) {
+        await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
+        await Withdraw.create({ phone, amount });
+        res.json({ success: true, msg: "Demann voye!" });
+    } else res.json({ success: false, msg: "Balans ba oswa montan invalid!" });
 });
 
+// Logique de Jeu
 let rooms = {};
 let waitingPlayers = {}; 
 
 io.on('connection', (socket) => {
-    // MATCHMAKING OTOMATIK
+    // Matchmaking Auto
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
-        const user = await User.findOne({ phone: data.phone });
-        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
-
         if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
             const opp = waitingPlayers[bet];
             delete waitingPlayers[bet];
             const code = `room_${Date.now()}`;
-            rooms[code] = { phones: [opp.phone, data.phone], bet, hostId: opp.id };
-            
+            rooms[code] = { phones: [opp.phone, data.phone], bet };
             socket.join(code);
             io.sockets.sockets.get(opp.id)?.join(code);
             await User.updateMany({ phone: { $in: [opp.phone, data.phone] } }, { $inc: { balance: -bet } });
-            
-            io.to(opp.id).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone, symbol: 'X' });
-            socket.emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone, symbol: 'O' });
+            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone });
         } else {
             waitingPlayers[bet] = { id: socket.id, phone: data.phone };
         }
     });
 
-    // CHANM PRIVÉ
-    socket.on('joinRoom', async (data) => {
+    // Chambre Privée
+    socket.on('joinPrivate', async (data) => {
         const { roomCode, phone, bet } = data;
-        const user = await User.findOne({ phone });
-
         if (!rooms[roomCode]) {
-            if (!user || user.balance < Number(bet)) return socket.emit('errorMsg', "Balans ou piti!");
             rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone], hostId: socket.id };
             socket.join(roomCode);
         } else {
             const r = rooms[roomCode];
-            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm sa a plen!");
-            if (user.balance < r.bet) return socket.emit('errorMsg', "Balans ou piti!");
-
             r.phones.push(phone);
             socket.join(roomCode);
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
-
-            io.to(r.hostId).emit('gameStart', { room: roomCode, prize: (r.bet * 2) * 0.95, turn: r.host, symbol: 'X' });
-            socket.emit('gameStart', { room: roomCode, prize: (r.bet * 2) * 0.95, turn: r.host, symbol: 'O' });
+            io.to(roomCode).emit('gameStart', { room: roomCode, prize: (r.bet * 2) * 0.95, turn: r.host });
         }
     });
 
-    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
+    // Synchronisation des mouvements
+    socket.on('move', (data) => {
+        socket.to(data.room).emit('opponentMove', data);
+    });
 
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
-            const prize = Number(data.prize);
             delete rooms[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, prize });
-            io.to(socket.id).emit('updateBalance', winner.balance);
+            await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: Number(data.prize) } });
+            io.to(data.room).emit('gameOver', { winner: data.phone });
         }
     });
 });
-
-setInterval(() => {
-    const url = process.env.RENDER_EXTERNAL_URL; 
-    if (url) axios.get(url).catch(() => {});
-}, 600000); 
 
 server.listen(PORT, () => console.log(`⚡ Blitz sou ${PORT}`));
