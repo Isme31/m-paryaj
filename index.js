@@ -39,7 +39,7 @@ function startTurnTimer(roomCode, activePlayer, prize) {
             const winnerPhone = rooms[roomCode].phones.find(p => p !== activePlayer);
             const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
             io.to(roomCode).emit('gameOver', { winner: winnerPhone, msg: "Tan fini (30s)!", newBalance: winner.balance });
-            delete rooms[roomCode]; delete gameTimers[roomCode];
+            delete rooms[roomCode];
         }
     }, 30000);
 }
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
     socket.on('joinPrivate', async (data) => {
         const { roomCode, phone, bet } = data;
         if (!rooms[roomCode]) {
-            rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone], hostId: socket.id };
+            rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone] };
             socket.join(roomCode);
             socket.emit('match-status', "KÒD: " + roomCode + " (Atann zanmi...)");
         } else {
