@@ -13,7 +13,7 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = "mongodb+srv://hugues:hugues@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+const MONGO_URI = "mongodb+srv://hugues:belard@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
 
 // KONFIGIRASYON ADMIN
 const ADMIN_INFO = {
