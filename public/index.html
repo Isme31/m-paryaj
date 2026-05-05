@@ -10,31 +10,23 @@
         body { background: var(--bg); font-family: sans-serif; margin: 0; padding-bottom: 90px; text-align: center; }
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
-        
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .logo { color: var(--primary); font-weight: 900; font-size: 24px; }
         .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; }
         .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; }
         .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
-        
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px 15px; }
-        .game-card { background: white; padding: 25px 10px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; border: 1px solid #eee; }
-        .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
-        
         .grid-20 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); width: 98vw; height: 98vw; max-width: 450px; margin: auto; }
         .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 11px; aspect-ratio: 1/1; }
         .win-cell { background: #c8e6c9 !important; animation: pulse 0.8s infinite; border: 1px solid var(--primary) !important; color: var(--primary) !important; }
         @keyframes pulse { 0% {transform:scale(1);} 50% {transform:scale(1.1);} 100% {transform:scale(1);} }
-        input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; }
         #timer-box { font-size: 32px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:10px; overflow-y: auto; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; }
+        input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; }
         a { text-decoration: none; color: inherit; }
     </style>
 </head>
 <body>
 
-    <!-- 1. LOGIN -->
     <div id="auth-s" class="screen" style="padding-top:60px;">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
             <h1 style="color:var(--primary)">Byenveni 👋</h1>
@@ -45,7 +37,6 @@
         </div>
     </div>
 
-    <!-- 2. HOME (DAKEY) -->
     <div id="menu-s" class="hidden">
         <div class="header"><b class="logo">BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
         <div class="banner">
@@ -60,51 +51,56 @@
             <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://wa.me')">Gwoup</button>
             <button class="btn-act" style="background:#ff9800;" onclick="showS('withdraw-s')">Retrè</button>
         </div>
-        <div class="game-grid">
-            <div class="game-card" onclick="showS('mopyon-opts')">
-                <span class="badge" style="background:#4caf50">AKTIF</span>
+        <div class="screen" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <div style="background:white; padding:20px; border-radius:20px; position:relative;" onclick="showS('mopyon-opts')">
+                <span style="position:absolute; top:10px; right:10px; background:#4caf50; color:white; padding:4px 8px; border-radius:10px; font-size:10px; font-weight:bold;">AKTIF</span>
                 <img src="https://flaticon.com" width="50"><div style="font-weight:bold; margin-top:10px;">MOPYON</div>
             </div>
-            <div class="game-card" style="opacity: 0.6; cursor: default;">
-                <span class="badge" style="background:#f44336">SOON</span>
-                <img src="https://flaticon.com" width="50"><div style="font-weight:bold; color:#888;">DOMINO</div>
+            <div style="background:white; padding:20px; border-radius:20px; position:relative; opacity:0.6;">
+                <span style="position:absolute; top:10px; right:10px; background:#f44336; color:white; padding:4px 8px; border-radius:10px; font-size:10px; font-weight:bold;">SOON</span>
+                <img src="https://flaticon.com" width="50"><div style="font-weight:bold; color:#888; margin-top:10px;">DOMINO</div>
             </div>
         </div>
-        <div class="bottom-nav"><b style="color:var(--primary)">AKEY</b><div onclick="showS('withdraw-s')">RETRÈ</div><div onclick="window.open('https://wa.me')">ÈD</div></div>
+        <div style="position:fixed; bottom:0; left:0; width:100%; background:white; display:flex; justify-content:space-around; padding:15px 0; border-top:1px solid #eee;">
+            <b style="color:var(--primary)">AKEY</b> <div onclick="showS('withdraw-s')">RETRÈ</div> <div onclick="window.open('https://wa.me')">ÈD</div>
+        </div>
     </div>
 
-    <!-- 3. WITHDRAW -->
     <div id="withdraw-s" class="hidden screen"><div style="background:white; padding:30px; border-radius:25px;">
-        <h3>Retrè HTG</h3><input type="number" id="w-amount" placeholder="Montan (Min 100)">
+        <h3>Mande Retrè</h3><input type="number" id="w-amount" placeholder="Montan HTG (Min 100)">
         <button class="btn-act" style="background:#ff9800" onclick="withdraw()">KONFIME</button>
         <button class="btn-act" style="background:#eee; color:#333;" onclick="showS('menu-s')">ANILE</button>
     </div></div>
 
-    <!-- 4. MOPYON OPTS -->
     <div id="mopyon-opts" class="hidden screen"><div style="background:white; padding:25px; border-radius:20px;">
         <h3>Match Privé</h3><input type="text" id="p-code" placeholder="Kòd Chanm"><input type="number" id="bet" value="50">
         <button class="btn-act" style="background:var(--primary)" onclick="joinPrivate()">KREYE / ANTRE</button>
-        <button class="btn-act" style="background:#999" onclick="showS('menu-s')">RETOUNEN</button>
+        <button class="btn-act" style="background:#999;" onclick="showS('menu-s')">ANILE</button>
     </div></div>
 
-    <!-- 5. GAME -->
     <div id="game-overlay" class="hidden"><div id="timer-box">30s</div><h3 id="match-status">...</h3>
         <div id="turn-info" style="font-weight:bold; margin-bottom:10px; color:var(--primary);"></div>
-        <div class="grid-20" id="board-grid"></div><button class="btn-act" style="background:red; width:150px;" onclick="location.reload()">KITE</button>
+        <div class="grid-20" id="board-grid"></div><button class="btn-act" style="background:red; width:150px;" onclick="finiJwet()">KITE</button>
     </div>
 
     <script>
         const socket = io();
         let user, room, symbol, myTurn, board, timerInt;
         function showS(id) { document.querySelectorAll('.screen, #menu-s, #game-overlay, #auth-s, #withdraw-s, #mopyon-opts').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+        function finiJwet() { clearInterval(timerInt); showS('menu-s'); }
         async function login() {
             const p = document.getElementById('phone').value, pass = document.getElementById('pass').value;
             const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone:p, password:pass, ref: new URLSearchParams(window.location.search).get('ref') }) });
             const data = await res.json();
-            if(data.success) { user=data.user; showS('menu-s'); updateUI(); }
+            if(data.success) { user=data.user; showS('menu-s'); updateUI(); } else alert(data.msg);
         }
         function updateUI() { document.getElementById('u-bal').innerText = user.balance + " HTG"; }
-        function joinPrivate() { socket.emit('joinPrivate', { roomCode: document.getElementById('p-code').value, phone: user.phone, bet: document.getElementById('bet').value }); showS('game-overlay'); resetBoard(); }
+        function joinPrivate() { 
+            const c = document.getElementById('p-code').value;
+            if(!c.trim()) return alert("Antre yon kòd!");
+            socket.emit('joinPrivate', { roomCode: c, phone: user.phone, bet: document.getElementById('bet').value }); 
+            showS('game-overlay'); resetBoard(); 
+        }
         socket.on('gameStart', d => { room=d.room; symbol=(d.turn===user.phone.slice(-8))?'X':'O'; myTurn=(d.turn===user.phone.slice(-8)); document.getElementById('match-status').innerText="Ou se: "+symbol; startTimer(); updateTurnText(); });
         socket.on('opponentMove', d => { board[d.r][d.c]=d.symbol; myTurn=true; renderBoard(); startTimer(); updateTurnText(); });
         function makeMove(r, c) { if(!myTurn || board[r][c]!=='') return; board[r][c]=symbol; myTurn=false; renderBoard(); clearInterval(timerInt); socket.emit('move', { room, r, c, symbol, phone: user.phone }); }
@@ -116,12 +112,12 @@
             if(d.winCells) d.winCells.forEach(p => document.querySelectorAll('.cell')[p.r*20+p.c].classList.add('win-cell'));
             alert(d.msg + "\nGanyan: " + d.winner);
             if(d.winner === user.phone.slice(-8)) { user.balance = d.newBalance; updateUI(); }
-            setTimeout(() => { showS('menu-s'); }, 4000);
+            setTimeout(() => { finiJwet(); }, 3000);
         });
         function resetBoard() { board = Array(20).fill().map(() => Array(20).fill('')); renderBoard(); }
         function renderBoard() { const g = document.getElementById('board-grid'); g.innerHTML = ''; for(let r=0; r<20; r++) for(let c=0; c<20; c++) { const d = document.createElement('div'); d.className = 'cell'; d.innerText = board[r][c]; if(board[r][c]==='X') d.style.color='red'; if(board[r][c]==='O') d.style.color='blue'; d.onclick = () => makeMove(r, c); g.appendChild(d); } }
         socket.on('match-status', m => document.getElementById('match-status').innerText = m);
-        socket.on('errorMsg', m => { alert(m); showS('menu-s'); });
+        socket.on('errorMsg', m => { alert(m); finiJwet(); });
     </script>
 </body>
 </html>
