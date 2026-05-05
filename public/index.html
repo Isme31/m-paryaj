@@ -7,46 +7,44 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #f4f7f6; }
-        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
+        body { background: var(--bg); font-family: sans-serif; margin: 0; text-align: center; }
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .card-ui { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 92%; margin-bottom: 10px; }
+        input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 90%; margin-bottom: 10px; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: var(--primary); border: 2px solid var(--primary); margin: auto; width: 95vw; height: 95vw; max-width: 400px; max-height: 400px; }
-        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; cursor: pointer; height: 100%; }
+        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; font-size: 14px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div style="background:white; padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee;">
-        <b style="color:var(--primary); font-size:20px;">BLITZ ⚡</b>
-        <span id="bal-display" class="hidden" style="background:#e8f5e9; color:var(--primary); padding:6px 12px; border-radius:20px; font-weight:bold;">0 HTG</span>
+    <div style="background:white; padding:15px; display:flex; justify-content:space-between; border-bottom:1px solid #eee;">
+        <b style="color:var(--primary)">BLITZ ⚡</b>
+        <span id="bal-display" class="hidden" style="background:#e8f5e9; color:var(--primary); padding:5px 10px; border-radius:15px; font-weight:bold;">0 HTG</span>
     </div>
 
     <div id="auth-s" class="screen">
         <div class="card-ui">
             <h1>Byenveni 👋</h1>
-            <input type="text" id="phone" placeholder="Nimewo Telefòn">
+            <input type="text" id="phone" placeholder="Telefòn">
             <input type="password" id="pass" placeholder="Modpas">
             <button class="btn" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
     <div id="menu-s" class="screen hidden">
-        <div class="card-ui" style="background: var(--primary); color:white;">
-            <h3>MOPYON BLITZ ⚡</h3>
-        </div>
+        <div class="card-ui" style="background: var(--primary); color:white;"><h3>MOPYON BLITZ ⚡</h3></div>
         <button class="btn" onclick="showS('mopyon-opts')">JWE MOPYON</button>
-        <button class="btn" style="background:var(--accent)" onclick="showS('withdraw-s')">DEMANN RETRÈ</button>
+        <button class="btn" style="background:var(--accent)" onclick="alert('Paj an kreyasyon...')">RETRÈ</button>
     </div>
 
     <div id="mopyon-opts" class="screen hidden">
         <div class="card-ui">
             <input type="number" id="bet" value="50">
             <button class="btn" onclick="startMatchmaking()">MATCHMAKING</button>
-            <input type="text" id="p-code" placeholder="Kòd Chanm" style="margin-top:15px;">
+            <input type="text" id="p-code" placeholder="Kòd Chanm" style="margin-top:10px;">
             <button class="btn" style="background:#444" onclick="joinPrivate()">KREYE / ANTRE</button>
             <button class="btn" style="background:#999" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
@@ -54,23 +52,25 @@
 
     <div id="game-overlay" class="hidden">
         <h3 id="match-status">Chache...</h3>
-        <div id="turn-info" style="margin-bottom:10px; font-weight:bold; font-size:18px;"></div>
+        <div id="turn-info" style="font-weight:bold; margin-bottom:10px; font-size:18px;"></div>
         <div class="grid" id="board-grid"></div>
-        <button class="btn" style="background:#e74c3c; width:150px; margin-top:20px;" onclick="closeGame()">KITE</button>
+        <button class="btn" style="background:red; width:120px; margin-top:20px;" onclick="finiJwet()">KITE</button>
     </div>
 
     <script>
         const socket = io();
-        let user, room, symbol, myTurn, prize, board = Array(15).fill().map(() => Array(15).fill(''));
+        let user, room, symbol, myTurn, prize, board;
 
         function showS(id) {
             document.querySelectorAll('.screen, #auth-s').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         }
 
-        function closeGame() {
+        function finiJwet() {
             document.getElementById('game-overlay').classList.add('hidden');
             showS('menu-s');
+            board = Array(15).fill().map(() => Array(15).fill(''));
+            renderBoard();
         }
 
         async function login() {
@@ -85,13 +85,13 @@
         function startMatchmaking() {
             socket.emit('startMatchmaking', { phone: user.phone, bet: document.getElementById('bet').value });
             board = Array(15).fill().map(() => Array(15).fill(''));
-            showS('game-overlay');
+            document.getElementById('game-overlay').classList.remove('hidden');
         }
 
         function joinPrivate() {
             socket.emit('joinPrivate', { roomCode: document.getElementById('p-code').value, phone: user.phone, bet: document.getElementById('bet').value });
             board = Array(15).fill().map(() => Array(15).fill(''));
-            showS('game-overlay');
+            document.getElementById('game-overlay').classList.remove('hidden');
         }
 
         socket.on('gameStart', (data) => {
@@ -126,34 +126,40 @@
             board[r][c] = symbol; myTurn = false;
             renderBoard(); updateTurnText();
             socket.emit('move', { room, r, c, symbol });
-
-            if(checkWin(r, c)) {
-                socket.emit('win', { room, phone: user.phone, prize });
-            }
+            if(checkWin(r, c)) socket.emit('win', { room, phone: user.phone, prize });
         }
 
         function checkWin(r, c) {
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
-            for(let [dr, dc] of dirs) {
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+            for (let [dr, dc] of directions) {
                 let count = 1;
-                for(let i=1; i<5; i++) if(board[r+dr*i]?.[c+dc*i] === symbol) count++; else break;
-                for(let i=1; i<5; i++) if(board[r-dr*i]?.[c-dc*i] === symbol) count++; else break;
-                if(count >= 5) return true;
+                for (let i = 1; i < 5; i++) {
+                    if (board[r + dr * i]?.[c + dc * i] === symbol) count++;
+                    else break;
+                }
+                for (let i = 1; i < 5; i++) {
+                    if (board[r - dr * i]?.[c - dc * i] === symbol) count++;
+                    else break;
+                }
+                if (count >= 5) return true;
             }
             return false;
         }
 
         function updateTurnText() {
-            document.getElementById('turn-info').innerText = myTurn ? "TOU PA W! ⚡" : "ATANN...";
+            const info = document.getElementById('turn-info');
+            info.innerText = myTurn ? "SE TOU PA W! ⚡" : "Atann opozan an...";
+            info.style.color = myTurn ? "var(--primary)" : "#888";
         }
 
         socket.on('gameOver', (data) => {
-            alert("Ganyan: " + data.winner);
-            if(data.winner === user.phone) user.balance += prize;
-            updateUI(); closeGame();
+            alert("Match fini! Ganyan: " + data.winner);
+            if(data.winner === user.phone) {
+                user.balance = data.newBalance;
+                updateUI();
+            }
+            finiJwet();
         });
-
-        socket.on('errorMsg', (m) => { alert(m); closeGame(); });
     </script>
 </body>
 </html>
