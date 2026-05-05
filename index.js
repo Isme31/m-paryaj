@@ -14,6 +14,8 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = "mongodb+srv://hugues:belard@hugues.pte9ru5.mongodb.net/mopyon_db?retryWrites=true&w=majority";
+// Kòd sa a ap pran lyen an nan Render sekrèman
+const MONGO_URI = process.env.MONGO_URI; 
 
 // KONFIGIRASYON ADMIN
 const ADMIN_INFO = {
