@@ -15,16 +15,16 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// --- KONEKSYON MONGODB (RANJE POU TRANZAKSYON) ---
+// --- KONEKSYON MONGODB AK OPSYON TRANZAKSYON ---
 mongoose.connect(MONGO_URI, {
-    tlsAllowInvalidCertificates: true, // RANJE ERÈ "CERTIFICATE VALIDATION"
+    tlsAllowInvalidCertificates: true, // Ranje erè sètifika a
+    sslValidate: false,               // Debloke koneksyon SSL
     retryWrites: true,
-    w: 'majority'
 })
-.then(() => console.log("✅ MONGO KONEKTE AVÈK SIKSE!"))
-.catch(err => console.log("❌ ERÈ KONEKSYON:", err));
+.then(() => console.log("✅ MONGO KONEKTE: Tranzaksyon Debloke!"))
+.catch(err => console.log("❌ ERÈ MONGO:", err));
 
-// --- MODÈL YO (ASIRE YO SE NUMBER) ---
+// --- MODÈL YO ---
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true, required: true },
     password: { type: String, required: true },
@@ -42,7 +42,7 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- LOGIN & REFERRAL ---
+// --- API LOGIN & TRANZAKSYON ---
 app.post('/login', async (req, res) => {
     try {
         const { phone, password, ref } = req.body;
@@ -60,7 +60,6 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// --- TRANZAKSYON RETRÈ ---
 app.post('/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const user = await User.findOne({ phone });
@@ -68,11 +67,11 @@ app.post('/withdraw', async (req, res) => {
     if (user && user.balance >= val && val >= 100) {
         await User.findOneAndUpdate({ phone }, { $inc: { balance: -val } });
         await Withdraw.create({ phone, amount: val });
-        res.json({ success: true, msg: "Demann voye bay Admin!" });
-    } else res.json({ success: false, msg: "Balans ba oswa montan an piti!" });
+        res.json({ success: true, msg: "Demann voye!" });
+    } else res.json({ success: false, msg: "Balans ba!" });
 });
 
-// --- LOJIK JWÈT & TRANZAKSYON MATCH ---
+// --- LOJIK JWÈT & SOCKET.IO ---
 let rooms = {};
 let waitingPlayers = {}; 
 
@@ -92,7 +91,6 @@ io.on('connection', (socket) => {
             const oppSocket = io.sockets.sockets.get(opp.id);
             if(oppSocket) oppSocket.join(code);
 
-            // Retire kòb de jwè yo nan MongoDB
             await User.updateMany({ phone: { $in: [opp.phone, data.phone] } }, { $inc: { balance: -bet } });
             io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone, symbol: 'X' });
         } else {
@@ -122,19 +120,28 @@ io.on('connection', (socket) => {
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
             const prize = Number(data.prize);
-            delete rooms[data.room];
-            // Depoze kòb ganyan an nan MongoDB
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, prize });
-            io.to(socket.id).emit('updateBalance', winner.balance);
+            const winnerPhone = data.phone;
+            const roomCode = data.room;
+            delete rooms[roomCode];
+
+            const winner = await User.findOneAndUpdate(
+                { phone: winnerPhone }, 
+                { $inc: { balance: prize } }, 
+                { new: true }
+            );
+
+            if (winner) {
+                io.to(roomCode).emit('gameOver', { winner: winnerPhone, prize });
+                io.to(socket.id).emit('updateBalance', winner.balance);
+            }
         }
     });
 });
 
-// --- SISTÈM ANTI-DÒMI (PING SENP) ---
+// --- PING SENP (ANTI-SÈVÈ NÈF) ---
 setInterval(() => {
     const url = process.env.RENDER_EXTERNAL_URL; 
     if (url) axios.get(url).catch(() => {});
 }, 600000); 
 
-server.listen(PORT, () => console.log(`⚡ Blitz ap kouri sou ${PORT}`));
+server.listen(PORT, () => console.log(`⚡ Blitz sou pòt ${PORT}`));
