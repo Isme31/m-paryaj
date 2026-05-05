@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLITZ ⚡</title>
+    <title>BLITZ ⚡ | Jwe & Touche</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #f8f9fa; }
@@ -11,7 +11,9 @@
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         
+        /* DESIGN PREMIUM */
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .logo { color: var(--primary); font-weight: 900; font-size: 24px; }
         .balance-pill { background: #f1f8f1; color: var(--primary); padding: 8px 18px; border-radius: 25px; font-weight: bold; border: 1px solid #e0eee0; font-size: 18px; }
         .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; }
         .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
@@ -20,11 +22,14 @@
         .game-card { background: white; padding: 25px 10px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; }
         .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
         
+        /* TABLEAU 20x20 */
         .grid-20 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; background: #ccc; border: 2px solid var(--primary); width: 98vw; height: 98vw; max-width: 450px; margin: auto; }
         .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 11px; aspect-ratio: 1/1; }
+        .win-cell { background: #c8e6c9 !important; animation: pulse 0.8s infinite; color: var(--primary) !important; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
         #timer-box { font-size: 32px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:10px; overflow-y: auto; }
-        
         input { width: 90%; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #f0f0f0; }
     </style>
@@ -36,24 +41,24 @@
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
             <h1 style="color:var(--primary); margin-bottom:5px;">Byenveni 👋</h1>
             <p style="font-weight:bold; color:var(--primary); font-style:italic; margin-bottom:25px;">" Jwe, Genyen, Touche "</p>
-            <input type="text" id="phone" placeholder="Telefòn">
+            <input type="text" id="phone" placeholder="Nimewo Telefòn">
             <input type="password" id="pass" placeholder="Modpas">
             <button class="btn-act" style="background:var(--primary)" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- HOME (DAKEY) -->
+    <!-- HOME -->
     <div id="menu-s" class="hidden">
         <div class="header"><b>BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
         <div class="banner">
             <h2>MOPYON BLITZ ⚡</h2>
-            <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:11px; border:1px solid rgba(255,255,255,0.2);">
+            <div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:12px; margin-top:15px; font-size:11px;">
                 Natcom: 55110103 | Digicel: 31594645
             </div>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:0 15px;">
-            <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://wa.me')">Gwoup</button>
-            <button class="btn-act" style="background:var(--accent);" onclick="showS('withdraw-s')">Retrè</button>
+            <button class="btn-act" style="background:#5cb85c;" onclick="window.open('https://wa.me')">Gwoup</button>
+            <button class="btn-act" style="background:#ff9800;" onclick="showS('withdraw-s')">Retrè</button>
         </div>
         <div class="game-grid">
             <div class="game-card" onclick="showS('mopyon-opts')">
@@ -74,21 +79,21 @@
         </div>
     </div>
 
-    <!-- WITHDRAW -->
+    <!-- RETRÈ -->
     <div id="withdraw-s" class="hidden screen">
         <div style="background:white; padding:30px; border-radius:25px; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
             <h3>Mande Retrè</h3>
-            <input type="number" id="w-amount" placeholder="Montan HTG">
-            <button class="btn-act" style="background:var(--accent)" onclick="withdraw()">KONFIME</button>
+            <input type="number" id="w-amount" placeholder="Montan HTG (Min 100)">
+            <button class="btn-act" style="background:#ff9800" onclick="withdraw()">KONFIME</button>
             <button class="btn-act" style="background:#eee; color:#333; margin-top:10px;" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
     </div>
 
-    <!-- OPTIONS PRIVÉ -->
+    <!-- MOPYON OPTS -->
     <div id="mopyon-opts" class="hidden screen">
         <div style="background:white; padding:25px; border-radius:20px;">
-            <h3>Match Privé</h3>
-            <input type="text" id="p-code" placeholder="Kòd Chanm (eg: 505)">
+            <h3>Chanm Privé</h3>
+            <input type="text" id="p-code" placeholder="Kòd Chanm (ex: 505)">
             <input type="number" id="bet" value="50">
             <button class="btn-act" style="background:var(--primary)" onclick="joinPrivate()">KREYE / ANTRE</button>
             <button class="btn-act" style="background:#999; margin-top:10px;" onclick="showS('menu-s')">ANILE</button>
@@ -98,7 +103,7 @@
     <!-- GAME OVERLAY -->
     <div id="game-overlay" class="hidden">
         <div id="timer-box">30s</div>
-        <h3 id="match-status">Atann zanmi...</h3>
+        <h3 id="match-status">Atann...</h3>
         <div id="turn-info" style="font-weight:bold; margin-bottom:10px; color:var(--primary);"></div>
         <div class="grid-20" id="board-grid"></div>
         <button class="btn-act" style="background:red; width:150px; margin-top:20px;" onclick="finiJwet()">KITE</button>
@@ -113,7 +118,7 @@
             document.getElementById(id).classList.remove('hidden');
         }
 
-        function finiJwet() { showS('menu-s'); clearInterval(timerInt); }
+        function finiJwet() { clearInterval(timerInt); showS('menu-s'); }
 
         async function login() {
             const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
@@ -127,7 +132,6 @@
 
         function joinPrivate() {
             const code = document.getElementById('p-code').value;
-            if(!code) return alert("Antre yon kòd!");
             socket.emit('joinPrivate', { roomCode: code, phone: user.phone, bet: document.getElementById('bet').value });
             showS('game-overlay'); resetBoard();
         }
@@ -150,24 +154,36 @@
             board[r][c] = symbol; myTurn = false;
             renderBoard(); clearInterval(timerInt); updateTurnText();
             socket.emit('move', { room, r, c, symbol, phone: user.phone, prize });
-            if(checkWin(r, c)) socket.emit('win', { room, phone: user.phone, prize });
+            let winCells = checkWin(r, c);
+            if(winCells) {
+                colorWinCells(winCells);
+                socket.emit('win', { room, phone: user.phone, prize });
+            }
         }
 
         function checkWin(r, c) {
-            const directions = [,,, [1,-1]];
-            for (let [dr, dc] of directions) {
-                let count = 1;
+            const dirs = [{dr:0,dc:1}, {dr:1,dc:0}, {dr:1,dc:1}, {dr:1,dc:-1}];
+            for (let {dr, dc} of dirs) {
+                let cells = [{r, c}];
                 for (let i = 1; i < 5; i++) {
-                    if (board[r + dr * i]?.[c + dc * i] === symbol) count++;
-                    else break;
+                    let nr = r + dr * i, nc = c + dc * i;
+                    if (board[nr]?.[nc] === symbol) cells.push({r: nr, c: nc}); else break;
                 }
                 for (let i = 1; i < 5; i++) {
-                    if (board[r - dr * i]?.[c - dc * i] === symbol) count++;
-                    else break;
+                    let nr = r - dr * i, nc = c - dc * i;
+                    if (board[nr]?.[nc] === symbol) cells.push({r: nr, c: nc}); else break;
                 }
-                if (count >= 5) return true;
+                if (cells.length >= 5) return cells;
             }
-            return false;
+            return null;
+        }
+
+        function colorWinCells(cells) {
+            const all = document.querySelectorAll('.cell');
+            cells.forEach(pos => {
+                const idx = pos.r * 20 + pos.c;
+                if(all[idx]) all[idx].classList.add('win-cell');
+            });
         }
 
         function startTimer() {
@@ -178,9 +194,7 @@
             }, 1000);
         }
 
-        function updateTurnText() {
-            document.getElementById('turn-info').innerText = myTurn ? "SE TOU PA W! ⚡" : "ATANN OPOZAN...";
-        }
+        function updateTurnText() { document.getElementById('turn-info').innerText = myTurn ? "TOU PA W! ⚡" : "ATANN OPOZAN..."; }
 
         async function withdraw() {
             const amount = document.getElementById('w-amount').value;
@@ -190,9 +204,10 @@
         }
 
         socket.on('gameOver', (data) => {
-            clearInterval(timerInt); alert(data.msg + "\nGanyan: " + data.winner);
+            clearInterval(timerInt);
+            alert(data.msg + "\nGanyan: " + data.winner);
             if(data.winner === user.phone) { user.balance = data.newBalance; updateUI(); }
-            finiJwet();
+            setTimeout(() => { showS('menu-s'); }, 2000);
         });
 
         function resetBoard() { board = Array(20).fill().map(() => Array(20).fill('')); renderBoard(); }
@@ -205,7 +220,7 @@
             }
         }
         socket.on('match-status', (m) => document.getElementById('match-status').innerText = m);
-        socket.on('errorMsg', (m) => { alert(m); finiJwet(); });
+        socket.on('errorMsg', (m) => { alert(m); showS('menu-s'); });
     </script>
 </body>
 </html>
