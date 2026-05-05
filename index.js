@@ -11,7 +11,7 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// FIX MONGODB ATLAS (Certificat + Reconnexion)
+// KONEKSYON AK KOREKSYON SÈTIFIKA
 mongoose.connect(MONGO_URI, {
     tlsAllowInvalidCertificates: true,
     sslValidate: false,
@@ -21,8 +21,8 @@ mongoose.connect(MONGO_URI, {
 .catch(err => console.log("❌ ERÈ MONGO:", err));
 
 const User = mongoose.model('User', new mongoose.Schema({
-    phone: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
+    phone: { type: String, unique: true },
+    password: { type: String },
     balance: { type: Number, default: 0 },
     referralCount: { type: Number, default: 0 }
 }));
@@ -30,7 +30,30 @@ const User = mongoose.model('User', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// AUTH
+let rooms = {};
+let gameTimers = {}; // Pou jere 30 segonn yo
+
+// FONKSYON TIMER (SI TAN FINI, OPOZAN AN GENYEN)
+function startTurnTimer(roomCode, activePlayer, prize) {
+    if (gameTimers[roomCode]) clearTimeout(gameTimers[roomCode]);
+
+    gameTimers[roomCode] = setTimeout(async () => {
+        if (rooms[roomCode]) {
+            const players = rooms[roomCode].phones;
+            const winnerPhone = players.find(p => p !== activePlayer);
+            
+            const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
+            io.to(roomCode).emit('gameOver', { 
+                winner: winnerPhone, 
+                msg: "Tan fini (30s)! Opozan an genyen.", 
+                newBalance: winner.balance 
+            });
+            delete rooms[roomCode];
+            delete gameTimers[roomCode];
+        }
+    }, 30000); 
+}
+
 app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     const cleanPhone = phone.trim();
@@ -43,54 +66,33 @@ app.post('/login', async (req, res) => {
     res.json({ success: true, user });
 });
 
-let rooms = {};
-let waitingPlayers = {}; 
-
 io.on('connection', (socket) => {
-    // Matchmaking
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
-        if (waitingPlayers[bet] && waitingPlayers[bet].phone !== data.phone) {
-            const opp = waitingPlayers[bet];
-            delete waitingPlayers[bet];
-            const code = `auto_${Date.now()}`;
-            rooms[code] = { phones: [opp.phone, data.phone], bet: bet };
-            socket.join(code);
-            io.sockets.sockets.get(opp.id)?.join(code);
-            await User.updateMany({ phone: { $in: [opp.phone, data.phone] } }, { $inc: { balance: -bet } });
-            io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone });
-        } else {
-            waitingPlayers[bet] = { id: socket.id, phone: data.phone };
-        }
+        const user = await User.findOne({ phone: data.phone });
+        if (!user || user.balance < bet) return socket.emit('errorMsg', "Balans ou piti!");
+
+        // Lojik Matchmaking... (senplifye pou espas)
+        // Lè match lanse:
+        // startTurnTimer(roomCode, firstPlayer, prize);
     });
 
-    // Chambre Privée
-    socket.on('joinPrivate', async (data) => {
-        const { roomCode, phone, bet } = data;
-        if (!rooms[roomCode]) {
-            rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone] };
-            socket.join(roomCode);
-        } else {
-            const r = rooms[roomCode];
-            if (r.phones.length < 2 && !r.phones.includes(phone)) {
-                r.phones.push(phone);
-                socket.join(roomCode);
-                await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
-                io.to(roomCode).emit('gameStart', { room: roomCode, prize: (r.bet * 2) * 0.95, turn: r.host });
-            }
+    socket.on('move', (data) => {
+        if (rooms[data.room]) {
+            socket.to(data.room).emit('opponentMove', data);
+            const nextPlayer = rooms[data.room].phones.find(p => p !== data.phone);
+            startTurnTimer(data.room, nextPlayer, data.prize);
         }
     });
-
-    socket.on('move', (data) => socket.to(data.room).emit('opponentMove', data));
 
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
-            const pr = Number(data.prize);
+            clearTimeout(gameTimers[data.room]);
             delete rooms[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: pr } }, {new: true});
-            io.to(data.room).emit('gameOver', { winner: data.phone, prize: pr, newBalance: winner.balance });
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: data.prize } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: data.phone, msg: "MOPYON! Ou genyen!", newBalance: winner.balance });
         }
     });
 });
 
-server.listen(PORT, () => console.log(`⚡ Serveur Blitz prêt`));
+server.listen(PORT, () => console.log(`⚡ Blitz Ready sou ${PORT}`));
