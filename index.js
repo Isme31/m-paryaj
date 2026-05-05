@@ -11,14 +11,12 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// KONEKSYON SEKIRIZE AK MONGODB
 mongoose.connect(MONGO_URI, { 
     tlsAllowInvalidCertificates: true, 
     sslValidate: false,
     retryWrites: true 
 }).then(() => console.log("✅ MONGO KONEKTE")).catch(err => console.log("❌ ERÈ MONGO:", err));
 
-// MODEL DATABASE
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
@@ -33,62 +31,73 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// FONCTION POUR GARDER SEULEMENT LES 8 DERNIERS CHIFFRES
+const cleanP = (p) => {
+    let c = p.toString().replace(/\D/g, ''); 
+    return c.length > 8 ? c.slice(-8) : c;
+};
+
+app.post('/login', async (req, res) => {
+    try {
+        let { phone, password, ref } = req.body;
+        const p8 = cleanP(phone);
+        let user = await User.findOne({ phone: p8 });
+        if (!user) {
+            if (ref) {
+                const r8 = cleanP(ref);
+                await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } });
+            }
+            user = await User.create({ phone: p8, password, balance: 100 }); 
+        }
+        if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
+        res.json({ success: true, user });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
+
+app.post('/withdraw', async (req, res) => {
+    try {
+        const p8 = cleanP(req.body.phone);
+        const amt = Number(req.body.amount);
+        const user = await User.findOne({ phone: p8 });
+        if (user && user.balance >= amt && amt >= 100) {
+            await User.findOneAndUpdate({ phone: p8 }, { $inc: { balance: -amt } });
+            await Withdraw.create({ phone: p8, amount: amt });
+            res.json({ success: true });
+        } else res.json({ success: false, msg: "Balans ba!" });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
+
 let rooms = {};
 let gameTimers = {};
 
-// TIMER SÈVÈ (30S)
 function startTurnTimer(roomCode, activePlayer, prize) {
     if (gameTimers[roomCode]) clearTimeout(gameTimers[roomCode]);
     gameTimers[roomCode] = setTimeout(async () => {
         if (rooms[roomCode]) {
             const players = rooms[roomCode].phones;
-            const winnerPhone = players.find(p => p !== activePlayer);
-            const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
-            io.to(roomCode).emit('gameOver', { winner: winnerPhone, msg: "Tan opozan an fini (30s)!", newBalance: winner.balance });
-            delete rooms[roomCode]; delete gameTimers[roomCode];
+            const winnerP = players.find(p => p !== activePlayer);
+            const winner = await User.findOneAndUpdate({ phone: winnerP }, { $inc: { balance: prize } }, { new: true });
+            io.to(roomCode).emit('gameOver', { winner: winnerP, msg: "Tan opozan an fini (30s)!", newBalance: winner.balance });
+            delete rooms[roomCode];
         }
     }, 30000);
 }
 
-// LOGIN & PARRAINAGE
-app.post('/login', async (req, res) => {
-    const { phone, password, ref } = req.body;
-    const cleanPhone = phone.trim();
-    let user = await User.findOne({ phone: cleanPhone });
-    if (!user) {
-        if (ref && ref !== cleanPhone) await User.findOneAndUpdate({ phone: ref }, { $inc: { balance: 5, referralCount: 1 } });
-        user = await User.create({ phone: cleanPhone, password, balance: 10 }); 
-    }
-    if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
-    res.json({ success: true, user });
-});
-
-// RETRÈ (WITHDRAW)
-app.post('/withdraw', async (req, res) => {
-    const { phone, amount } = req.body;
-    const user = await User.findOne({ phone });
-    if (user && user.balance >= amount && amount >= 100) {
-        await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
-        await Withdraw.create({ phone, amount });
-        res.json({ success: true });
-    } else res.json({ success: false, msg: "Balans ba!" });
-});
-
-// LOGIK SOCKET (MATCHMAKING & CHANM PRIVÉ)
 io.on('connection', (socket) => {
     socket.on('joinPrivate', async (data) => {
-        const { roomCode, phone, bet } = data;
-        const user = await User.findOne({ phone });
+        const p8 = cleanP(data.phone);
+        const { roomCode, bet } = data;
+        const user = await User.findOne({ phone: p8 });
         if (!user || user.balance < Number(bet)) return socket.emit('errorMsg', "Balans ou piti!");
 
         if (!rooms[roomCode]) {
-            rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone], hostId: socket.id };
+            rooms[roomCode] = { host: p8, bet: Number(bet), phones: [p8] };
             socket.join(roomCode);
-            socket.emit('match-status', "KÒD: " + roomCode + " (Atann zanmi...)");
+            socket.emit('match-status', "KÒD: " + roomCode + " (Atann opozan...)");
         } else {
             const r = rooms[roomCode];
-            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm sa plen!");
-            r.phones.push(phone);
+            if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm plen!");
+            r.phones.push(p8);
             socket.join(roomCode);
             const prize = (r.bet * 2) * 0.95;
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
@@ -100,20 +109,19 @@ io.on('connection', (socket) => {
     socket.on('move', (data) => {
         if (rooms[data.room]) {
             socket.to(data.room).emit('opponentMove', data);
-            const nextPlayer = rooms[data.room].phones.find(p => p !== data.phone);
-            startTurnTimer(data.room, nextPlayer, data.prize);
+            const nextP = rooms[data.room].phones.find(p => p !== cleanP(data.phone));
+            startTurnTimer(data.room, nextP, data.prize);
         }
     });
 
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
             clearTimeout(gameTimers[data.room]);
-            const prize = Number(data.prize);
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
-            io.to(data.room).emit('gameOver', { winner: data.phone, msg: "MOPYON! 5 PWEN ALIGNÉ!", newBalance: winner.balance });
+            const winner = await User.findOneAndUpdate({ phone: cleanP(data.phone) }, { $inc: { balance: Number(data.prize) } }, { new: true });
+            io.to(data.room).emit('gameOver', { winner: winner.phone, msg: "MOPYON! 🎉", newBalance: winner.balance });
             delete rooms[data.room];
         }
     });
 });
 
-server.listen(PORT, () => console.log(`⚡ Blitz Ready`));
+server.listen(PORT, () => console.log(`⚡ Blitz sou ${PORT}`));
