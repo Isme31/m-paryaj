@@ -11,7 +11,7 @@ const io = new Server(server, { transports: ['websocket', 'polling'] });
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// CONNEXION MONGODB AVEC FIX CERTIFICAT
+// CONNEXION SÉCURISÉE MONGODB
 mongoose.connect(MONGO_URI, {
     tlsAllowInvalidCertificates: true,
     sslValidate: false,
@@ -20,7 +20,7 @@ mongoose.connect(MONGO_URI, {
 .then(() => console.log("✅ MONGO KONEKTE"))
 .catch(err => console.log("❌ ERÈ MONGO:", err));
 
-// SCHÉMAS
+// SCHÉMAS DATABASE
 const User = mongoose.model('User', new mongoose.Schema({
     phone: { type: String, unique: true },
     password: { type: String },
@@ -39,7 +39,7 @@ let rooms = {};
 let waitingPlayers = {}; 
 let gameTimers = {};
 
-// TIMER SERVEUR 30S
+// LOGIQUE TIMER 30S SERVEUR
 function startTurnTimer(roomCode, activePlayer, prize) {
     if (gameTimers[roomCode]) clearTimeout(gameTimers[roomCode]);
     gameTimers[roomCode] = setTimeout(async () => {
@@ -47,13 +47,13 @@ function startTurnTimer(roomCode, activePlayer, prize) {
             const players = rooms[roomCode].phones;
             const winnerPhone = players.find(p => p !== activePlayer);
             const winner = await User.findOneAndUpdate({ phone: winnerPhone }, { $inc: { balance: prize } }, { new: true });
-            io.to(roomCode).emit('gameOver', { winner: winnerPhone, msg: "Temps écoulé (30s) ! Victoire adverse.", newBalance: winner.balance });
+            io.to(roomCode).emit('gameOver', { winner: winnerPhone, msg: "Tan fini (30s)!", newBalance: winner.balance });
             delete rooms[roomCode]; delete gameTimers[roomCode];
         }
     }, 30000);
 }
 
-// AUTH & REFERRAL
+// ROUTES API
 app.post('/login', async (req, res) => {
     const { phone, password, ref } = req.body;
     const cleanPhone = phone.trim();
@@ -66,7 +66,6 @@ app.post('/login', async (req, res) => {
     res.json({ success: true, user });
 });
 
-// RETRAIT (WITHDRAW)
 app.post('/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const user = await User.findOne({ phone });
@@ -74,10 +73,10 @@ app.post('/withdraw', async (req, res) => {
         await User.findOneAndUpdate({ phone }, { $inc: { balance: -amount } });
         await Withdraw.create({ phone, amount });
         res.json({ success: true });
-    } else res.json({ success: false, msg: "Balans ba oswa montan invalid!" });
+    } else res.json({ success: false, msg: "Balans ba!" });
 });
 
-// LOGIQUE SOCKET
+// SOCKET.IO
 io.on('connection', (socket) => {
     socket.on('startMatchmaking', async (data) => {
         const bet = Number(data.bet);
@@ -92,16 +91,21 @@ io.on('connection', (socket) => {
             await User.updateMany({ phone: { $in: [opp.phone, data.phone] } }, { $inc: { balance: -bet } });
             io.to(code).emit('gameStart', { room: code, prize: (bet * 2) * 0.95, turn: opp.phone });
             startTurnTimer(code, opp.phone, (bet * 2) * 0.95);
-        } else { waitingPlayers[bet] = { id: socket.id, phone: data.phone }; }
+        } else {
+            waitingPlayers[bet] = { id: socket.id, phone: data.phone };
+            socket.emit('match-status', "Ap chache opozan...");
+        }
     });
 
     socket.on('joinPrivate', async (data) => {
         const { roomCode, phone, bet } = data;
         const user = await User.findOne({ phone });
         if (!user || user.balance < Number(bet)) return socket.emit('errorMsg', "Balans ou piti!");
+
         if (!rooms[roomCode]) {
             rooms[roomCode] = { host: phone, bet: Number(bet), phones: [phone] };
             socket.join(roomCode);
+            socket.emit('match-status', "Kòd: " + roomCode + " (Atann...)");
         } else {
             const r = rooms[roomCode];
             r.phones.push(phone); socket.join(roomCode);
@@ -122,8 +126,8 @@ io.on('connection', (socket) => {
     socket.on('win', async (data) => {
         if (rooms[data.room]) {
             clearTimeout(gameTimers[data.room]);
-            const pr = Number(data.prize); delete rooms[data.room];
-            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: pr } }, { new: true });
+            const prize = Number(data.prize); delete rooms[data.room];
+            const winner = await User.findOneAndUpdate({ phone: data.phone }, { $inc: { balance: prize } }, { new: true });
             io.to(data.room).emit('gameOver', { winner: data.phone, msg: "MOPYON! Ou genyen!", newBalance: winner.balance });
         }
     });
