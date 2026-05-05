@@ -6,192 +6,210 @@
     <title>Mopyon Blitz ⚡</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: white; text-align: center; margin: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: white; text-align: center; margin: 0; }
         .hidden { display: none; }
-        .container { padding: 20px; }
+        .container { padding: 15px; }
         
-        /* Login Style */
-        .login-box { background: #1e1e1e; padding: 30px; border-radius: 10px; display: inline-block; margin-top: 50px; }
-        input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
-        button { background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        
-        /* Dashboard */
-        .header { background: #1e1e1e; padding: 15px; display: flex; justify-content: space-around; align-items: center; }
-        .balance { color: #f1c40f; font-size: 20px; font-weight: bold; }
-        .admin-info { background: #2980b9; padding: 10px; font-size: 14px; margin: 10px 0; border-radius: 5px; }
+        /* Dashboard Header */
+        .header { background: #1a1a1a; padding: 15px; border-bottom: 2px solid #27ae60; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .balance-box { background: #2ecc71; color: black; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 18px; }
+
+        /* Menu Bouton */
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 10px; margin: 15px 0; }
+        .btn-menu { background: #2c3e50; border: none; color: white; padding: 15px; border-radius: 10px; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .btn-menu:active { transform: scale(0.95); }
+        .btn-play { background: #27ae60; grid-column: span 2; font-size: 18px; font-weight: bold; }
 
         /* Board Style */
-        .grid { display: grid; grid-template-columns: repeat(3, 100px); grid-gap: 5px; justify-content: center; margin-top: 20px; }
-        .cell { width: 100px; height: 100px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; border-radius: 5px; }
-        .cell:hover { background: #444; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 10px; max-width: 300px; margin: 20px auto; }
+        .cell { aspect-ratio: 1/1; background: #1e1e1e; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 40px; border-radius: 8px; font-weight: bold; }
         
-        .status { margin: 20px; font-size: 18px; color: #e67e22; }
+        /* Modals / Sections */
+        .modal { background: #1a1a1a; padding: 20px; border-radius: 15px; margin-top: 20px; border: 1px solid #333; }
+        input { width: 90%; padding: 12px; margin: 10px 0; background: #333; border: 1px solid #444; color: white; border-radius: 8px; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        .status { color: #f1c40f; margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- PAJ KONEKSYON -->
+    <!-- LOGIN -->
     <div id="login-page" class="container">
-        <div class="login-box">
-            <h2>Mopyon Blitz ⚡</h2>
-            <input type="number" id="phone" placeholder="Nimewo Telefòn">
+        <h1 style="color: #27ae60;">MOPYON BLITZ ⚡</h1>
+        <div class="modal">
+            <input type="number" id="phone" placeholder="Nimewo MonCash/Natcash">
             <input type="password" id="password" placeholder="Modpas">
-            <br>
-            <button onclick="login()">Konekte / Enskri</button>
-            <p id="login-msg" style="color: #e74c3c;"></p>
+            <input type="number" id="ref-code" placeholder="Nimewo moun ki envite w la (opsyonèl)">
+            <button class="btn-action" style="background: #27ae60; color: white;" onclick="login()">ANTRE / KREYE KONT</button>
+            <p id="login-err" style="color: #e74c3c; font-size: 13px;"></p>
         </div>
     </div>
 
-    <!-- DASHBOARD JWÈT LA -->
+    <!-- MAIN DASHBOARD -->
     <div id="game-page" class="hidden">
         <div class="header">
-            <div>📲 <span id="display-phone"></span></div>
-            <div class="balance">💰 <span id="balance-amount">0</span> G</div>
-            <button style="background:#c0392b" onclick="logout()">Soti</button>
+            <div style="font-size: 14px;">👤 <span id="u-phone"></span></div>
+            <div class="balance-box">💰 <span id="u-balance">0</span> G</div>
         </div>
 
-        <div class="admin-info">
-            Depo: <b id="depo-num">...</b> | Retrè: <b id="retre-num">...</b>
-            <br>
-            <a id="wa-link" href="#" style="color:white; text-decoration:underline;">Kontakte Asistan WhatsApp</a>
-        </div>
+        <div class="container">
+            <div class="menu-grid">
+                <button class="btn-menu btn-play" onclick="showSection('matchmaking')">JWE MOUPYON 🎮</button>
+                <button class="btn-menu" onclick="showSection('depo')">📥 DEPO</button>
+                <button class="btn-menu" onclick="showSection('retre')">📤 RETRÈ</button>
+                <button class="btn-menu" onclick="showSection('referal')">👥 REFERAL</button>
+                <button class="btn-menu" onclick="logout()" style="background: #c0392b;">SOTI</button>
+            </div>
 
-        <div id="lobby">
-            <h3>Chwazi yon paryaj:</h3>
-            <button onclick="startMatch(50)">50 G</button>
-            <button onclick="startMatch(100)">100 G</button>
-            <button onclick="startMatch(500)">500 G</button>
-        </div>
+            <!-- SEKSYON MATCHMAKING -->
+            <div id="sec-matchmaking" class="section hidden modal">
+                <h3>Chwazi Paryaj ou:</h3>
+                <button class="btn-action" style="background:#34495e; color:white;" onclick="startMatch(50)">Mete 50 G (Ganyen 95 G)</button>
+                <button class="btn-action" style="background:#34495e; color:white;" onclick="startMatch(100)">Mete 100 G (Ganyen 190 G)</button>
+                <button class="btn-action" style="background:#34495e; color:white;" onclick="startMatch(500)">Mete 500 G (Ganyen 950 G)</button>
+            </div>
 
-        <div id="game-area" class="hidden">
-            <div class="status" id="game-status">Nan match...</div>
-            <div class="grid" id="board">
-                <div class="cell" onclick="makeMove(0)"></div>
-                <div class="cell" onclick="makeMove(1)"></div>
-                <div class="cell" onclick="makeMove(2)"></div>
-                <div class="cell" onclick="makeMove(3)"></div>
-                <div class="cell" onclick="makeMove(4)"></div>
-                <div class="cell" onclick="makeMove(5)"></div>
-                <div class="cell" onclick="makeMove(6)"></div>
-                <div class="cell" onclick="makeMove(7)"></div>
-                <div class="cell" onclick="makeMove(8)"></div>
+            <!-- SEKSYON DEPO -->
+            <div id="sec-depo" class="section hidden modal">
+                <h3>Kijan pou w Depoze:</h3>
+                <p>Voye montan an sou MonCash nimewo sa a:</p>
+                <h2 id="d-phone" style="color: #2ecc71;">31594645</h2>
+                <p>Apre w fin voye l, klike anba la a pou voye prèv la sou WhatsApp:</p>
+                <button class="btn-action" style="background:#25d366; color:white;" id="wa-btn">VOYE PRÈV SOU WHATSAPP</button>
+            </div>
+
+            <!-- SEKSYON RETRÈ -->
+            <div id="sec-retre" class="section hidden modal">
+                <h3>Mande Retrè:</h3>
+                <input type="number" id="w-amount" placeholder="Montan ou vle rale (Min 100G)">
+                <button class="btn-action" style="background:#e67e22; color:white;" onclick="requestWithdraw()">KONFIME RETRÈ</button>
+            </div>
+
+            <!-- TABLO JWÈT LA -->
+            <div id="game-board" class="section hidden modal">
+                <div class="status" id="g-status">Ap tann advèsè...</div>
+                <div class="grid" id="grid">
+                    <div class="cell" onclick="cellClick(0)"></div>
+                    <div class="cell" onclick="cellClick(1)"></div>
+                    <div class="cell" onclick="cellClick(2)"></div>
+                    <div class="cell" onclick="cellClick(3)"></div>
+                    <div class="cell" onclick="cellClick(4)"></div>
+                    <div class="cell" onclick="cellClick(5)"></div>
+                    <div class="cell" onclick="cellClick(6)"></div>
+                    <div class="cell" onclick="cellClick(7)"></div>
+                    <div class="cell" onclick="cellClick(8)"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let currentUser = null;
-        let currentRoom = null;
-        let mySymbol = '';
-        let myTurn = false;
+        let user = null;
+        let room = null;
+        let turn = false;
+        let symbol = '';
 
-        // 1. KONEKSYON
+        // LOGIN
         async function login() {
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
-            
+            const ref = document.getElementById('ref-code').value;
+
             const res = await fetch('/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone, password })
+                body: JSON.stringify({ phone, password, ref })
             });
             const data = await res.json();
-            
-            if (data.success) {
-                currentUser = data.user;
-                localStorage.setItem('mopyon_user', JSON.stringify(data.user));
-                showGamePage();
-            } else {
-                document.getElementById('login-msg').innerText = data.msg;
-            }
+            if(data.success) {
+                user = data.user;
+                localStorage.setItem('blitz_user', JSON.stringify(user));
+                initApp();
+            } else alert(data.msg);
         }
 
-        // 2. REFRESH BALANS OTOMATIK
-        async function refreshBalance() {
-            if (!currentUser) return;
-            const res = await fetch(`/api/get-balance/${currentUser.phone}`);
+        // BALANS OTOMATIK (Chak 5 segond)
+        async function updateBalance() {
+            if(!user) return;
+            const res = await fetch(`/api/get-balance/${user.phone}`);
             const data = await res.json();
-            if (data.success) {
-                currentUser.balance = data.balance;
-                document.getElementById('balance-amount').innerText = data.balance;
+            if(data.success) {
+                user.balance = data.balance;
+                document.getElementById('u-balance').innerText = data.balance;
             }
         }
 
-        function showGamePage() {
+        function initApp() {
             document.getElementById('login-page').classList.add('hidden');
             document.getElementById('game-page').classList.remove('hidden');
-            document.getElementById('display-phone').innerText = currentUser.phone;
-            refreshBalance();
-            loadAdminInfo();
-            // Tcheke balans chak 5 segond pou depo moute otomatik
-            setInterval(refreshBalance, 5000);
+            document.getElementById('u-phone').innerText = user.phone;
+            setInterval(updateBalance, 5000);
+            updateBalance();
+            fetch('/api/admin-info').then(r => r.json()).then(d => {
+                document.getElementById('d-phone').innerText = d.depo_phone;
+                document.getElementById('wa-btn').onclick = () => window.location.href = d.assistant_whatsapp;
+            });
         }
 
-        async function loadAdminInfo() {
-            const res = await fetch('/api/admin-info');
-            const data = await res.json();
-            document.getElementById('depo-num').innerText = data.depo_phone;
-            document.getElementById('retre-num').innerText = data.retre_phone;
-            document.getElementById('wa-link').href = data.assistant_whatsapp;
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('sec-'+id)?.classList.remove('hidden');
         }
 
-        // 3. LOGIK JWÈT
         function startMatch(bet) {
-            if (currentUser.balance < bet) return alert("Balans ou piti!");
-            document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('game-area').classList.remove('hidden');
-            document.getElementById('game-status').innerText = "Koneksyon ak yon advèsè...";
-            socket.emit('startMatchmaking', { phone: currentUser.phone, bet });
+            if(user.balance < bet) return alert("Kòb ou pa ase!");
+            showSection('none');
+            document.getElementById('game-board').classList.remove('hidden');
+            socket.emit('startMatchmaking', { phone: user.phone, bet });
         }
 
-        socket.on('gameStart', (data) => {
-            currentRoom = data.room;
-            mySymbol = (data.turn === currentUser.phone) ? 'X' : 'O';
-            myTurn = (data.turn === currentUser.phone);
-            document.getElementById('game-status').innerText = myTurn ? "Se tou pa w!" : "Tou advèsè a...";
-            resetBoard();
+        socket.on('gameStart', d => {
+            room = d.room;
+            symbol = (d.turn === user.phone) ? 'X' : 'O';
+            turn = (d.turn === user.phone);
+            document.getElementById('g-status').innerText = turn ? "SE TOU PA W!" : "ADVÈSÈ A AP JWE...";
+            document.querySelectorAll('.cell').forEach(c => c.innerText = '');
         });
 
-        function makeMove(index) {
-            if (!myTurn || document.getElementsByClassName('cell')[index].innerText !== '') return;
-            
-            document.getElementsByClassName('cell')[index].innerText = mySymbol;
-            myTurn = false;
-            document.getElementById('game-status').innerText = "Tou advèsè a...";
-            socket.emit('move', { room: currentRoom, index, symbol: mySymbol });
-            checkWinner();
+        function cellClick(i) {
+            const cells = document.querySelectorAll('.cell');
+            if(!turn || cells[i].innerText !== '') return;
+            cells[i].innerText = symbol;
+            turn = false;
+            document.getElementById('g-status').innerText = "ADVÈSÈ A AP JWE...";
+            socket.emit('move', { room, index: i, symbol });
         }
 
-        socket.on('opponentMove', (data) => {
-            document.getElementsByClassName('cell')[data.index].innerText = data.symbol;
-            myTurn = true;
-            document.getElementById('game-status').innerText = "Se tou pa w!";
+        socket.on('opponentMove', d => {
+            document.querySelectorAll('.cell')[d.index].innerText = d.symbol;
+            turn = true;
+            document.getElementById('g-status').innerText = "SE TOU PA W!";
         });
 
-        socket.on('gameOver', (data) => {
-            alert("Match fini! Ganyan: " + data.winner);
-            location.reload(); 
-        });
-
-        function resetBoard() {
-            const cells = document.getElementsByClassName('cell');
-            for (let c of cells) c.innerText = '';
-        }
-
-        function logout() {
-            localStorage.removeItem('mopyon_user');
+        socket.on('gameOver', d => {
+            alert("Match fini! Ganyan: " + d.winner);
             location.reload();
+        });
+
+        async function requestWithdraw() {
+            const amount = document.getElementById('w-amount').value;
+            const res = await fetch('/withdraw', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: user.phone, amount: Number(amount) })
+            });
+            const data = await res.json();
+            alert(data.msg);
         }
 
-        // Tcheke si jwè a te deja konekte
+        function logout() { localStorage.clear(); location.reload(); }
+
         window.onload = () => {
-            const saved = localStorage.getItem('mopyon_user');
-            if (saved) {
-                currentUser = JSON.parse(saved);
-                showGamePage();
-            }
-        };
+            const saved = localStorage.getItem('blitz_user');
+            if(saved) { user = JSON.parse(saved); initApp(); }
+        }
     </script>
 </body>
 </html>
