@@ -3,78 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLITZ ⚡</title>
+    <title>BLITZ ⚡ | Jwe & Touche</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #f8f9fa; }
-        body { background: var(--bg); font-family: sans-serif; margin: 0; padding-bottom: 80px; text-align: center; }
+        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 90px; text-align: center; }
         .hidden { display: none !important; }
-        .screen { padding: 15px; max-width: 500px; margin: auto; }
         .header { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .logo { color: var(--primary); font-weight: 900; font-size: 22px; }
         .balance-pill { background: #e8f5e9; color: var(--primary); padding: 8px 15px; border-radius: 20px; font-weight: bold; }
-        .banner { background: #2e7d32; margin: 15px; padding: 20px; border-radius: 20px; color: white; text-align: left; }
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 15px; }
-        .btn-act { border: none; padding: 15px; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-        .game-card { background: white; margin: 15px; padding: 20px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; }
+        .banner { background: #1b5e20; margin: 15px; padding: 25px; border-radius: 20px; color: white; text-align: left; position: relative; }
+        .banner h2 { margin: 0; font-size: 24px; }
+        .service-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-top: 15px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px; }
+        .btn-act { border: none; padding: 18px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px 15px; }
+        .game-card { background: white; padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.04); position: relative; cursor: pointer; }
+        .badge { position: absolute; top: 10px; right: 10px; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
+        .badge-aktif { background: #4caf50; }
+        .badge-soon { background: #f44336; }
+        .game-card img { width: 50px; margin-bottom: 10px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #eee; }
+        .nav-item { color: #888; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: var(--primary); width: 95vw; height: 95vw; max-width: 400px; margin: auto; }
-        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; font-size: 14px; }
-        #timer-box { font-size: 24px; color: red; font-weight: 800; margin: 10px; }
+        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; }
+        #timer-box { font-size: 28px; color: red; font-weight: 900; margin: 10px; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top:20px; }
     </style>
 </head>
 <body>
 
     <!-- LOGIN -->
-    <div id="auth-s" class="screen" style="margin-top:50px;">
-        <div class="card-ui" style="background:white; padding:30px; border-radius:20px; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
-            <h1 style="color:var(--primary)">Byenveni 👋</h1>
-            <input type="text" id="phone" placeholder="Nimewo Telefòn" style="width:90%; padding:15px; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;">
-            <input type="password" id="pass" placeholder="Modpas" style="width:90%; padding:15px; margin-bottom:15px; border-radius:10px; border:1px solid #ddd;">
+    <div id="auth-s" class="screen" style="padding-top:60px;">
+        <div style="background:white; padding:30px; margin:20px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
+            <h1 style="color:var(--primary); margin-bottom:5px;">Byenveni 👋</h1>
+            <p style="color:var(--primary); font-weight:bold; font-style:italic; margin-bottom:25px;">" Jwe, Genyen, Touche "</p>
+            <input type="text" id="phone" placeholder="Telefòn" style="width:90%; padding:15px; margin-bottom:15px; border-radius:12px; border:1px solid #ddd;">
+            <input type="password" id="pass" placeholder="Modpas" style="width:90%; padding:15px; margin-bottom:20px; border-radius:12px; border:1px solid #ddd;">
             <button class="btn-act" style="background:var(--primary); width:100%;" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- MENU PRINCIPAL -->
+    <!-- HOME PAGE -->
     <div id="menu-s" class="hidden">
-        <div class="header"><b style="color:var(--primary); font-size:20px;">BLITZ</b> <div id="u-bal" class="balance-pill">0 HTG</div></div>
-        <div class="banner"><h3>MOPYON BLITZ ⚡</h3><p style="font-size:12px; opacity:0.8;">SÈVIS: Natcom: 55110103 | Digicel: 31594645</p></div>
-        <div class="btn-grid">
+        <div class="header"><div class="logo">BLITZ</div> <div id="u-bal" class="balance-pill">0 HTG</div></div>
+        <div class="banner">
+            <h2>MOPYON BLITZ ⚡</h2>
+            <div class="service-box"><b>SÈVIS (Depo / Retrè / Asistans):</b><br>Natcom: 55110103 | Digicel: 31594645</div>
+        </div>
+        <div class="action-grid">
             <button class="btn-act" style="background:#4caf50;" onclick="window.open('https://wa.me')">Gwoup</button>
             <button class="btn-act" style="background:var(--accent);" onclick="showS('withdraw-s')">Retrè</button>
         </div>
-        <div class="game-card" onclick="showS('mopyon-opts')">
-            <div style="text-align:left;"><b>MOPYON</b><br><small style="color:green; font-weight:bold;">● AKTIF</small></div>
-            <img src="https://flaticon.com" width="50">
+        <div class="game-grid">
+            <div class="game-card" onclick="showS('mopyon-opts')">
+                <span class="badge badge-aktif">AKTIF</span>
+                <img src="https://flaticon.com">
+                <div style="font-weight:bold;">MOPYON</div>
+            </div>
+            <div class="game-card">
+                <span class="badge badge-soon">SOON</span>
+                <img src="https://flaticon.com">
+                <div style="font-weight:bold; color:#888;">DOMINO</div>
+            </div>
+        </div>
+        <div class="bottom-nav">
+            <div class="nav-item active">AKEY</div>
+            <div class="nav-item" onclick="showS('withdraw-s')">RETRÈ</div>
+            <div class="nav-item" onclick="window.open('https://wa.me')">ÈD</div>
         </div>
     </div>
 
-    <!-- OPTIONS MOPYON -->
+    <!-- OPTIONS & GAME (Logique Timer incluse) -->
     <div id="mopyon-opts" class="screen hidden">
-        <div class="card-ui" style="background:white; padding:20px; border-radius:20px;">
-            <h3>Konfigirasyon</h3>
-            <input type="number" id="bet" value="50" style="width:80%; padding:10px;">
-            <button class="btn-act" style="background:var(--primary); width:100%; margin-top:10px;" onclick="startMatchmaking()">MATCHMAKING</button>
-            <hr>
-            <input type="text" id="p-code" placeholder="Kòd Chanm" style="width:80%; padding:10px;">
-            <button class="btn-act" style="background:#444; width:100%;" onclick="joinPrivate()">KREYE / ANTRE</button>
-            <button class="btn-act" style="background:#999; width:100%; margin-top:10px;" onclick="showS('menu-s')">RETOUNEN</button>
+        <div style="background:white; padding:20px; border-radius:20px; margin:15px;">
+            <h3>Match Mopyon</h3>
+            <input type="number" id="bet" value="50" style="width:80%; padding:10px; margin-bottom:10px;">
+            <button class="btn-act" style="background:var(--primary); width:100%;" onclick="startMatchmaking()">MATCH OTOMATIK</button>
+            <div style="margin:15px 0; border-top:1px solid #eee; padding-top:15px;">
+                <input type="text" id="p-code" placeholder="Kòd Chanm" style="width:80%; padding:10px;">
+                <button class="btn-act" style="background:#444; width:100%; margin-top:10px;" onclick="joinPrivate()">KREYE / ANTRE</button>
+            </div>
+            <button class="btn-act" style="background:#999; width:100%;" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
     </div>
 
-    <!-- WITHDRAW -->
-    <div id="withdraw-s" class="screen hidden">
-        <div class="card-ui" style="background:white; padding:20px; border-radius:20px;">
-            <h3>Mande Retrè</h3>
-            <input type="number" id="w-amount" placeholder="Montan HTG (Min 100)" style="width:80%; padding:10px;">
-            <button class="btn-act" style="background:var(--accent); width:100%;" onclick="withdraw()">VOYE DEMANN</button>
-            <button class="btn-act" style="background:#ccc; width:100%; margin-top:10px;" onclick="showS('menu-s')">ANILE</button>
-        </div>
-    </div>
-
-    <!-- GAME OVERLAY -->
     <div id="game-overlay" class="hidden">
         <div id="timer-box">30s</div>
-        <h3 id="match-status">Chache...</h3>
+        <h3 id="match-status">Match!</h3>
         <div id="turn-info" style="font-weight:bold; margin-bottom:10px;"></div>
         <div class="grid" id="board-grid"></div>
         <button class="btn-act" style="background:red; width:120px; margin-top:20px;" onclick="finiJwet()">KITE</button>
@@ -85,16 +102,24 @@
         let user, room, symbol, myTurn, prize, board, timerInt;
 
         function showS(id) {
-            document.querySelectorAll('.screen, #menu-s, #game-overlay, #mopyon-opts, #auth-s, #withdraw-s').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.screen, #menu-s, #game-overlay, #mopyon-opts, #auth-s').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         }
 
         function finiJwet() { showS('menu-s'); clearInterval(timerInt); }
 
+        function startTimer() {
+            let t = 30; clearInterval(timerInt);
+            document.getElementById('timer-box').innerText = t + "s";
+            timerInt = setInterval(() => {
+                t--; document.getElementById('timer-box').innerText = t + "s";
+                if(t <= 0) clearInterval(timerInt);
+            }, 1000);
+        }
+
         async function login() {
             const phone = document.getElementById('phone').value, password = document.getElementById('pass').value;
-            const ref = new URLSearchParams(window.location.search).get('ref');
-            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password, ref }) });
+            const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone, password }) });
             const data = await res.json();
             if(data.success) { user = data.user; showS('menu-s'); document.getElementById('u-bal').innerText = user.balance + " HTG"; }
         }
@@ -131,7 +156,7 @@
         }
 
         function checkWin(r, c) {
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const dirs = [[1,0],[0,1],[1,1],[1,-1]];
             for(let [dr, dc] of dirs) {
                 let count = 1;
                 for(let i=1; i<5; i++) if(board[r+dr*i]?.[c+dc*i] === symbol) count++; else break;
@@ -141,23 +166,8 @@
             return false;
         }
 
-        function startTimer() {
-            let t = 30; clearInterval(timerInt);
-            timerInt = setInterval(() => {
-                t--; document.getElementById('timer-box').innerText = t + "s";
-                if(t <= 0) clearInterval(timerInt);
-            }, 1000);
-        }
-
         function updateTurnText() {
-            document.getElementById('turn-info').innerText = myTurn ? "SE TOU PA W! ⚡" : "Atann opozan an...";
-        }
-
-        async function withdraw() {
-            const amount = document.getElementById('w-amount').value;
-            const res = await fetch('/withdraw', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: user.phone, amount }) });
-            const data = await res.json();
-            alert(data.msg); if(data.success) location.reload();
+            document.getElementById('turn-info').innerText = myTurn ? "TOU PA W! ⚡" : "ATANN OPOZAN...";
         }
 
         socket.on('gameOver', (data) => {
