@@ -3,79 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLITZ ⚡</title>
+    <title>BLITZ ⚡ | Jwe & Touche</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --primary: #1b5e20; --accent: #ffa502; --bg: #f4f7f6; }
-        body { background: var(--bg); font-family: sans-serif; margin: 0; text-align: center; }
+        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 30px; text-align: center; }
         .hidden { display: none !important; }
         .screen { padding: 15px; max-width: 500px; margin: auto; }
         .card-ui { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 90%; margin-bottom: 10px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn:active { transform: scale(0.98); }
+        input { padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 92%; margin-bottom: 10px; font-size: 16px; }
         .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; background: var(--primary); border: 2px solid var(--primary); margin: auto; width: 95vw; height: 95vw; max-width: 400px; max-height: 400px; }
-        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+        .cell { background: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; cursor: pointer; }
         #game-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2000; padding-top: 20px; }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div style="background:white; padding:15px; display:flex; justify-content:space-between; border-bottom:1px solid #eee;">
-        <b style="color:var(--primary)">BLITZ ⚡</b>
-        <span id="bal-display" class="hidden" style="background:#e8f5e9; padding:5px 10px; border-radius:15px; font-weight:bold;">0 HTG</span>
+    <div style="background:white; padding:15px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+        <b style="color:var(--primary); font-size:20px;">BLITZ ⚡</b>
+        <span id="bal-display" class="hidden" style="background:#e8f5e9; color:var(--primary); padding:6px 12px; border-radius:20px; font-weight:bold;">0 HTG</span>
     </div>
 
-    <!-- Login -->
+    <!-- LOGIN -->
     <div id="auth-s" class="screen">
         <div class="card-ui">
             <h1>Byenveni 👋</h1>
+            <p style="color:var(--primary); font-style:italic; font-weight:bold;">" Jwe, Genyen, Touche "</p>
             <input type="text" id="phone" placeholder="Nimewo Telefòn">
             <input type="password" id="pass" placeholder="Modpas">
             <button class="btn" onclick="login()">KONEKTE</button>
         </div>
     </div>
 
-    <!-- Menu Principal -->
+    <!-- MENU -->
     <div id="menu-s" class="screen hidden">
-        <div class="card-ui" style="background: linear-gradient(135deg, #1b5e20, #2e7d32); color:white;">
-            <h3>MOPYON BLITZ ⚡</h3>
-            <p style="font-size:11px">Natcom: 55110103 | Digicel: 31594645</p>
+        <div class="card-ui" style="background: linear-gradient(135deg, #1b5e20, #2e7d32); color:white; text-align:left;">
+            <h3 style="margin:0">MOPYON BLITZ ⚡</h3>
+            <p style="font-size:10px; opacity:0.8;">Natcom: 55110103 | Digicel: 31594645</p>
         </div>
         <button class="btn" onclick="showS('mopyon-opts')">JWE MOPYON</button>
-        <button class="btn" style="background:var(--accent)" onclick="showS('withdraw-s')">RETRÈ</button>
+        <button class="btn" style="background:var(--accent)" onclick="showS('withdraw-s')">DEMANN RETRÈ</button>
         <button class="btn" style="background:#25d366" onclick="window.open('https://wa.me')">DEPO (WHATSAPP)</button>
     </div>
 
-    <!-- Options Mopyon -->
+    <!-- MOPYON OPTIONS -->
     <div id="mopyon-opts" class="screen hidden">
         <div class="card-ui">
-            <h3>Konfigirasyon</h3>
+            <h3>Konfigirasyon Match</h3>
             <input type="number" id="bet" value="50" placeholder="Miz HTG">
             <button class="btn" onclick="startMatchmaking()">MATCH OTOMATIK</button>
-            <hr>
-            <input type="text" id="p-code" placeholder="Kòd Chanm">
-            <button class="btn" style="background:#444" onclick="joinPrivate()">KREYE / ANTRE</button>
+            <div style="margin:20px 0; border-top:1px solid #eee; padding-top:10px;">
+                <input type="text" id="p-code" placeholder="Antre Kòd Chanm">
+                <button class="btn" style="background:#444" onclick="joinPrivate()">KREYE / ANTRE CHANM</button>
+            </div>
             <button class="btn" style="background:#999" onclick="showS('menu-s')">RETOUNEN</button>
         </div>
     </div>
 
-    <!-- Withdraw -->
+    <!-- WITHDRAW -->
     <div id="withdraw-s" class="screen hidden">
         <div class="card-ui">
             <h3>Mande Retrè</h3>
-            <input type="number" id="w-amount" placeholder="Montan (Min 100)">
+            <input type="number" id="w-amount" placeholder="Montan HTG (Min 100)">
             <button class="btn" onclick="withdraw()">VOYE DEMANN</button>
-            <button class="btn" style="background:#ccc" onclick="showS('menu-s')">ANILE</button>
+            <button class="btn" style="background:#ccc; color:333" onclick="showS('menu-s')">ANILE</button>
         </div>
     </div>
 
-    <!-- Game Overlay -->
+    <!-- GAME OVERLAY -->
     <div id="game-overlay" class="hidden">
-        <h3 id="match-status">Chache moun...</h3>
-        <div id="turn-info" style="margin-bottom:10px; font-weight:bold;"></div>
+        <h3 id="match-status" style="color:var(--primary)">Chache moun...</h3>
+        <div id="turn-info" style="margin-bottom:10px; font-weight:bold; font-size:18px;"></div>
         <div class="grid" id="board-grid"></div>
-        <button class="btn" style="background:red; width:150px; margin-top:20px;" onclick="location.reload()">KITE</button>
+        <button class="btn" style="background:#e74c3c; width:150px; margin-top:20px;" onclick="location.reload()">KITE JWÈT</button>
     </div>
 
     <script>
@@ -104,7 +106,7 @@
 
         function startMatchmaking() {
             const bet = document.getElementById('bet').value;
-            if(user.balance < bet) return alert("Balans ba!");
+            if(user.balance < bet) return alert("Balans ou ensifizan!");
             socket.emit('startMatchmaking', { phone: user.phone, bet });
             document.getElementById('game-overlay').classList.remove('hidden');
         }
@@ -116,11 +118,13 @@
             document.getElementById('game-overlay').classList.remove('hidden');
         }
 
+        socket.on('match-status', (msg) => { document.getElementById('match-status').innerText = msg; });
+
         socket.on('gameStart', (data) => {
             room = data.room; prize = data.prize;
             symbol = (data.turn === user.phone) ? 'X' : 'O';
             myTurn = (data.turn === user.phone);
-            document.getElementById('match-status').innerText = "Match! Ou se " + symbol + " | Pri: " + prize + "HTG";
+            document.getElementById('match-status').innerText = "Match Lanse! Ou se: " + symbol + " | Pri: " + prize + " HTG";
             renderBoard(); updateTurnText();
         });
 
@@ -135,7 +139,8 @@
                 for(let c=0; c<15; c++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell'; cell.innerText = board[r][c];
-                    cell.style.color = board[r][c] === 'X' ? 'red' : 'blue';
+                    if(board[r][c] === 'X') cell.style.color = '#d32f2f';
+                    if(board[r][c] === 'O') cell.style.color = '#1976d2';
                     cell.onclick = () => makeMove(r, c);
                     grid.appendChild(cell);
                 }
@@ -147,11 +152,13 @@
             board[r][c] = symbol; myTurn = false;
             renderBoard(); updateTurnText();
             socket.emit('move', { room, r, c, symbol });
-            // Note: La logique de victoire (5 alignés) devrait être ajoutée ici.
+            // Isit la ou ka ajoute win logic pou tcheke 5 alignés
         }
 
         function updateTurnText() {
-            document.getElementById('turn-info').innerText = myTurn ? "SE TOU PA W! ⚡" : "Atann opozan an...";
+            const info = document.getElementById('turn-info');
+            info.innerText = myTurn ? "SE TOU PA W! ⚡" : "Atann opozan an...";
+            info.style.color = myTurn ? "var(--primary)" : "#888";
         }
 
         async function withdraw() {
@@ -161,7 +168,9 @@
             alert(data.msg); if(data.success) location.reload();
         }
 
-        socket.on('gameOver', (data) => { alert("Ganyan se: " + data.winner); location.reload(); });
+        socket.on('updateBalance', (b) => { user.balance = b; updateUI(); });
+        socket.on('errorMsg', (m) => { alert(m); location.reload(); });
+        socket.on('gameOver', (d) => { alert("Jwèt Fini! Ganyan: " + d.winner); location.reload(); });
     </script>
 </body>
 </html>
