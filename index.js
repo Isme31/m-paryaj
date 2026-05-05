@@ -12,9 +12,7 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
 mongoose.connect(MONGO_URI, { 
-    tlsAllowInvalidCertificates: true, 
-    sslValidate: false,
-    retryWrites: true 
+    tlsAllowInvalidCertificates: true, sslValidate: false, retryWrites: true 
 }).then(() => console.log("✅ MONGO KONEKTE")).catch(err => console.log("❌ ERÈ MONGO:", err));
 
 const User = mongoose.model('User', new mongoose.Schema({
@@ -31,11 +29,25 @@ const Withdraw = mongoose.model('Withdraw', new mongoose.Schema({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// FONCTION STANDARD 8 CHIFFRES
-const cleanP = (p) => {
-    let c = p.toString().replace(/\D/g, ''); 
-    return c.length > 8 ? c.slice(-8) : c;
-};
+const cleanP = (p) => { let c = p.toString().replace(/\D/g, ''); return c.length > 8 ? c.slice(-8) : c; };
+
+// ANTI-TRICH: SÈVÈ A TCHEKE VIKTWA A
+function checkWinServer(board, r, c, symbol) {
+    const ds = [{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1},{dr:1,dc:-1}];
+    for (let {dr, dc} of ds) {
+        let cells = [{r, c}];
+        for (let i = 1; i < 5; i++) {
+            let nr = r + dr * i, nc = c + dc * i;
+            if (board[nr] && board[nr][nc] === symbol) cells.push({r: nr, c: nc}); else break;
+        }
+        for (let i = 1; i < 5; i++) {
+            let nr = r - dr * i, nc = c - dc * i;
+            if (board[nr] && board[nr][nc] === symbol) cells.push({r: nr, c: nc}); else break;
+        }
+        if (cells.length >= 5) return cells;
+    }
+    return null;
+}
 
 app.post('/login', async (req, res) => {
     try {
@@ -43,10 +55,7 @@ app.post('/login', async (req, res) => {
         const p8 = cleanP(phone);
         let user = await User.findOne({ phone: p8 });
         if (!user) {
-            if (ref) {
-                const r8 = cleanP(ref);
-                await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } });
-            }
+            if (ref) { const r8 = cleanP(ref); await User.findOneAndUpdate({ phone: r8 }, { $inc: { balance: 5, referralCount: 1 } }); }
             user = await User.create({ phone: p8, password, balance: 100 }); 
         }
         if (user.password !== password) return res.json({ success: false, msg: "Modpas pa bon!" });
@@ -70,23 +79,6 @@ app.post('/withdraw', async (req, res) => {
 let rooms = {};
 let gameTimers = {};
 
-function checkWinServer(board, r, c, symbol) {
-    const ds = [{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1},{dr:1,dc:-1}];
-    for (let {dr, dc} of ds) {
-        let cells = [{r, c}];
-        for (let i = 1; i < 5; i++) {
-            let nr = r + dr * i, nc = c + dc * i;
-            if (board[nr] && board[nr][nc] === symbol) cells.push({r: nr, c: nc}); else break;
-        }
-        for (let i = 1; i < 5; i++) {
-            let nr = r - dr * i, nc = c - dc * i;
-            if (board[nr] && board[nr][nc] === symbol) cells.push({r: nr, c: nc}); else break;
-        }
-        if (cells.length >= 5) return cells;
-    }
-    return null;
-}
-
 function startTurnTimer(roomCode, activePlayer) {
     if (gameTimers[roomCode]) clearTimeout(gameTimers[roomCode]);
     gameTimers[roomCode] = setTimeout(async () => {
@@ -103,7 +95,7 @@ function startTurnTimer(roomCode, activePlayer) {
 
 io.on('connection', (socket) => {
     socket.on('joinPrivate', async (data) => {
-        if (!data.roomCode || data.roomCode.trim() === "") return socket.emit('errorMsg', "Tape yon kòd!");
+        if (!data.roomCode || data.roomCode.trim() === "") return socket.emit('errorMsg', "Kòd la vid!");
         const p8 = cleanP(data.phone);
         const rCode = data.roomCode.trim();
         const user = await User.findOne({ phone: p8 });
@@ -116,8 +108,7 @@ io.on('connection', (socket) => {
         } else {
             const r = rooms[rCode];
             if (r.phones.length >= 2) return socket.emit('errorMsg', "Chanm plen!");
-            r.phones.push(p8);
-            socket.join(rCode);
+            r.phones.push(p8); socket.join(rCode);
             await User.updateMany({ phone: { $in: r.phones } }, { $inc: { balance: -r.bet } });
             io.to(rCode).emit('gameStart', { room: rCode, prize: (r.bet * 2) * 0.95, turn: r.host });
             startTurnTimer(rCode, r.host);
@@ -129,6 +120,7 @@ io.on('connection', (socket) => {
         if (rooms[rCode]) {
             rooms[rCode].board[data.r][data.c] = data.symbol;
             socket.to(rCode).emit('opponentMove', data);
+            // ANTI-TRICH: SÈVÈ A DESIDE SI JWÈ A GENYEN
             const winCells = checkWinServer(rooms[rCode].board, data.r, data.c, data.symbol);
             if (winCells) {
                 clearTimeout(gameTimers[rCode]);
@@ -137,8 +129,7 @@ io.on('connection', (socket) => {
                 io.to(rCode).emit('gameOver', { winner: winner.phone, winCells, msg: "MOPYON! 🎉", newBalance: winner.balance });
                 delete rooms[rCode];
             } else {
-                const nextP = rooms[rCode].phones.find(p => p !== cleanP(data.phone));
-                startTurnTimer(rCode, nextP);
+                startTurnTimer(rCode, rooms[rCode].phones.find(p => p !== cleanP(data.phone)));
             }
         }
     });
